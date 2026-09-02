@@ -1,0 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #17140F;
+  --paper: #F5EFE0;
+  --ink: #2B2620;
+  --stamp: #E8422D;
+  --stamp-hover: #D43723;
+  --ember: #FFB93C;
+  --tan: #C9BFA6;
+  --tan-dim: #8A8168;
+  --success: #7FA65C;
+  --border-dark: rgba(255, 255, 255, 0.08);
+  --border-paper: rgba(0, 0, 0, 0.1);
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    border-color: var(--border-dark);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--bg);
+    color: var(--tan);
+    font-family: 'Inter', sans-serif;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--bg);
+    color: var(--tan);
+  }
+
+  ::selection {
+    background-color: var(--stamp);
+    color: var(--paper);
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--stamp);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* ---- Primary Button: Single primary button visible per viewport ---- */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: var(--stamp);
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    padding: 12px 24px;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 120ms ease, transform 120ms ease;
+    user-select: none;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--stamp-hover);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .btn-primary:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+  }
+
+  /* ---- Secondary / Ghost Button ---- */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: transparent;
+    color: var(--tan);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    padding: 12px 24px;
+    border-radius: 2px;
+    border: 1px solid var(--tan-dim);
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    user-select: none;
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    border-color: var(--tan);
+    color: var(--paper);
+    background-color: rgba(255, 255, 255, 0.04);
+  }
+
+  .btn-ghost:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  /* Small button variants */
+  .btn-primary-sm {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
+  .btn-ghost-sm {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
+  /* ---- Section Eyebrows & Labels ---- */
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ember);
+    display: inline-block;
+  }
+
+  /* ---- 1px hairline gap grid layout ---- */
+  .gap-grid-1px {
+    display: grid;
+    gap: 1px;
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .gap-grid-1px > * {
+    background-color: var(--bg);
+  }
+
+  /* ---- Red Pen Strikethrough ---- */
+  .red-pen-strike {
+    position: relative;
+    display: inline-block;
+    white-space: nowrap;
+  }
+
+  .red-pen-strike::after {
+    content: '';
+    position: absolute;
+    left: -4%;
+    right: -4%;
+    top: 52%;
+    height: 4px;
+    background-color: var(--stamp);
+    transform: rotate(-2deg);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  /* ---- Red Pen Underline mark ---- */
+  .red-pen-underline {
+    position: relative;
+    display: inline;
+  }
+
+  .red-pen-underline::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 2.5px;
+    background-color: var(--stamp);
+    border-radius: 1px;
+    transform: rotate(0.8deg);
+  }
+
+  /* ---- Dropzone Document Slot ---- */
+  .dropzone-slot {
+    border: 1px dashed var(--tan-dim);
+    background-color: rgba(245, 239, 224, 0.04);
+    border-radius: 2px;
+    transition: border-color 120ms ease, background-color 120ms ease;
+  }
+
+  .dropzone-slot.drag-over,
+  .dropzone-slot:hover {
+    border-color: var(--stamp);
+    background-color: rgba(232, 66, 45, 0.08);
+  }
+}
+
+/* ---- Marquee animation ---- */
+@keyframes marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* ---- Red Pen Custom Cursor (Desktop only on grading desk) ---- */
+@media (hover: hover) and (pointer: fine) {
+  .desk-cursor {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M18.5 2.5a2.121 2.121 0 0 1 3 3L7 19.5 2 21l1.5-5L18.5 2.5z' stroke='%23E8422D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='%23E8422D' fill-opacity='0.25'/%3E%3Ccircle cx='2' cy='22' r='1.5' fill='%23E8422D'/%3E%3C/svg%3E") 2 22, auto;
+  }
+
+  .desk-cursor input,
+  .desk-cursor textarea,
+  .desk-cursor button,
+  .desk-cursor a,
+  .desk-cursor [role="button"],
+  .desk-cursor select,
+  .desk-cursor label {
+    cursor: pointer !important;
+  }
+
+  .desk-cursor input[type="text"],
+  .desk-cursor textarea {
+    cursor: text !important;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
