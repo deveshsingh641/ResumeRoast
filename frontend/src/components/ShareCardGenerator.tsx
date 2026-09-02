@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import html2canvas from 'html2canvas'
 import type { RoastResult } from '@/store/useAppStore'
-import ScoreStamp, { BAND_CONFIG } from './ScoreStamp'
+import ScoreStamp from './ScoreStamp'
 
 interface ShareCardGeneratorProps {
   result: RoastResult
@@ -16,7 +16,8 @@ export default function ShareCardGenerator({ result }: ShareCardGeneratorProps) 
 
   const topRoast = result.issues[0]?.roast || result.one_line_verdict
 
-  const shareText = `My resume scored ${result.overall_score}/100 on ResumeRoast.\n\nVerdict: "${result.one_line_verdict}"\n\nGet your resume graded at: https://resumeroast.app`
+  const whatsappShareText = `Bhai mera resume roast ho gaya 😂🔥!\n\nScore: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\n\nDekh tere resume ka kya banta hai: https://resumeroast.app`
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappShareText)}`
 
   const generateCanvas = async () => {
     if (!offscreenCardRef.current) return null
@@ -34,6 +35,46 @@ export default function ShareCardGenerator({ result }: ShareCardGeneratorProps) 
     }
   }
 
+  // B.1 WhatsApp-first sharing handler
+  const handleWhatsAppShare = async () => {
+    setIsGenerating(true)
+    setShareNotice(null)
+    try {
+      const canvas = await generateCanvas()
+      if (canvas && navigator.share && navigator.canShare) {
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            const file = new File([blob], `resume-roast-${result.overall_score}.png`, {
+              type: 'image/png',
+            })
+            if (navigator.canShare({ files: [file] })) {
+              try {
+                await navigator.share({
+                  title: 'Resume Roast Score',
+                  text: whatsappShareText,
+                  files: [file],
+                })
+                setIsGenerating(false)
+                return
+              } catch {
+                // Fallback to whatsapp link
+              }
+            }
+          }
+          window.open(whatsappUrl, '_blank')
+          setIsGenerating(false)
+        })
+        return
+      }
+      // Desktop or standard fallback
+      window.open(whatsappUrl, '_blank')
+    } catch {
+      window.open(whatsappUrl, '_blank')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   const handleDownload = async () => {
     setIsGenerating(true)
     setShareNotice(null)
@@ -47,17 +88,16 @@ export default function ShareCardGenerator({ result }: ShareCardGeneratorProps) 
         setDownloaded(true)
         setTimeout(() => setDownloaded(false), 3000)
       } else {
-        // Fallback: Copy share text if canvas is blocked
         if (navigator.clipboard) {
-          await navigator.clipboard.writeText(shareText)
-          setShareNotice('Image render unavailable — copied share text to clipboard!')
+          await navigator.clipboard.writeText(whatsappShareText)
+          setShareNotice('Image render unavailable — share text copy ho gaya!')
           setTimeout(() => setShareNotice(null), 4000)
         }
       }
     } catch {
       if (navigator.clipboard) {
-        await navigator.clipboard.writeText(shareText)
-        setShareNotice('Copied verdict text to clipboard!')
+        await navigator.clipboard.writeText(whatsappShareText)
+        setShareNotice('Verdict text copy ho gaya clipboard pe!')
         setTimeout(() => setShareNotice(null), 4000)
       }
     } finally {
@@ -80,29 +120,28 @@ export default function ShareCardGenerator({ result }: ShareCardGeneratorProps) 
               setCopied(true)
               setTimeout(() => setCopied(false), 3000)
             } catch {
-              // Fallback to text copy
-              await navigator.clipboard.writeText(shareText)
+              await navigator.clipboard.writeText(whatsappShareText)
               setCopied(true)
-              setShareNotice('Copied verdict summary to clipboard!')
+              setShareNotice('Roast summary copy ho gaya!')
               setTimeout(() => {
                 setCopied(false)
-                setShareNotice(null)
-              }, 3000)
+                setShareNotice(null), 3000
+              })
             }
           }
         })
       } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(shareText)
+        await navigator.clipboard.writeText(whatsappShareText)
         setCopied(true)
-        setShareNotice('Copied verdict summary to clipboard!')
+        setShareNotice('Roast summary copy ho gaya!')
         setTimeout(() => {
           setCopied(false)
-          setShareNotice(null)
-        }, 3000)
+          setShareNotice(null), 3000
+        })
       }
     } catch {
       if (navigator.clipboard) {
-        await navigator.clipboard.writeText(shareText)
+        await navigator.clipboard.writeText(whatsappShareText)
         setCopied(true)
         setTimeout(() => setCopied(false), 3000)
       }
@@ -158,7 +197,7 @@ export default function ShareCardGenerator({ result }: ShareCardGeneratorProps) 
                 marginBottom: 20,
               }}
             >
-              RESUMEROAST.APP // OFFICIAL VERDICT
+              RESUMEROAST.APP // DESK KA OFFICIAL VERDICT
             </div>
 
             <div
@@ -170,8 +209,8 @@ export default function ShareCardGenerator({ result }: ShareCardGeneratorProps) 
                 marginBottom: 28,
               }}
             >
-              MY RESUME GOT <br />
-              <span style={{ color: '#E8422D' }}>ROASTED.</span>
+              MERA RESUME HO GAYA <br />
+              <span style={{ color: '#E8422D' }}>ROAST 🔥</span>
             </div>
 
             <div
@@ -211,7 +250,7 @@ export default function ShareCardGenerator({ result }: ShareCardGeneratorProps) 
               color: '#8A8168',
             }}
           >
-            Get your resume graded &amp; roasted at resumeroast.app
+            Apna resume bhi roast karwao 👉 resumeroast.app
           </div>
         </div>
       </div>
@@ -222,7 +261,7 @@ export default function ShareCardGenerator({ result }: ShareCardGeneratorProps) 
           <div className="flex-1 text-left">
             <p className="section-label mb-2">Share card preview</p>
             <p className="font-display text-xl text-paper leading-tight">
-              My resume got <span className="text-stamp">roasted.</span>
+              Mera resume ho gaya <span className="text-stamp">roast.</span>
             </p>
             <p className="font-mono text-xs text-tan-dim mt-2 line-clamp-2">
               "{topRoast}"
@@ -240,24 +279,35 @@ export default function ShareCardGenerator({ result }: ShareCardGeneratorProps) 
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons — WhatsApp First Priority */}
       <div className="flex flex-col sm:flex-row gap-3">
+        {/* B.1 Primary Button: WhatsApp Status */}
+        <button
+          type="button"
+          onClick={handleWhatsAppShare}
+          disabled={isGenerating}
+          className="btn-primary flex-1 justify-center !bg-emerald-600 hover:!bg-emerald-500 !border-emerald-500 font-bold text-sm tracking-wide flex items-center gap-2"
+        >
+          <span>Status pe daal de</span>
+          <span>📲</span>
+        </button>
+
         <button
           type="button"
           onClick={handleDownload}
           disabled={isGenerating}
-          className="btn-primary flex-1 justify-center"
+          className="btn-ghost flex-1 justify-center"
         >
-          {downloaded ? '✓ Downloaded PNG' : isGenerating ? 'Generating card…' : 'Download share card'}
+          {downloaded ? '✓ Downloaded PNG' : isGenerating ? 'Generating…' : 'Download card'}
         </button>
 
         <button
           type="button"
           onClick={handleCopy}
           disabled={isGenerating}
-          className="btn-ghost flex-1 justify-center"
+          className="btn-ghost px-4 justify-center"
         >
-          {copied ? '✓ Copied!' : 'Copy image'}
+          {copied ? '✓ Copied!' : 'Copy'}
         </button>
       </div>
 

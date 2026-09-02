@@ -91,13 +91,13 @@ export const SAMPLE_RESUME_INFO = {
     'To work in a dynamic environment where I can utilize my skills and contribute to organizational growth.',
   bullet1Annotated:
     'utilize my skills and contribute to organizational growth',
-  bullet1Tag: 'GENERIC OBJECTIVE',
+  bullet1Tag: 'GHISA-PITA OBJECTIVE',
   bullet2Text:
     'Responsible for handling client relationships and achieving sales targets.',
   bullet2Annotated: 'handling client relationships',
-  bullet2Tag: 'ZERO METRICS / VAGUE',
+  bullet2Tag: 'NUMBER GHAYAB HAI',
   bullet3Text:
     'Team player with strong communication skills, hardworking, dedicated professional, proficient in MS Office.',
   bullet3Annotated: 'proficient in MS Office',
-  bullet3Tag: 'BUZZWORD OVERLOAD',
+  bullet3Tag: 'BUZZWORD KA OVERDOSE',
 }

@@ -13,18 +13,18 @@ export default function RoastPage() {
           RESUME<span className="text-stamp">ROAST</span>
         </Link>
         <Link to="/" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-          ← Back to Desk
+          ← Wapas Desk Pe
         </Link>
       </header>
 
       {/* Center Dropzone / Grading Area */}
       <div className="max-w-[560px] w-full mx-auto text-center my-auto py-12">
-        <p className="section-label mb-3">DOCUMENT SUBMISSION</p>
+        <p className="section-label mb-3">DESK PE DOCUMENT RAKHO</p>
         <h1 className="font-display text-3xl sm:text-4xl text-paper tracking-tight mb-3">
-          Place your resume on the desk.
+          Apna resume desk pe daal de bhai.
         </h1>
         <p className="font-mono text-xs text-tan-dim mb-8">
-          The red pen is ready. You will receive a brutal grade and exact rewrites.
+          Red pen taiyyar hai. Kadak grading milegi aur exact bullet rewrites bhi.
         </p>
 
         {/* Morphable Dropzone Component */}
@@ -41,7 +41,7 @@ export default function RoastPage() {
             </p>
             {uploadError.includes('limit') && (
               <Link to="/pricing" className="font-mono text-xs text-ember underline mt-2 inline-block">
-                View Pro unlimited plan →
+                Pro unlimited plan dekho →
               </Link>
             )}
           </div>
@@ -50,7 +50,7 @@ export default function RoastPage() {
 
       {/* Bottom Info Note */}
       <footer className="max-w-[960px] w-full mx-auto text-center font-mono text-xs text-tan-dim py-4 border-t border-white/[0.08]">
-        Free daily roast · Text-based PDF or DOCX · Anonymous files automatically purged after 7 days
+        Har din 1 free roast · Text PDF ya DOCX · Anonymous files 7 din mein automatically delete ho jaati hain
       </footer>
     </main>
   )

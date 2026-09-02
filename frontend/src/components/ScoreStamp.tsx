@@ -10,9 +10,9 @@ interface ScoreStampProps {
 }
 
 export const BAND_CONFIG: Record<ScoreBand, { color: string; label: string }> = {
-  weak:   { color: '#E8422D', label: 'WEAK' },
-  mid:    { color: '#FFB93C', label: 'MID' },
-  strong: { color: '#7FA65C', label: 'STRONG' },
+  weak:   { color: '#E8422D', label: 'KAMZOR' },
+  mid:    { color: '#FFB93C', label: 'THIK-THAK' },
+  strong: { color: '#7FA65C', label: 'DAMDAAR' },
 }
 
 export function getBandFromScore(score: number): ScoreBand {

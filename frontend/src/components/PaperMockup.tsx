@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Issue } from '@/store/useAppStore'
+import { getHinglishTag } from '@/utils/categoryTags'
 
 interface PaperMockupProps {
   candidateName?: string
@@ -21,19 +22,19 @@ interface PaperMockupProps {
 }
 
 export default function PaperMockup({
-  candidateName = 'ALEX JOHNSON',
-  candidateTitle = 'SENIOR FULL-STACK ENGINEER // 5 YOE',
-  experienceHeader = 'EXPERIENCE',
-  companyLine = 'TechCorp Inc. — Senior Software Engineer (2022–Present)',
+  candidateName = 'ROHIT SHARMA',
+  candidateTitle = 'SOFTWARE ENGINEER // 3 YOE',
+  experienceHeader = 'EXPERIENCE (KAAM KA RECORD)',
+  companyLine = 'TechCorp Labs — Software Engineer (2022–Present)',
   bullet1Text = 'Leveraged cross-functional synergies to drive high-impact outcomes across 12 product teams.',
   bullet1Annotated = 'Leveraged cross-functional synergies to drive high-impact outcomes',
-  bullet1Tag = 'BUZZWORD DETECTED',
+  bullet1Tag = 'BUZZWORD KA OVERDOSE',
   bullet2Text = 'Responsible for backend system development and general database optimization.',
   bullet2Annotated = 'Responsible for backend system development',
-  bullet2Tag = 'ZERO METRICS / VAGUE',
+  bullet2Tag = 'NUMBER GHAYAB HAI',
   bullet3Text = 'Assisted in regular agile ceremonies and references available upon request.',
   bullet3Annotated = 'references available upon request',
-  bullet3Tag = 'OBSOLETE / CLUTTER',
+  bullet3Tag = 'YE KYUN LIKHA BHAI',
   issues,
   rotation = -2,
   animate = true,
@@ -41,31 +42,31 @@ export default function PaperMockup({
   // If custom issues passed from real resume, populate bullets from issues
   let finalBullet1Text = bullet1Text
   let finalBullet1Annotated = bullet1Annotated
-  let finalBullet1Tag = bullet1Tag
+  let finalBullet1Tag = getHinglishTag(bullet1Tag)
 
   let finalBullet2Text = bullet2Text
   let finalBullet2Annotated = bullet2Annotated
-  let finalBullet2Tag = bullet2Tag
+  let finalBullet2Tag = getHinglishTag(bullet2Tag)
 
   let finalBullet3Text = bullet3Text
   let finalBullet3Annotated = bullet3Annotated
-  let finalBullet3Tag = bullet3Tag
+  let finalBullet3Tag = getHinglishTag(bullet3Tag)
 
   if (issues && issues.length > 0) {
     if (issues[0]) {
       finalBullet1Text = issues[0].quoted_text
       finalBullet1Annotated = issues[0].quoted_text
-      finalBullet1Tag = (issues[0].category || 'FLAGGED').toUpperCase()
+      finalBullet1Tag = getHinglishTag(issues[0].category)
     }
     if (issues[1]) {
       finalBullet2Text = issues[1].quoted_text
       finalBullet2Annotated = issues[1].quoted_text
-      finalBullet2Tag = (issues[1].category || 'FLAGGED').toUpperCase()
+      finalBullet2Tag = getHinglishTag(issues[1].category)
     }
     if (issues[2]) {
       finalBullet3Text = issues[2].quoted_text
       finalBullet3Annotated = issues[2].quoted_text
-      finalBullet3Tag = (issues[2].category || 'FLAGGED').toUpperCase()
+      finalBullet3Tag = getHinglishTag(issues[2].category)
     }
   }
 

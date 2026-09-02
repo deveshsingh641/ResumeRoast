@@ -4,15 +4,17 @@ import ScoreStamp from '@/components/ScoreStamp'
 import PaperMockup from '@/components/PaperMockup'
 import DeskClutter from '@/components/DeskClutter'
 import MarqueeTicker from '@/components/MarqueeTicker'
+import PlacementSeasonBanner from '@/components/PlacementSeasonBanner'
+import LiveRoastCounter from '@/components/LiveRoastCounter'
 import { SAMPLE_ROAST_DATA, SAMPLE_RESUME_INFO } from '@/data/sampleRoast'
 
-/* ── 4 Stats Hairline Gap Grid ── */
+/* ── 4 Stats Hairline Gap Grid (Section A.6) ── */
 function StatsRow() {
   const stats = [
-    { value: '42,910', label: 'Resumes Graded' },
-    { value: '44', label: 'Average Score' },
-    { value: '88%', label: 'Fluff Removed' },
-    { value: '15s', label: 'Grading Time' },
+    { value: '42,910', label: 'resumes ab tak roast ho chuke' },
+    { value: '15s', label: 'roast milne mein' },
+    { value: '100%', label: 'sign-up ki zaroorat nahi' },
+    { value: '94%', label: 'dobara roast karayenge' },
   ]
 
   return (
@@ -23,7 +25,7 @@ function StatsRow() {
             <div className="font-display text-2xl sm:text-3xl text-paper tracking-tight leading-none mb-2">
               {stat.value}
             </div>
-            <div className="font-mono text-xs text-tan-dim uppercase tracking-wider">
+            <div className="font-mono text-xs text-tan-dim lowercase tracking-wider">
               {stat.label}
             </div>
           </div>
@@ -33,23 +35,23 @@ function StatsRow() {
   )
 }
 
-/* ── 3 Numbered Feature Rows ── */
+/* ── 3 Numbered Feature Rows (Section A.6) ── */
 function FeatureSection() {
   const steps = [
     {
       num: '01',
-      title: 'Drop your resume onto the grading desk',
-      desc: 'Submit your text-based PDF or DOCX file. Our engine parses every bullet point, section title, and metric without superficial keyword-matching tricks.',
+      title: 'Apna resume desk pe daal de',
+      desc: 'Apna text-based PDF ya DOCX file submit karo. Koi superficial keyword matching ka jhol nahi, seedha asli bullet points, claims aur metrics check honge.',
     },
     {
       num: '02',
-      title: 'Get marked with red pen annotations & a harsh score',
-      desc: 'Get a stamped overall score from 0 to 100 alongside circled buzzwords, unquantified claims, formatting bloat, and embarrassing resume habits.',
+      title: 'Red pen se marking aur ek kadak score milega',
+      desc: '0 se 100 tak ka stamped score milega, saath mein circled buzzwords, unquantified claims, formatting ka kachra aur cringe lines.',
     },
     {
       num: '03',
-      title: 'Re-engineer every line with concrete rewrites',
-      desc: 'Receive specific rewritten replacements for your weakest bullets with quantifiable metrics, active verbs, and zero corporate filler.',
+      title: 'Har weak line ka exact rewrite solution lo',
+      desc: 'Sirf roast nahi karenge — jo bullet point bekaar hai uska exact better rewritten version likh ke denge with active verbs aur zero filler.',
     },
   ]
 
@@ -57,9 +59,9 @@ function FeatureSection() {
     <section className="py-24 px-4 border-t border-white/[0.08]" aria-label="How it works">
       <div className="max-w-[960px] mx-auto">
         <div className="text-center mb-16">
-          <p className="section-label mb-2">Methodology</p>
+          <p className="section-label mb-2">PROCESS DEKH LE</p>
           <h2 className="font-display text-2xl sm:text-3xl text-paper">
-            Three steps. Zero sugarcoating.
+            Teen steps. Zero sugarcoating.
           </h2>
         </div>
 
@@ -88,23 +90,23 @@ function FeatureSection() {
   )
 }
 
-/* ── Real Output Sample Roast ── */
+/* ── Real Output Sample Roast (Section A.6) ── */
 function SampleSection() {
   return (
     <section id="sample" className="py-24 px-4 border-t border-white/[0.08]" aria-label="Sample roast">
       <div className="max-w-[960px] mx-auto">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 mb-2">
-            <p className="section-label">GRADED DOCUMENT SAMPLE</p>
+            <p className="section-label">SAMPLE ROAST DEKH LE</p>
             <span className="font-mono text-[10px] text-tan-dim uppercase px-1.5 py-0.5 border border-white/10 rounded-[2px]">
-              Sample Roast Demo
+              Live Preview
             </span>
           </div>
           <h2 className="font-display text-2xl sm:text-3xl text-paper">
-            What a graded resume looks like.
+            Asli roast kaisa dikhta hai, khud dekh le.
           </h2>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-lg mx-auto">
-            Hardcoded candidate test: typical fresher resume with buzzwords, zero metrics, and standard filler.
+            Fresher candidate ka sample resume: bhare hue buzzwords, number gayab, aur standard generic lines.
           </p>
         </div>
 
@@ -128,11 +130,11 @@ function SampleSection() {
           <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 bg-[#110E0A] border border-white/[0.08] p-4 rounded-sm max-w-xl w-full">
             <ScoreStamp score={SAMPLE_ROAST_DATA.overall_score} band={SAMPLE_ROAST_DATA.band} animate={false} size="sm" rotation={-12} />
             <div className="text-left font-mono text-xs text-tan flex-1">
-              <span className="text-stamp font-semibold uppercase block mb-1">Official Desk Verdict:</span>
+              <span className="text-stamp font-semibold uppercase block mb-1">Desk ka Official Verdict:</span>
               <span className="text-paper text-sm font-display">"{SAMPLE_ROAST_DATA.one_line_verdict}"</span>
               <div className="mt-2">
                 <Link to="/roast/demo" className="text-ember hover:underline text-[11px] inline-flex items-center gap-1">
-                  Inspect full 6-issue breakdown & voice note →
+                  Poora 6-issue breakdown aur voice note suno →
                 </Link>
               </div>
             </div>
@@ -149,23 +151,23 @@ function PricingSection() {
 
   const features = [
     { label: 'Roasts per day', free: '1/day', pro: 'Unlimited' },
-    { label: 'Issues displayed', free: 'Top 3 issues', pro: 'All 5–8 issues' },
-    { label: 'Red-pen rewritten bullets', free: 'Preview only', pro: 'Full rewrite access' },
+    { label: 'Issues dikhenge', free: 'Top 3 issues', pro: 'Saare 5–8 issues' },
+    { label: 'Red-pen rewritten lines', free: 'Preview only', pro: 'Full rewrite access' },
     { label: 'Key strength breakdown', free: 'Included', pro: 'Included' },
     { label: 'Shareable score stamp card', free: 'Included', pro: 'Included' },
-    { label: 'PDF re-export recommendations', free: '—', pro: 'Included' },
+    { label: 'PDF re-export suggestions', free: '—', pro: 'Included' },
   ]
 
   return (
     <section id="pricing" className="py-24 px-4 border-t border-white/[0.08]" aria-label="Pricing">
       <div className="max-w-[960px] mx-auto">
         <div className="text-center mb-12">
-          <p className="section-label mb-2">Pricing</p>
+          <p className="section-label mb-2">PRICING</p>
           <h2 className="font-display text-2xl sm:text-3xl text-paper">
-            Free forever. Deep roast for Pro.
+            Free hamesha ke liye. Aur deep roast chahiye toh Pro.
           </h2>
           <p className="font-mono text-xs text-tan-dim mt-2">
-            No subscription tricks. Instant access.
+            Koi subscription ka jhol nahi. Instant access.
           </p>
 
           {/* Billing Switch */}
@@ -177,7 +179,7 @@ function PricingSection() {
                 !annual ? 'bg-bg text-paper border border-white/[0.08]' : 'text-tan-dim hover:text-tan'
               }`}
             >
-              Monthly
+              Mahina
             </button>
             <button
               type="button"
@@ -186,7 +188,7 @@ function PricingSection() {
                 annual ? 'bg-bg text-paper border border-white/[0.08]' : 'text-tan-dim hover:text-tan'
               }`}
             >
-              Annual <span className="text-ember">(-30%)</span>
+              Saal <span className="text-ember">(-30%)</span>
             </button>
           </div>
         </div>
@@ -201,10 +203,10 @@ function PricingSection() {
               </p>
               <div className="flex items-baseline gap-1 mb-4">
                 <span className="font-display text-3xl text-paper">₹0</span>
-                <span className="font-mono text-xs text-tan-dim">/ forever</span>
+                <span className="font-mono text-xs text-tan-dim">/ hamesha ke liye</span>
               </div>
               <p className="font-body text-xs text-tan mb-6 leading-relaxed">
-                Ideal for a fast, honest check of your top resume flaws.
+                Apne top flaws ka fatak se sach jaan-ne ke liye best hai.
               </p>
 
               <ul className="space-y-3 font-mono text-xs text-tan border-t border-white/[0.08] pt-6 mb-8">
@@ -218,21 +220,20 @@ function PricingSection() {
             </div>
 
             <Link to="/roast" className="btn-ghost w-full justify-center">
-              Upload free resume
+              Free resume roast karo
             </Link>
           </div>
 
-          {/* Pro Tier Card — with 2px stamp border & badge */}
+          {/* Pro Tier Card */}
           <div
             className="rounded-sm p-8 bg-bg flex flex-col justify-between text-left relative"
             style={{
               border: '2px solid #E8422D',
             }}
           >
-            {/* Top right "most people pick this" tag */}
             <div className="absolute -top-3 right-4 bg-[#E8422D]/[0.15] border border-stamp px-2.5 py-0.5 rounded-sm">
               <span className="font-mono text-[10px] text-stamp font-semibold uppercase tracking-wider">
-                Most people pick this
+                Zyada log ye lete hain
               </span>
             </div>
 
@@ -245,11 +246,11 @@ function PricingSection() {
                   {annual ? '₹2,499' : '₹299'}
                 </span>
                 <span className="font-mono text-xs text-tan-dim">
-                  {annual ? '/ year' : '/ month'}
+                  {annual ? '/ saal' : '/ mahina'}
                 </span>
               </div>
               <p className="font-body text-xs text-tan mb-6 leading-relaxed">
-                Full-line critique, all rewritten bullet recommendations, and unlimited submissions.
+                Full-line critique, saari rewritten lines, aur unlimited daily roasts.
               </p>
 
               <ul className="space-y-3 font-mono text-xs text-tan border-t border-white/[0.08] pt-6 mb-8">
@@ -262,9 +263,8 @@ function PricingSection() {
               </ul>
             </div>
 
-            {/* Single primary button in this view */}
             <Link to="/pricing" className="btn-primary w-full justify-center">
-              Upgrade to Pro
+              Pro pe upgrade karo
             </Link>
           </div>
         </div>
@@ -276,20 +276,20 @@ function PricingSection() {
 /* ── FAQ Accordion ── */
 const FAQS = [
   {
-    q: 'Does the grader actually read my entire resume?',
-    a: 'Yes. Every line of text is extracted and analyzed by Claude Sonnet. Every flagged critique is directly quoted from your submitted text, not generic advice.',
+    q: 'Kya AI sach mein mera poora resume padhta hai?',
+    a: 'Haan bhai. Har ek line extract karke analyze hoti hai. Saare flagged comments directly tumhare text se quote honge, koi generic gyaan nahi.',
   },
   {
-    q: 'What file formats and sizes are supported?',
-    a: 'We accept text-based PDF and DOCX files up to 5MB. Ensure your PDF has selectable text and is not a flat scanned photo.',
+    q: 'Kaunse formats aur size supported hain?',
+    a: 'PDF aur DOCX files up to 5MB. Make sure PDF selectable text ho, scanned photo nahi.',
   },
   {
-    q: 'Is my resume stored or shared with recruiters?',
-    a: 'Anonymous roasts are cached for 7 days so you can share your score link, after which they are permanently expunged. We never sell your data to third parties.',
+    q: 'Kya mera resume kisi recruiter ke saath share hoga?',
+    a: 'Bilkul nahi. Anonymous roasts 7 din baad permanently delete ho jaate hain. Hum data kisi third-party ko nahi bechte.',
   },
   {
-    q: 'Why did my resume get a score below 40?',
-    a: 'A score under 40 indicates severe buzzword saturation, lack of quantifiable business results, or structural issues that get resumes filtered out by recruiters.',
+    q: 'Mera score 40 se kam kyu aaya bhai?',
+    a: 'Agar score 40 se kam hai toh iska matlab buzzwords bohot zyada hain, number gayab hain, ya formatting aisi hai jo recruiter ko 5 second mein reject karne pe majboor karti hai.',
   },
 ]
 
@@ -300,9 +300,9 @@ function FAQSection() {
     <section className="py-24 px-4 border-t border-white/[0.08]" aria-label="Frequently Asked Questions">
       <div className="max-w-[800px] mx-auto text-left">
         <div className="text-center mb-16">
-          <p className="section-label mb-2">Inquiries</p>
+          <p className="section-label mb-2">SAWAL JAWAB</p>
           <h2 className="font-display text-2xl sm:text-3xl text-paper">
-            Frequently asked questions.
+            Aamtaur pe pooche jaane wale sawaal.
           </h2>
         </div>
 
@@ -343,6 +343,9 @@ function FAQSection() {
 export default function LandingPage() {
   return (
     <main className="min-h-screen desk-cursor">
+      {/* B.4 Time-Boxed Placement Season Banner */}
+      <PlacementSeasonBanner />
+
       {/* Top Bar Header */}
       <header className="border-b border-white/[0.08] py-4 px-6">
         <div className="max-w-[960px] mx-auto flex items-center justify-between">
@@ -363,7 +366,7 @@ export default function LandingPage() {
               Pricing
             </a>
             <Link to="/roast" className="btn-ghost btn-ghost-sm">
-              Grade resume
+              Roast karwao
             </Link>
           </nav>
         </div>
@@ -372,37 +375,40 @@ export default function LandingPage() {
       {/* Marquee Ticker */}
       <MarqueeTicker />
 
-      {/* ── Hero Section ── */}
-      <section className="pt-20 pb-16 px-4 text-center relative overflow-hidden">
-        {/* Tactile Desk Clutter (Crumpled Reject, Coffee Ring Stain, Sticky Note) */}
-        <DeskClutter stickyText="fix this before friday!! 😭" stickyRotation={4} />
+      {/* ── Hero Section (Section A.2) ── */}
+      <section className="pt-16 pb-16 px-4 text-center relative overflow-hidden">
+        {/* Tactile Desk Clutter (Section A.5) */}
+        <DeskClutter stickyText="friday se pehle fix kar le yaar!! 😭" stickyRotation={4} />
 
         <div className="max-w-[960px] mx-auto relative z-10">
+          {/* B.2 Live Social Proof Counter */}
+          <LiveRoastCounter />
+
           {/* Eyebrow Line */}
           <p className="section-label mb-4">
-            BRUTALLY HONEST AI RESUME CRITIQUE
+            DESK PE POORA SACH // 100% RAW AI ROAST
           </p>
 
-          {/* Headline with Rotated Red Pen Strikethrough */}
+          {/* Headline with Rotated Red Pen Strikethrough (A.2 Exact Spec) */}
           <h1 className="font-display text-4xl sm:text-6xl md:text-7xl text-paper tracking-tight leading-[0.98] mb-6">
-            YOUR RESUME IS{' '}
-            <span className="red-pen-strike text-tan-dim">IMPRESSIVE</span>
+            TERA RESUME{' '}
+            <span className="red-pen-strike text-tan-dim">IMPRESSIVE</span> HAI...
             <br />
-            <span className="text-stamp">FULL OF FLUFF.</span>
+            <span className="text-stamp">BAS FLUFF HAI BHAI.</span>
           </h1>
 
-          {/* Subcopy */}
-          <p className="font-body text-base sm:text-lg text-tan max-w-[620px] mx-auto mb-8 leading-relaxed">
-            Get graded on the desk with red-pen annotations, an uncompromising verdict stamp, and exact bullet rewrites.
+          {/* Subcopy (A.2 Exact Spec) */}
+          <p className="font-body text-base sm:text-lg text-tan max-w-[660px] mx-auto mb-8 leading-relaxed">
+            Red pen se poori marking hogi, ek pakka verdict stamp milega, aur exact line likh ke bhi denge ki fix kaise karna hai.
           </p>
 
-          {/* Primary + Ghost CTA Pair */}
+          {/* Primary + Ghost CTA Pair (A.2 Exact Spec) */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link to="/roast" id="hero-cta" className="btn-primary">
-              Upload resume
+              Resume daal de bhai
             </Link>
             <a href="#sample" className="btn-ghost">
-              See sample roast
+              Pehle sample dekh le
             </a>
           </div>
 
@@ -451,24 +457,29 @@ export default function LandingPage() {
       {/* ── Bottom CTA ── */}
       <section className="py-24 px-4 border-t border-white/[0.08] text-center">
         <div className="max-w-[640px] mx-auto">
-          <p className="section-label mb-3">Instant Evaluation</p>
+          <p className="section-label mb-3">INSTANT ROAST</p>
           <h2 className="font-display text-3xl sm:text-4xl text-paper mb-4 leading-tight">
-            Place your resume on the desk.
+            Apna resume desk pe rakh do.
           </h2>
           <p className="font-mono text-xs text-tan-dim mb-8">
-            Free · 1 roast/day · No credit card required · Graded in ~15 seconds
+            Free · 1 roast/day · Koi credit card nahi chahiye · ~15 seconds mein report
           </p>
           <Link to="/roast" className="btn-primary">
-            Upload resume
+            Resume daal de bhai
           </Link>
         </div>
       </section>
 
-      {/* ── Footer ── */}
+      {/* ── Footer (Section A.6 Tagline) ── */}
       <footer className="border-t border-white/[0.08] py-8 px-6 text-center sm:text-left">
         <div className="max-w-[960px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="font-display text-sm text-paper">
-            RESUME<span className="text-stamp">ROAST</span>
+          <div>
+            <div className="font-display text-sm text-paper">
+              RESUME<span className="text-stamp">ROAST</span>
+            </div>
+            <p className="font-mono text-[11px] text-tan-dim mt-1">
+              resume roast — desk kabhi jhooth nahi bolta.
+            </p>
           </div>
           <nav className="flex items-center gap-4 font-mono text-xs text-tan-dim" aria-label="Legal footer links">
             <Link to="/pricing" className="hover:text-tan transition-colors">Pricing</Link>

@@ -6,7 +6,7 @@ interface DeskClutterProps {
 }
 
 export default function DeskClutter({
-  stickyText = 'bhai fix this before friday!! 😭',
+  stickyText = 'friday se pehle fix kar le yaar!! 😭',
   stickyRotation = 4,
 }: DeskClutterProps) {
   const [offset, setOffset] = useState({ x: 0, y: 0 })

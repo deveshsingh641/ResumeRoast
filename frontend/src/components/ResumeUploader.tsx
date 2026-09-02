@@ -163,10 +163,10 @@ export default function ResumeUploader() {
         </div>
 
         <p className="font-mono text-sm text-paper mb-1">
-          {isDragOver ? 'Release to drop onto desk' : 'Place your resume on the desk'}
+          {isDragOver ? 'Abhi chhod do desk pe!' : 'Apna resume yahan drop karo'}
         </p>
         <p className="font-mono text-xs text-tan-dim mb-6">
-          PDF or DOCX format · Max 5MB
+          PDF ya DOCX format · Max 5MB
         </p>
 
         {/* Primary verb-first button */}
@@ -180,7 +180,7 @@ export default function ResumeUploader() {
             if (!isProcessing) fileInputRef.current?.click()
           }}
         >
-          Browse files
+          File choose karo
         </button>
 
         <input

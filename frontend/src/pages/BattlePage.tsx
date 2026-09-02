@@ -85,12 +85,12 @@ export default function BattlePage() {
       <div className="max-w-[1100px] mx-auto px-4 space-y-12 text-center">
         {/* Title */}
         <div>
-          <p className="section-label mb-2">1-ON-1 RESUME SHOWDOWN</p>
+          <p className="section-label mb-2">1-ON-1 RESUME KA DANGAL</p>
           <h1 className="font-display text-3xl sm:text-5xl text-paper tracking-tight">
             Resume <span className="text-stamp">Roast Battle</span>
           </h1>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-[600px] mx-auto">
-            Drop two resumes on the desk. AI referees the fight and crowns the winner with comparative savage commentary.
+            Do resume desk pe daal. AI referee karega dangal aur batayega kiska kachra kam hai.
           </p>
         </div>
 
@@ -102,7 +102,7 @@ export default function BattlePage() {
               <div className="border border-dashed border-white/20 hover:border-amber-400/50 rounded-lg p-6 bg-white/[0.02] text-left transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-mono text-xs text-amber-400 font-bold uppercase tracking-wider">
-                    🥊 FIGHTER 1 (YOUR RESUME)
+                    🥊 FIGHTER 1 (TERA RESUME)
                   </span>
                   {file1 && <span className="font-mono text-xs text-emerald-400">✓ Ready</span>}
                 </div>
@@ -121,9 +121,9 @@ export default function BattlePage() {
                 >
                   <p className="text-2xl mb-2">📄</p>
                   <p className="font-mono text-xs text-paper font-bold truncate">
-                    {file1 ? file1.name : 'Choose Fighter 1 Resume (PDF/DOCX)'}
+                    {file1 ? file1.name : 'Pehla Resume Chuno (PDF/DOCX)'}
                   </p>
-                  <p className="font-mono text-[10px] text-tan-dim mt-1">Click to browse file</p>
+                  <p className="font-mono text-[10px] text-tan-dim mt-1">File choose karne ke liye click karo</p>
                 </label>
               </div>
 
@@ -131,7 +131,7 @@ export default function BattlePage() {
               <div className="border border-dashed border-white/20 hover:border-ember/50 rounded-lg p-6 bg-white/[0.02] text-left transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-mono text-xs text-ember font-bold uppercase tracking-wider">
-                    🥊 FIGHTER 2 (RIVAL / FRIEND)
+                    🥊 FIGHTER 2 (DOST YA RIVAL KA RESUME)
                   </span>
                   {file2 && <span className="font-mono text-xs text-emerald-400">✓ Ready</span>}
                 </div>
@@ -150,9 +150,9 @@ export default function BattlePage() {
                 >
                   <p className="text-2xl mb-2">📄</p>
                   <p className="font-mono text-xs text-paper font-bold truncate">
-                    {file2 ? file2.name : 'Choose Fighter 2 Resume (PDF/DOCX)'}
+                    {file2 ? file2.name : 'Doosra Resume Chuno (PDF/DOCX)'}
                   </p>
-                  <p className="font-mono text-[10px] text-tan-dim mt-1">Click to browse file</p>
+                  <p className="font-mono text-[10px] text-tan-dim mt-1">File choose karne ke liye click karo</p>
                 </label>
               </div>
             </div>
@@ -169,7 +169,7 @@ export default function BattlePage() {
               disabled={loading || !file1 || !file2}
               className="btn-primary w-full sm:w-auto sm:px-12 py-3 text-sm justify-center shadow-lg"
             >
-              {loading ? 'Analyzing both fighters… 🥊' : '⚔️ START ROAST BATTLE'}
+              {loading ? 'Dono fighters ko inspect kar rahe hain… 🥊' : '⚔️ DANGAL SHURU KARO'}
             </button>
           </div>
         )}

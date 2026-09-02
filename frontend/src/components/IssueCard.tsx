@@ -1,15 +1,6 @@
 import { useState } from 'react'
 import type { Issue } from '@/store/useAppStore'
-
-const CATEGORY_LABELS: Record<string, string> = {
-  buzzword:     'BUZZWORD',
-  'no-metrics': 'NO METRICS',
-  formatting:   'FORMATTING',
-  length:       'LENGTH / DENSITY',
-  irrelevant:   'IRRELEVANT',
-  typo:         'TYPO',
-  other:        'OTHER',
-}
+import { getHinglishTag } from '@/utils/categoryTags'
 
 export function getCategoryColor(category: string): string {
   switch (category) {
@@ -34,6 +25,7 @@ interface IssueCardProps {
 export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
   const [showFix, setShowFix] = useState(false)
   const categoryColor = getCategoryColor(issue.category)
+  const tagLabel = getHinglishTag(issue.category)
 
   return (
     <div
@@ -60,10 +52,10 @@ export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
           <p className="font-mono text-xs text-tan">
-            Issue #{rank} locked in Free tier
+            Issue #{rank} Free tier mein locked hai bhai 🔒
           </p>
           <a href="/pricing" className="btn-ghost btn-ghost-sm">
-            Unlock full roast
+            Poora roast unlock karo
           </a>
         </div>
       )}
@@ -80,7 +72,7 @@ export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
               border: `1px solid ${categoryColor}40`,
             }}
           >
-            {CATEGORY_LABELS[issue.category] ?? issue.category.toUpperCase()}
+            {tagLabel}
           </span>
           <span className="font-mono text-xs text-tan-dim">
             #{String(rank).padStart(2, '0')}
@@ -109,13 +101,13 @@ export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
               aria-expanded={showFix}
             >
               <span className="select-none">{showFix ? '−' : '+'}</span>
-              <span>{showFix ? 'Hide suggested fix' : 'View suggested fix'}</span>
+              <span>{showFix ? 'Fix chhupao (−)' : 'Fix dekh le (+)'}</span>
             </button>
 
             {showFix && (
               <div className="mt-2 bg-[#F5EFE0]/[0.04] border border-white/[0.08] rounded-sm p-3">
                 <p className="font-mono text-xs text-tan-dim mb-1 uppercase tracking-wider">
-                  Recommended Rewrite:
+                  Aise Likhna Chahiye Tha:
                 </p>
                 <p className="font-mono text-xs text-paper leading-relaxed">
                   {issue.fix}
