@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import LandingPage from '@/pages/LandingPage'
 import RoastPage from '@/pages/RoastPage'
 import ResultsPage from '@/pages/ResultsPage'
@@ -38,6 +39,7 @@ export default function App() {
           }
         />
       </Routes>
+      <Analytics />
     </BrowserRouter>
   )
 }
