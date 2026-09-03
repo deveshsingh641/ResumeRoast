@@ -44,8 +44,11 @@ This is the standard, modern setup: deploy the backend on **Render** (or Railway
    | `GEMINI_API_KEY` | `AIzaSy...` | Your Gemini API Key from [Google AI Studio](https://aistudio.google.com) |
    | `ENVIRONMENT` | `production` | Enables production mode and disables Swagger docs |
    | `DATABASE_URL` | *(Optional)* | Your PostgreSQL connection string (from Supabase/Neon). If omitted, runs in memory. |
-   | `FRONTEND_URL` | `https://your-frontend.vercel.app` | We will set this in Step 2 |
+   | `FRONTEND_URL` | `https://your-frontend.vercel.app` | Production frontend domain for CORS |
    | `FREE_TIER_DAILY_LIMIT` | `1` | Free roasts allowed per IP/fingerprint per day |
+   | `RAZORPAY_KEY_ID` | `rzp_live_...` | Razorpay Key ID (Use `rzp_test_...` for testing, `rzp_live_...` for production) |
+   | `RAZORPAY_KEY_SECRET` | `secret_...` | Razorpay Key Secret from Dashboard > Settings > API Keys |
+   | `RAZORPAY_WEBHOOK_SECRET` | `whsec_...` | Webhook Secret from Razorpay Dashboard > Webhooks (for `order.paid` and `payment.captured`) |
 
 6. Click **Deploy Web Service**.
 7. Once deployed, copy your backend service URL (e.g. `https://resumeroast-api.onrender.com`). Verify it by visiting `https://resumeroast-api.onrender.com/health` (should return `{"status":"ok"}`).

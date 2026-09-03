@@ -6,6 +6,8 @@ from __future__ import annotations
 import hashlib
 import os
 
+from typing import Optional
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -23,16 +25,23 @@ def _device_fingerprint(request: Request) -> str:
 
 
 @router.get("/usage")
-async def get_usage(request: Request) -> JSONResponse:
+async def get_usage(request: Request, email: Optional[str] = None) -> JSONResponse:
+    user_email = email or request.headers.get("X-User-Email")
+    is_pro = False
+    if user_email:
+        clean_email = user_email.strip().lower()
+        is_pro = (database.get_user_subscription(clean_email) == "pro")
+
     fingerprint = _device_fingerprint(request)
     used = database.get_usage_count(fingerprint)
-    remaining = max(0, FREE_TIER_LIMIT - used)
+    remaining = 999999 if is_pro else max(0, FREE_TIER_LIMIT - used)
+    limit = 999999 if is_pro else FREE_TIER_LIMIT
 
     return JSONResponse(
         content={
             "used": used,
             "remaining": remaining,
-            "limit": FREE_TIER_LIMIT,
-            "is_pro": False,  # TODO: check subscription_status when auth is added
+            "limit": limit,
+            "is_pro": is_pro,
         }
     )

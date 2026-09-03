@@ -3,17 +3,26 @@ FastAPI application entry point.
 """
 from __future__ import annotations
 
+import logging
 import os
 
 from dotenv import load_dotenv
+
+load_dotenv()
+
+# Configure root logger with informative timestamp format
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger("main")
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-
-load_dotenv()
 
 from app.db.database import init_db, cleanup_expired_roasts
 from app.routers import battle, payment, roast, usage, voice, wall
@@ -38,13 +47,21 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ---------------------------------------------------------------------------
-# CORS
+# CORS (Strict origin list without wildcard to comply with credentials spec)
 # ---------------------------------------------------------------------------
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-origins = [url.strip().rstrip("/") for url in FRONTEND_URL.split(",") if url.strip()]
-for default_origin in ["http://localhost:5173", "http://localhost:3000", "*"]:
-    if default_origin not in origins:
-        origins.append(default_origin)
+configured_origins = [
+    url.strip().rstrip("/")
+    for url in FRONTEND_URL.split(",")
+    if url.strip() and url.strip() != "*"
+]
+dev_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+origins = list(dict.fromkeys(configured_origins + dev_origins))
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,11 +82,21 @@ app.include_router(usage.router)
 app.include_router(payment.router)
 
 
+from fastapi import FastAPI, HTTPException, Request
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 # ---------------------------------------------------------------------------
-# Global error handler — never leak raw stack traces
+# Global error handler — preserves HTTPExceptions, never leaks raw stack traces
 # ---------------------------------------------------------------------------
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    if isinstance(exc, (HTTPException, StarletteHTTPException)):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=getattr(exc, "headers", None),
+        )
+    logger.exception(f"Unhandled internal server error: {exc}")
     return JSONResponse(
         status_code=500,
         content={

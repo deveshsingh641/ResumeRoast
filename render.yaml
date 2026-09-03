@@ -16,3 +16,9 @@ services:
         sync: false
       - key: FREE_TIER_DAILY_LIMIT
         value: 1
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false

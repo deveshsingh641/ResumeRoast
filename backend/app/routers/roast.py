@@ -133,11 +133,17 @@ async def create_roast(
             detail=f"File too large ({size_mb}MB). Maximum supported size is 5MB.",
         )
 
-    # 2. Rate-limit check (server-enforced)
+    # 2. Rate-limit & Pro subscription check (server-enforced)
+    user_email = request.headers.get("X-User-Email") or request.query_params.get("email")
+    is_pro = False
+    if user_email:
+        clean_email = user_email.strip().lower()
+        is_pro = (database.get_user_subscription(clean_email) == "pro")
+
+    is_free_tier = not is_pro
     fingerprint = _device_fingerprint(request)
     usage_count = database.get_usage_count(fingerprint)
 
-    is_free_tier = True  # TODO: Check subscription when authenticated
     if is_free_tier and usage_count >= FREE_TIER_LIMIT:
         raise HTTPException(
             status_code=429,
@@ -244,9 +250,18 @@ async def get_demo_roast() -> JSONResponse:
 
 
 @router.get("/roast/{roast_id}")
-async def get_roast(roast_id: str, request: Request) -> JSONResponse:
+async def get_roast(roast_id: str, request: Request, email: Optional[str] = None) -> JSONResponse:
+    # Check if request comes with Pro user identification
+    user_email = email or request.headers.get("X-User-Email")
+    is_pro = False
+    if user_email:
+        is_pro = (database.get_user_subscription(user_email.strip().lower()) == "pro")
+
     if roast_id in ("demo", "demo-roast", "sample-roast-1"):
-        return JSONResponse(content=SAMPLE_ROAST_RESPONSE)
+        demo_resp = dict(SAMPLE_ROAST_RESPONSE)
+        if is_pro:
+            demo_resp["is_truncated"] = False
+        return JSONResponse(content=demo_resp)
 
     row = database.get_roast(roast_id)
     if row is None:
@@ -270,8 +285,8 @@ async def get_roast(roast_id: str, request: Request) -> JSONResponse:
         except Exception:
             strengths = []
 
-    is_truncated = len(issues) > 3
-    visible_issues = issues[:3]
+    is_truncated = (len(issues) > 3) and (not is_pro)
+    visible_issues = issues if is_pro else issues[:3]
 
     return JSONResponse(
         content={

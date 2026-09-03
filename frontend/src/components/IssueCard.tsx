@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import type { Issue } from '@/store/useAppStore'
 import { getHinglishTag } from '@/utils/categoryTags'
 
@@ -93,9 +94,12 @@ export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: 
           <p className="font-mono text-xs text-tan">
             Issue #{rank} Free tier mein locked hai bhai 🔒
           </p>
-          <a href="/pricing" className="btn-ghost btn-ghost-sm">
+          <Link
+            to={typeof window !== 'undefined' ? `/pricing?from=${encodeURIComponent(window.location.pathname)}` : '/pricing'}
+            className="btn-ghost btn-ghost-sm"
+          >
             Poora roast unlock karo
-          </a>
+          </Link>
         </div>
       )}
 

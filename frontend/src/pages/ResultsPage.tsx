@@ -77,7 +77,11 @@ export default function ResultsPage() {
       try {
         setLoading(true)
         setError(null)
-        const { data } = await axios.get(`/api/roast/${id}`, { timeout: 15000 })
+        const savedEmail = typeof window !== 'undefined' ? localStorage.getItem('resumeroast_user_email') || '' : ''
+        const url = savedEmail
+          ? `/api/roast/${id}?email=${encodeURIComponent(savedEmail)}`
+          : `/api/roast/${id}`
+        const { data } = await axios.get(url, { timeout: 15000 })
         setLocalResult(data)
         setResult(data)
       } catch (err: any) {
@@ -325,7 +329,10 @@ export default function ResultsPage() {
                   Pro plan mein saari chhipi galtiyaan, exact rewritten lines, aur unlimited daily roasts khul jayenge.
                 </p>
               </div>
-              <Link to="/pricing" className="btn-primary shrink-0">
+              <Link
+                to={typeof window !== 'undefined' ? `/pricing?from=${encodeURIComponent(window.location.pathname)}` : '/pricing'}
+                className="btn-primary shrink-0"
+              >
                 Poora roast unlock karo
               </Link>
             </div>
