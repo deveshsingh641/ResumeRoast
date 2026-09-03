@@ -16,13 +16,29 @@ from app.services import voice_service
 router = APIRouter(prefix="/api/roast", tags=["voice"])
 
 
+DEMO_VOICE_ROAST = {
+    "id": "demo",
+    "overall_score": 28,
+    "band": "weak",
+    "one_line_verdict": "Bhai resume hai ya suspense novel? 🕵️",
+    "issues": [
+        {"quoted_text": "Responsible for building UI components", "category": "no-metrics", "roast": "Responsible for likhna band karo yaar recruiter ko number chahiye"},
+        {"quoted_text": "DECLARATION: I hereby declare all information is true", "category": "formatting", "roast": "Bhai 2005 ka declaration kyu daal rakha hai"},
+    ],
+}
+
+
 @router.post("/{roast_id}/voice")
 async def generate_voice_roast(roast_id: str, request: Request) -> JSONResponse:
     """
     Generate or retrieve an existing WhatsApp-style voice note roast.
     Uses stored one_line_verdict and top issues to compose natural spoken script.
     """
-    roast = database.get_roast(roast_id)
+    if roast_id in ("demo", "demo-roast", "sample-roast-1"):
+        roast = DEMO_VOICE_ROAST
+    else:
+        roast = database.get_roast(roast_id)
+
     if not roast:
         raise HTTPException(
             status_code=404,
@@ -51,7 +67,8 @@ async def generate_voice_roast(roast_id: str, request: Request) -> JSONResponse:
 
     # 2. Generate audio
     audio_path = voice_service.generate_voice_roast_audio(roast_id, script)
-    database.update_roast_voice(roast_id, script, audio_path)
+    if roast_id not in ("demo", "demo-roast", "sample-roast-1"):
+        database.update_roast_voice(roast_id, script, audio_path)
 
     # Calculate approximate duration based on word count (~130 words per minute)
     word_count = len(script.split())
@@ -76,7 +93,11 @@ async def get_voice_audio(roast_id: str) -> FileResponse:
     audio_path = voice_service.get_cached_voice_audio_path(roast_id)
     if not audio_path or not os.path.exists(audio_path):
         # Generate on the fly if roast exists
-        roast = database.get_roast(roast_id)
+        if roast_id in ("demo", "demo-roast", "sample-roast-1"):
+            roast = DEMO_VOICE_ROAST
+        else:
+            roast = database.get_roast(roast_id)
+
         if not roast:
             raise HTTPException(status_code=404, detail="Voice note audio not found.")
 

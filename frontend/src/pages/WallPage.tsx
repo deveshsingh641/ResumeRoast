@@ -194,6 +194,59 @@ export default function WallPage() {
           </Link>
         </div>
 
+        {/* Weekly Spotlight Feature */}
+        <section
+          aria-label="Weekly Spotlight"
+          className="max-w-[960px] mx-auto bg-gradient-to-br from-[#24130F] to-[#14100C] border-2 border-amber-500/40 rounded-sm p-6 text-left relative overflow-hidden shadow-2xl"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 border-b border-white/[0.08] pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🌟</span>
+              <div>
+                <span className="font-mono text-[10px] text-amber-400 font-bold uppercase tracking-widest block">
+                  WEEKLY SPOTLIGHT // MOST VIRAL SUBMISSION
+                </span>
+                <h2 className="font-display text-lg sm:text-xl text-paper">
+                  {activeTab === 'shame' ? 'This Week’s Hall of Disaster Champion' : 'This Week’s Benchmark Resume'}
+                </h2>
+              </div>
+            </div>
+            <span className="font-mono text-xs px-2.5 py-1 bg-amber-400/10 border border-amber-400/30 text-amber-300 rounded-sm">
+              🔥 1,420 shares this week
+            </span>
+          </div>
+
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-black/40 border border-white/10 rounded-sm p-4">
+            <div className="flex-1 space-y-2">
+              <p className="font-display text-base sm:text-lg text-paper">
+                "{activeTab === 'shame'
+                  ? 'Bhai resume hai ya suspense novel? 🕵️ 4 page ka resume dekh ke ATS behosh ho gaya.'
+                  : 'FastAPI aur React ka crisp integration with real performance metrics! 🚀'}"
+              </p>
+              <div className="flex flex-wrap gap-2 text-[11px] font-mono text-tan-dim">
+                <span className="bg-white/[0.05] px-2 py-0.5 rounded-[2px]">
+                  {activeTab === 'shame' ? '❌ 14 Buzzwords' : '✅ 8 Metrics Included'}
+                </span>
+                <span className="bg-white/[0.05] px-2 py-0.5 rounded-[2px]">
+                  {activeTab === 'shame' ? '❌ 0 Numbers' : '✅ Clean 1-Page Layout'}
+                </span>
+              </div>
+            </div>
+
+            <div className="shrink-0 flex items-center gap-4">
+              <ScoreStamp
+                score={activeTab === 'shame' ? 22 : 92}
+                band={activeTab === 'shame' ? 'weak' : 'strong'}
+                size="md"
+                animate={false}
+              />
+              <Link to="/roast" className="btn-primary !text-xs !py-2 !px-3">
+                Beat this score →
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* Grid of PaperMockup-lite Wall Cards */}
         {loading ? (
           <div className="text-center py-16 font-mono text-xs text-tan-dim">

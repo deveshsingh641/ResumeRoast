@@ -88,8 +88,18 @@ async def on_startup() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Health check
+# Health & Root check
 # ---------------------------------------------------------------------------
+@app.get("/")
+async def root() -> dict:
+    return {
+        "status": "ok",
+        "service": "resume-roast-api",
+        "message": "Resume Roast Backend is live and running 🔥",
+    }
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok", "service": "resume-roast-api"}
+

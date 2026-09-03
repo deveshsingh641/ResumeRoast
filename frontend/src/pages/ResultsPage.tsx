@@ -12,6 +12,7 @@ import DeskClutter from '@/components/DeskClutter'
 import PapaProudMeter from '@/components/PapaProudMeter'
 import WorstLineTrophy from '@/components/WorstLineTrophy'
 import ReferralChallenge from '@/components/ReferralChallenge'
+import ScoreJourney from '@/components/ScoreJourney'
 import { SAMPLE_ROAST_DATA, ExtendedRoastResult } from '@/data/sampleRoast'
 
 export default function ResultsPage() {
@@ -20,6 +21,25 @@ export default function ResultsPage() {
   const [result, setLocalResult] = useState<ExtendedRoastResult | null>(storeResult)
   const [loading, setLoading] = useState(!storeResult && id !== 'demo')
   const [error, setError] = useState<string | null>(null)
+  const [downloadingCert, setDownloadingCert] = useState(false)
+
+  const handleDownloadCertificate = async () => {
+    if (!result) return
+    try {
+      setDownloadingCert(true)
+      const downloadUrl = `/api/roast/${result.id}/certificate/download`
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = `ResumeRoast-Certificate-${result.id.slice(0, 8)}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch {
+      window.open(`/api/roast/${result.id}/certificate/download`, '_blank')
+    } finally {
+      setTimeout(() => setDownloadingCert(false), 2500)
+    }
+  }
 
   useEffect(() => {
     if (storeResult?.id === id) {
@@ -233,6 +253,47 @@ export default function ResultsPage() {
             </div>
           </section>
         )}
+
+        {/* ── 5.5 Score Journey Roadmap ── */}
+        <section aria-label="Score Journey Roadmap" className="pt-2">
+          <ScoreJourney
+            currentScore={result.overall_score}
+            band={result.band}
+            totalIssues={result.total_issues}
+          />
+        </section>
+
+        {/* ── 5.8 Official Parody Certificate Download Card ── */}
+        <section
+          aria-label="Official Evaluation Diploma"
+          className="max-w-[640px] mx-auto text-left border-2 border-dashed border-amber-500/40 bg-gradient-to-br from-[#1C160E] to-[#120F0C] rounded-sm p-6 shadow-xl relative overflow-hidden"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xl">📜</span>
+                <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold">
+                  OFFICIAL EVALUATION DIPLOMA // PARODY PDF
+                </span>
+              </div>
+              <h3 className="font-display text-lg sm:text-xl text-paper">
+                Official Parody Certificate Download Karo
+              </h3>
+              <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
+                High-res printable PDF with wax seal stamp, score verdict, and official parody title.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadCertificate}
+              disabled={downloadingCert}
+              className="btn-primary shrink-0 !text-xs !py-2.5 !px-4 flex items-center gap-1.5 font-bold whitespace-nowrap"
+            >
+              <span>{downloadingCert ? 'Generating PDF…' : 'Download Certificate (PDF)'}</span>
+              <span>📥</span>
+            </button>
+          </div>
+        </section>
 
         {/* ── 6. Live Share Card Generation Module (B.1 WhatsApp First) ── */}
         <section aria-label="Share score card" className="pt-6">

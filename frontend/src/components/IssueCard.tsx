@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Issue } from '@/store/useAppStore'
 import { getHinglishTag } from '@/utils/categoryTags'
 
@@ -27,9 +27,45 @@ export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
   const categoryColor = getCategoryColor(issue.category)
   const tagLabel = getHinglishTag(issue.category)
 
+  // 1.2 WhatsApp "Typing..." Indicator State & Session Cache
+  const cardRef = useRef<HTMLDivElement>(null)
+  const cacheKey = `seen_issue_${issue.quoted_text.slice(0, 32)}`
+  const alreadySeen = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(cacheKey))
+
+  const [isTyping, setIsTyping] = useState(false)
+  const [isRevealed, setIsRevealed] = useState(alreadySeen || locked)
+
+  useEffect(() => {
+    if (alreadySeen || locked || isRevealed) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries
+        if (entry.isIntersecting) {
+          setIsTyping(true)
+          const timer = setTimeout(() => {
+            setIsTyping(false)
+            setIsRevealed(true)
+            sessionStorage.setItem(cacheKey, 'true')
+          }, 650)
+          observer.disconnect()
+          return () => clearTimeout(timer)
+        }
+      },
+      { threshold: 0.15 }
+    )
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [alreadySeen, locked, isRevealed, cacheKey])
+
   return (
     <div
-      className="relative bg-bg border border-white/[0.08] rounded-r-sm rounded-l-none p-5 select-none transition-colors duration-120"
+      ref={cardRef}
+      className="relative bg-bg border border-white/[0.08] rounded-r-sm rounded-l-none p-5 select-none transition-all duration-150 hover:-translate-y-[2px] hover:shadow-xl group"
       style={{
         borderLeft: `3px solid ${categoryColor}`,
       }}
@@ -65,7 +101,7 @@ export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
         {/* Header Row */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <span
-            className="font-mono text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-sm"
+            className="font-mono text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-sm transition-colors group-hover:brightness-125"
             style={{
               color: categoryColor,
               backgroundColor: `${categoryColor}15`,
@@ -86,13 +122,31 @@ export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
           <span className="text-tan-dim select-none ml-1">"</span>
         </div>
 
-        {/* Brutally honest critique text */}
-        <p className="font-body text-sm text-tan mb-3 leading-relaxed">
-          {issue.roast}
-        </p>
+        {/* 1.2 WhatsApp Typing Indicator Bouncing Dots Bubble */}
+        {isTyping && !isRevealed && (
+          <div
+            role="status"
+            aria-label="Roast is being typed..."
+            className="flex items-center gap-2 py-1.5 px-3 bg-white/[0.04] border border-white/[0.08] rounded-full w-fit mb-3"
+          >
+            <span className="font-mono text-[10px] text-tan-dim tracking-wider uppercase">roast type ho raha hai</span>
+            <div className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        )}
+
+        {/* Brutally honest critique text (Revealed once typing completes) */}
+        {isRevealed && (
+          <p className="font-body text-sm text-tan mb-3 leading-relaxed animate-fadeIn">
+            {issue.roast}
+          </p>
+        )}
 
         {/* Fix button & toggleable suggested rewrite */}
-        {issue.fix && (
+        {isRevealed && issue.fix && (
           <div>
             <button
               type="button"
@@ -135,8 +189,8 @@ export function IssueList({ issues, totalIssues, isTruncated }: IssueListProps) 
     {
       quoted_text: 'Assisted team members with various ad-hoc engineering duties as needed.',
       category: 'no-metrics',
-      roast: 'Vague filler sentence that adds zero quantifiable substance to your experience.',
-      fix: 'Specify 2-3 specific technical implementations and their measurable impact.',
+      roast: '"Assisted" likh ke credit kyu gawa rahe ho yaar? Exact metric batao na.',
+      fix: 'Rewrite karo: "Resolved 45+ critical production bugs in PostgreSQL, reducing ticket backlog by 40%".',
       start_offset: null,
       end_offset: null,
       severity_rank: 4,
@@ -144,8 +198,8 @@ export function IssueList({ issues, totalIssues, isTruncated }: IssueListProps) 
     {
       quoted_text: 'Passionate self-starter with deep enthusiasm for next-generation technology.',
       category: 'buzzword',
-      roast: 'Pure buzzword filler that recruiter eye-tracking studies prove gets skipped instantly.',
-      fix: 'Cut entirely and replace with actual tools, frameworks, and architecture patterns.',
+      roast: 'Pure buzzword filler hai bhai, recruiter eye-tracking mein instantly skip hota hai 🥱',
+      fix: 'Adjectives hatao aur shipped projects ke live stack aur metrics daalo.',
       start_offset: null,
       end_offset: null,
       severity_rank: 5,
@@ -153,8 +207,8 @@ export function IssueList({ issues, totalIssues, isTruncated }: IssueListProps) 
     {
       quoted_text: 'Curriculum Vitae — References available upon request.',
       category: 'formatting',
-      roast: 'Wastes a prime line of document real estate stating standard procedure.',
-      fix: 'Delete this line immediately to free up vertical spacing.',
+      roast: 'Prime resume space waste ho raha hai bhai, standard baatein likh ke 💀',
+      fix: 'Ye line delete karke vertical whitespace ko project links ke liye use karo.',
       start_offset: null,
       end_offset: null,
       severity_rank: 6,

@@ -26,6 +26,7 @@ FREE_TIER_DAILY_LIMIT = int(os.getenv("FREE_TIER_DAILY_LIMIT", "1"))
 _memory_store: dict[str, dict] = {}
 _usage_memory: dict[str, int] = {}  # key -> count for today (UTC)
 _dedup_cache: dict[str, tuple[float, str]] = {}  # content_hash -> (timestamp, roast_id)
+_reactions_memory: dict[str, dict[str, int]] = {}  # roast_id -> {emoji: count}
 
 
 def _get_conn():
@@ -102,9 +103,18 @@ CREATE TABLE IF NOT EXISTS usage_counters (
     UNIQUE(key, date)
 );
 
+CREATE TABLE IF NOT EXISTS roast_reactions (
+    id SERIAL PRIMARY KEY,
+    roast_id TEXT NOT NULL,
+    emoji TEXT NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (roast_id, emoji)
+);
+
 CREATE INDEX IF NOT EXISTS idx_roasts_expires_at ON roasts (expires_at);
 CREATE INDEX IF NOT EXISTS idx_battles_expires_at ON battles (expires_at);
 CREATE INDEX IF NOT EXISTS idx_wall_type_score ON wall_entries (type, hidden, score, created_at);
+CREATE INDEX IF NOT EXISTS idx_roast_reactions_roast_id ON roast_reactions (roast_id);
 """
 
 
@@ -684,4 +694,62 @@ def hide_wall_entry(entry_id: str, hidden: bool = True) -> bool:
             row = cur.fetchone()
         conn.commit()
     return bool(row)
+
+
+VALID_REACTION_EMOJIS = {"laugh", "fire", "skull", "eyes"}
+
+
+def get_roast_reactions(roast_id: str) -> dict[str, int]:
+    """Retrieve emoji reactions counts for a given roast_id."""
+    base = {"laugh": 0, "fire": 0, "skull": 0, "eyes": 0}
+    if not DATABASE_URL:
+        mem = _reactions_memory.get(roast_id, {})
+        for k, v in mem.items():
+            if k in base:
+                base[k] = v
+        return base
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT emoji, count FROM roast_reactions WHERE roast_id = %s", (roast_id,))
+                rows = cur.fetchall()
+                for r in rows:
+                    if r["emoji"] in base:
+                        base[r["emoji"]] = r["count"]
+                return base
+    except Exception as e:
+        print(f"[WARN] Error fetching roast reactions: {e}")
+        return base
+
+
+def add_roast_reaction(roast_id: str, emoji: str) -> dict[str, int]:
+    """Increment emoji reaction count for a roast and return updated counts."""
+    if emoji not in VALID_REACTION_EMOJIS:
+        return get_roast_reactions(roast_id)
+
+    if not DATABASE_URL:
+        if roast_id not in _reactions_memory:
+            _reactions_memory[roast_id] = {"laugh": 0, "fire": 0, "skull": 0, "eyes": 0}
+        _reactions_memory[roast_id][emoji] = _reactions_memory[roast_id].get(emoji, 0) + 1
+        return dict(_reactions_memory[roast_id])
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO roast_reactions (roast_id, emoji, count)
+                    VALUES (%s, %s, 1)
+                    ON CONFLICT (roast_id, emoji)
+                    DO UPDATE SET count = roast_reactions.count + 1
+                    """,
+                    (roast_id, emoji),
+                )
+            conn.commit()
+        return get_roast_reactions(roast_id)
+    except Exception as e:
+        print(f"[WARN] Error updating roast reaction: {e}")
+        return get_roast_reactions(roast_id)
+
 

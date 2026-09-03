@@ -8,10 +8,82 @@ import os
 from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 
 from app.db import database
 from app.services import ai_analyzer, extractor
+from app.services.certificate_service import generate_certificate_pdf, get_credential_title
+
+SAMPLE_ROAST_RESPONSE = {
+    "id": "demo",
+    "overall_score": 28,
+    "band": "weak",
+    "one_line_verdict": "Bhai resume hai ya suspense novel? 🕵️",
+    "issues": [
+        {
+            "quoted_text": "Responsible for building reusable UI components and collaborating across teams",
+            "category": "no-metrics",
+            "roast": "\"Responsible for\" likhna band karo yaar 😩 recruiter ko number chahiye, kahani nahi.",
+            "fix": "Kuch is tarah likho: 'Built 12 reusable UI components, cutting page load time by 30%' — number daalo, impact dikhao.",
+            "start_offset": 45,
+            "end_offset": 125,
+            "severity_rank": 1,
+        },
+        {
+            "quoted_text": "Leveraged synergistic paradigms to accelerate core business outcomes",
+            "category": "buzzword",
+            "roast": "Ye word har second resume mein hai bhai, tu unique kaise banega isse?",
+            "fix": "Corporate jargon cut karo aur seedha bolo: 'Led checkout redesign, reducing cart drop-off by 18%'.",
+            "start_offset": 130,
+            "end_offset": 200,
+            "severity_rank": 2,
+        },
+        {
+            "quoted_text": "DECLARATION: I hereby declare that all information is true to my knowledge",
+            "category": "formatting",
+            "roast": "Bhai 2005 ka declaration kyu daal rakha hai? ✋ Modern tech resume mein iski zaroorat nahi hai.",
+            "fix": "Declaration section poora delete kardo aur whitespace ko project links ke liye use karo.",
+            "start_offset": 210,
+            "end_offset": 285,
+            "severity_rank": 3,
+        },
+        {
+            "quoted_text": "Hobbies: Playing cricket, watching movies, listening to music",
+            "category": "irrelevant",
+            "roast": "Ye yahan kyun hai bhai? Iska job se koi lena dena nahi 🤔",
+            "fix": "Hobbies section hatao aur wahan hackathon rank ya open-source contributions mention karo.",
+            "start_offset": 290,
+            "end_offset": 350,
+            "severity_rank": 4,
+        },
+        {
+            "quoted_text": "Curriculum Vitae (Page 1 of 4) — Detailed Experience",
+            "category": "length",
+            "roast": "Recruiter 6 second dekhta hai resume, tune usse 4 page bana diya.",
+            "fix": "Isko 1 page mein fit karo. Purani schooling aur obvious baatein hatao.",
+            "start_offset": 355,
+            "end_offset": 405,
+            "severity_rank": 5,
+        },
+        {
+            "quoted_text": "SKILS: Pythno, Jacascript, C++",
+            "category": "typo",
+            "roast": "Spelling mistake hai bhai, spellcheck bhi nahi chalaya kya? 😩",
+            "fix": "Typo fix karo: 'Python, JavaScript, C++' — submission se pehle ek baar Grammarly zaroor run karo.",
+            "start_offset": 410,
+            "end_offset": 440,
+            "severity_rank": 6,
+        },
+    ],
+    "total_issues": 6,
+    "strengths": [
+        "Tech stack modern hai — FastAPI aur React achha combination hai 🚀",
+        "Projects section mein GitHub links live hain 🔥",
+    ],
+    "is_truncated": False,
+    "created_at": "2026-09-01T12:00:00Z",
+}
 
 router = APIRouter(prefix="/api", tags=["roast"])
 
@@ -166,8 +238,16 @@ async def create_roast(
     )
 
 
+@router.get("/roast/demo")
+async def get_demo_roast() -> JSONResponse:
+    return JSONResponse(content=SAMPLE_ROAST_RESPONSE)
+
+
 @router.get("/roast/{roast_id}")
 async def get_roast(roast_id: str, request: Request) -> JSONResponse:
+    if roast_id in ("demo", "demo-roast", "sample-roast-1"):
+        return JSONResponse(content=SAMPLE_ROAST_RESPONSE)
+
     row = database.get_roast(roast_id)
     if row is None:
         raise HTTPException(
@@ -206,3 +286,88 @@ async def get_roast(roast_id: str, request: Request) -> JSONResponse:
             "created_at": str(row.get("created_at", "")),
         }
     )
+
+
+@router.get("/roast/{roast_id}/certificate")
+async def get_certificate_info(roast_id: str) -> JSONResponse:
+    if roast_id in ("demo", "demo-roast", "sample-roast-1"):
+        row = SAMPLE_ROAST_RESPONSE
+    else:
+        row = database.get_roast(roast_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Roast not found or expired.")
+
+    score = row["overall_score"]
+    band = row["band"]
+    verdict = row["one_line_verdict"]
+    title = get_credential_title(score, band, seed=roast_id)
+
+    pdf_path = generate_certificate_pdf(
+        roast_id=roast_id,
+        candidate_name="Candidate",
+        score=score,
+        band=band,
+        one_line_verdict=verdict,
+        created_at=str(row.get("created_at", "")),
+    )
+
+    return JSONResponse(
+        content={
+            "status": "success",
+            "roast_id": roast_id,
+            "credential_title": title,
+            "download_url": f"/api/roast/{roast_id}/certificate/download",
+        }
+    )
+
+
+@router.get("/roast/{roast_id}/certificate/download")
+async def download_certificate(roast_id: str) -> FileResponse:
+    if roast_id in ("demo", "demo-roast", "sample-roast-1"):
+        row = SAMPLE_ROAST_RESPONSE
+    else:
+        row = database.get_roast(roast_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Roast not found or expired.")
+
+    pdf_path = generate_certificate_pdf(
+        roast_id=roast_id,
+        candidate_name="Candidate",
+        score=row["overall_score"],
+        band=row["band"],
+        one_line_verdict=row["one_line_verdict"],
+        created_at=str(row.get("created_at", "")),
+    )
+
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=500, detail="Failed to render certificate PDF.")
+
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        filename=f"ResumeRoast-Certificate-{roast_id[:8]}.pdf",
+        headers={"Content-Disposition": f'attachment; filename="ResumeRoast-Certificate-{roast_id[:8]}.pdf"'},
+    )
+
+
+class ReactionPayload(BaseModel):
+    emoji: str
+
+
+@router.get("/roast/{roast_id}/reactions")
+async def get_reactions(roast_id: str) -> JSONResponse:
+    reactions = database.get_roast_reactions(roast_id)
+    return JSONResponse(content={"roast_id": roast_id, "reactions": reactions})
+
+
+@router.post("/roast/{roast_id}/react")
+async def add_reaction(roast_id: str, payload: ReactionPayload) -> JSONResponse:
+    emoji = payload.emoji.strip().lower()
+    if emoji not in database.VALID_REACTION_EMOJIS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid emoji. Must be one of: {sorted(list(database.VALID_REACTION_EMOJIS))}",
+        )
+    reactions = database.add_roast_reaction(roast_id, emoji)
+    return JSONResponse(content={"roast_id": roast_id, "reactions": reactions})
+

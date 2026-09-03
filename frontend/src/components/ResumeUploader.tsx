@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react'
 import axios from 'axios'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import ProcessingState from './ProcessingState'
 
@@ -198,10 +198,20 @@ export default function ResumeUploader() {
       {errorMessage && (
         <div
           role="alert"
-          className="mt-3 text-left font-mono text-[13px] text-stamp leading-relaxed flex items-start gap-2"
+          className="mt-3 text-left font-mono text-[13px] text-stamp leading-relaxed flex flex-col gap-1.5 border border-stamp/30 bg-stamp/[0.06] p-3 rounded-sm"
         >
-          <span aria-hidden="true">⚠</span>
-          <span>{errorMessage}</span>
+          <div className="flex items-start gap-2">
+            <span aria-hidden="true">⚠</span>
+            <span>{errorMessage}</span>
+          </div>
+          {(errorMessage.toLowerCase().includes('daily') || errorMessage.toLowerCase().includes('limit')) && (
+            <Link
+              to="/pricing"
+              className="text-ember underline text-xs font-semibold hover:text-amber-300 ml-5 inline-block"
+            >
+              Upgrade to Pro for unlimited daily roasts →
+            </Link>
+          )}
         </div>
       )}
     </div>

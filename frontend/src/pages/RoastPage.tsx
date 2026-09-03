@@ -1,9 +1,11 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import ResumeUploader from '@/components/ResumeUploader'
 import { useAppStore } from '@/store/useAppStore'
 
 export default function RoastPage() {
   const { uploadError } = useAppStore()
+  const [searchParams] = useSearchParams()
+  const isUpgraded = searchParams.get('upgraded') === 'true'
 
   return (
     <main className="min-h-screen flex flex-col justify-between p-6 desk-cursor">
@@ -26,6 +28,21 @@ export default function RoastPage() {
         <p className="font-mono text-xs text-tan-dim mb-8">
           Red pen taiyyar hai. Kadak grading milegi aur exact bullet rewrites bhi.
         </p>
+
+        {/* Pro Active Celebration Banner */}
+        {isUpgraded && (
+          <div className="mb-6 bg-emerald-950/40 border border-emerald-500/40 rounded-sm p-4 text-left flex items-center gap-3">
+            <span className="text-2xl">🎉</span>
+            <div>
+              <p className="font-display text-sm text-emerald-300 font-bold">
+                Pro Subscription Active!
+              </p>
+              <p className="font-mono text-xs text-tan-dim mt-0.5">
+                Unlimited daily roasts aur full 5–8 issues breakdown unlock ho chuka hai.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Morphable Dropzone Component */}
         <ResumeUploader />

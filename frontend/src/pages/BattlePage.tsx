@@ -40,6 +40,16 @@ export default function BattlePage() {
       return
     }
 
+    if (file1.size === 0 || file2.size === 0) {
+      setError('One of your files is empty (0 bytes). Please upload complete resume documents.')
+      return
+    }
+
+    if (file1.size > 5 * 1024 * 1024 || file2.size > 5 * 1024 * 1024) {
+      setError('Maximum supported size is 5MB per resume file.')
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
@@ -53,8 +63,16 @@ export default function BattlePage() {
       setBattleData(data)
       window.history.pushState({}, '', `/battle/${data.id}`)
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || 'Failed to start battle. Please check your files.'
-      setError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+      const detail = err?.response?.data?.detail
+      let msg = 'Failed to start battle. Please check your files.'
+      if (typeof detail === 'object' && detail?.message) {
+        msg = detail.message
+      } else if (typeof detail === 'string') {
+        msg = detail
+      } else if (err?.message) {
+        msg = err.message
+      }
+      setError(msg)
     } finally {
       setLoading(false)
     }
