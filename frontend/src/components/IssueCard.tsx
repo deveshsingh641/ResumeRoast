@@ -20,16 +20,17 @@ interface IssueCardProps {
   issue: Issue
   rank: number
   locked?: boolean
+  roastId?: string
 }
 
-export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
+export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: IssueCardProps) {
   const [showFix, setShowFix] = useState(false)
   const categoryColor = getCategoryColor(issue.category)
   const tagLabel = getHinglishTag(issue.category)
 
   // 1.2 WhatsApp "Typing..." Indicator State & Session Cache
   const cardRef = useRef<HTMLDivElement>(null)
-  const cacheKey = `seen_issue_${issue.quoted_text.slice(0, 32)}`
+  const cacheKey = `seen_roast_${roastId}_issue_${rank}_${issue.quoted_text.slice(0, 20)}`
   const alreadySeen = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(cacheKey))
 
   const [isTyping, setIsTyping] = useState(false)
@@ -46,7 +47,9 @@ export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
           const timer = setTimeout(() => {
             setIsTyping(false)
             setIsRevealed(true)
-            sessionStorage.setItem(cacheKey, 'true')
+            try {
+              sessionStorage.setItem(cacheKey, 'true')
+            } catch {}
           }, 650)
           observer.disconnect()
           return () => clearTimeout(timer)
@@ -65,7 +68,7 @@ export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
   return (
     <div
       ref={cardRef}
-      className="relative bg-bg border border-white/[0.08] rounded-r-sm rounded-l-none p-5 select-none transition-all duration-150 hover:-translate-y-[2px] hover:shadow-xl group"
+      className="relative bg-bg border border-white/[0.08] rounded-r-sm rounded-l-none p-5 select-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-2xl hover:border-white/[0.16] group"
       style={{
         borderLeft: `3px solid ${categoryColor}`,
       }}
@@ -101,7 +104,7 @@ export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
         {/* Header Row */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <span
-            className="font-mono text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-sm transition-colors group-hover:brightness-125"
+            className="font-mono text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-sm transition-all duration-200 group-hover:brightness-125"
             style={{
               color: categoryColor,
               backgroundColor: `${categoryColor}15`,
@@ -122,18 +125,18 @@ export function IssueCard({ issue, rank, locked = false }: IssueCardProps) {
           <span className="text-tan-dim select-none ml-1">"</span>
         </div>
 
-        {/* 1.2 WhatsApp Typing Indicator Bouncing Dots Bubble */}
+        {/* 1.2 WhatsApp Typing Indicator Understated Bouncing Dots Bubble */}
         {isTyping && !isRevealed && (
           <div
             role="status"
-            aria-label="Roast is being typed..."
-            className="flex items-center gap-2 py-1.5 px-3 bg-white/[0.04] border border-white/[0.08] rounded-full w-fit mb-3"
+            aria-label="Roast line typing..."
+            className="flex items-center gap-2 py-1 px-3 bg-white/[0.04] border border-white/[0.08] rounded-full w-fit mb-3 select-none"
           >
-            <span className="font-mono text-[10px] text-tan-dim tracking-wider uppercase">roast type ho raha hai</span>
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim animate-bounce" style={{ animationDelay: '300ms' }} />
+            <span className="font-mono text-[10px] text-tan-dim tracking-wider">typing…</span>
+            <div className="flex items-center gap-1.5 py-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim typing-dot" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim typing-dot" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim typing-dot" style={{ animationDelay: '300ms' }} />
             </div>
           </div>
         )}
@@ -179,9 +182,10 @@ interface IssueListProps {
   issues: Issue[]
   totalIssues: number
   isTruncated: boolean
+  roastId?: string
 }
 
-export function IssueList({ issues, totalIssues, isTruncated }: IssueListProps) {
+export function IssueList({ issues, totalIssues, isTruncated, roastId }: IssueListProps) {
   const lockedCount = isTruncated ? Math.max(0, totalIssues - issues.length) : 0
 
   // Real placeholder locked cards for layout-shift-free preview
@@ -218,10 +222,10 @@ export function IssueList({ issues, totalIssues, isTruncated }: IssueListProps) 
   return (
     <div className="space-y-3 w-full max-w-[640px] mx-auto text-left">
       {issues.map((issue, idx) => (
-        <IssueCard key={idx} issue={issue} rank={idx + 1} locked={false} />
+        <IssueCard key={idx} issue={issue} rank={idx + 1} locked={false} roastId={roastId} />
       ))}
       {lockedCards.map((issue, idx) => (
-        <IssueCard key={`locked-${idx}`} issue={issue} rank={issues.length + idx + 1} locked={true} />
+        <IssueCard key={`locked-${idx}`} issue={issue} rank={issues.length + idx + 1} locked={true} roastId={roastId} />
       ))}
     </div>
   )

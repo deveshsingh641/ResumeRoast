@@ -360,14 +360,27 @@ async def get_reactions(roast_id: str) -> JSONResponse:
     return JSONResponse(content={"roast_id": roast_id, "reactions": reactions})
 
 
+_REACTION_COUNTS_BY_CLIENT: dict[str, int] = {}
+MAX_REACTIONS_PER_CLIENT_PER_ROAST = 10
+
+
 @router.post("/roast/{roast_id}/react")
-async def add_reaction(roast_id: str, payload: ReactionPayload) -> JSONResponse:
+async def add_reaction(roast_id: str, payload: ReactionPayload, request: Request) -> JSONResponse:
+    client_key = f"{_device_fingerprint(request)}:{roast_id}"
+    current_count = _REACTION_COUNTS_BY_CLIENT.get(client_key, 0)
+    if current_count >= MAX_REACTIONS_PER_CLIENT_PER_ROAST:
+        # Rate-limit reached; return existing reactions without incrementing
+        reactions = database.get_roast_reactions(roast_id)
+        return JSONResponse(content={"roast_id": roast_id, "reactions": reactions, "limited": True})
+
     emoji = payload.emoji.strip().lower()
     if emoji not in database.VALID_REACTION_EMOJIS:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid emoji. Must be one of: {sorted(list(database.VALID_REACTION_EMOJIS))}",
         )
+    _REACTION_COUNTS_BY_CLIENT[client_key] = current_count + 1
     reactions = database.add_roast_reaction(roast_id, emoji)
     return JSONResponse(content={"roast_id": roast_id, "reactions": reactions})
+
 

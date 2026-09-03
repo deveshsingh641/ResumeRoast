@@ -5,6 +5,7 @@ interface ScoreStampProps {
   score: number
   band?: ScoreBand
   animate?: boolean
+  visible?: boolean
   size?: 'sm' | 'md' | 'lg'
   rotation?: number // e.g. -8 to -16 deg
 }
@@ -49,10 +50,12 @@ export default function ScoreStamp({
   score,
   band,
   animate = true,
+  visible = true,
   size = 'lg',
   rotation,
 }: ScoreStampProps) {
   const [hasAnimated, setHasAnimated] = useState(!animate)
+  const [isIdleDrifting, setIsIdleDrifting] = useState(!animate)
   const compId = useId()
 
   // Pick deterministic rotation between -8deg and -16deg based on score / id if not explicitly passed
@@ -65,21 +68,37 @@ export default function ScoreStamp({
   const { diameter, borderWidth, numClass, labelClass, labelMargin } = SIZE_CONFIG[size]
 
   useEffect(() => {
-    if (animate) {
+    if (animate && visible) {
       const timer = setTimeout(() => {
         setHasAnimated(true)
       }, 50)
-      return () => clearTimeout(timer)
+      const driftTimer = setTimeout(() => {
+        setIsIdleDrifting(true)
+      }, 560)
+      return () => {
+        clearTimeout(timer)
+        clearTimeout(driftTimer)
+      }
     }
-  }, [animate])
+  }, [animate, visible])
+
+  if (!visible) {
+    return (
+      <div
+        style={{ width: diameter, height: diameter }}
+        className="opacity-0 pointer-events-none select-none"
+        aria-hidden="true"
+      />
+    )
+  }
 
   return (
     <div
       role="img"
       aria-label={`Score stamp: ${score} out of 100 — ${label}`}
       className={`relative inline-flex flex-col items-center justify-center select-none rounded-full shrink-0 ${
-        animate && hasAnimated ? 'animate-stamp-slam' : ''
-      }`}
+        animate && hasAnimated && !isIdleDrifting ? 'animate-stamp-slam' : ''
+      } ${isIdleDrifting ? 'animate-stamp-drift' : ''}`}
       style={{
         width: diameter,
         height: diameter,

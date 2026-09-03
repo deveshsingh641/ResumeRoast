@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import axios from 'axios'
-import type { RoastResult } from '@/store/useAppStore'
 import { useAppStore } from '@/store/useAppStore'
 import ScoreStamp from '@/components/ScoreStamp'
 import PaperMockup from '@/components/PaperMockup'
@@ -13,6 +12,11 @@ import PapaProudMeter from '@/components/PapaProudMeter'
 import WorstLineTrophy from '@/components/WorstLineTrophy'
 import ReferralChallenge from '@/components/ReferralChallenge'
 import ScoreJourney from '@/components/ScoreJourney'
+import ConfettiScraps from '@/components/ConfettiScraps'
+import SoundToggle from '@/components/SoundToggle'
+import RoastReactions from '@/components/RoastReactions'
+import PaperSkeleton from '@/components/PaperSkeleton'
+import { useCinematicReveal } from '@/hooks/useCinematicReveal'
 import { SAMPLE_ROAST_DATA, ExtendedRoastResult } from '@/data/sampleRoast'
 
 export default function ResultsPage() {
@@ -22,6 +26,21 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(!storeResult && id !== 'demo')
   const [error, setError] = useState<string | null>(null)
   const [downloadingCert, setDownloadingCert] = useState(false)
+  const [xRayMode, setXRayMode] = useState(false)
+
+  // 1.1 Cinematic Reveal Sequence Orchestrator
+  const {
+    paperSettled,
+    markStep,
+    stampVisible,
+    showConfetti,
+    setShowConfetti,
+    canSkip,
+    skip,
+  } = useCinematicReveal({
+    score: result ? result.overall_score : 0,
+    enabled: true,
+  })
 
   const handleDownloadCertificate = async () => {
     if (!result) return
@@ -80,14 +99,9 @@ export default function ResultsPage() {
     fetchResult()
   }, [id, storeResult, setResult])
 
+  // 2.4 Themed Loading Skeleton with paper & stamp branding
   if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center p-6 text-center">
-        <div className="font-mono text-xs text-tan-dim tracking-wider uppercase">
-          Desk pe report taiyyar ho rahi hai…
-        </div>
-      </main>
-    )
+    return <PaperSkeleton label="Desk pe report taiyyar ho rahi hai…" />
   }
 
   if (error || !result) {
@@ -114,36 +128,62 @@ export default function ResultsPage() {
 
   return (
     <main className="min-h-screen pb-24 desk-cursor relative overflow-hidden">
+      {/* 1.4 Confetti Burst for High Scores (score >= 70) */}
+      {showConfetti && (
+        <ConfettiScraps onComplete={() => setShowConfetti(false)} />
+      )}
+
       {/* Tactile Desk Clutter (A.5) */}
       <DeskClutter stickyText="friday se pehle fix kar le yaar!! 😭" stickyRotation={-5} />
 
       {/* Top Bar Header */}
-      <header className="border-b border-white/[0.08] py-4 px-6 mb-12 relative z-10">
+      <header className="border-b border-white/[0.08] py-4 px-6 mb-8 sm:mb-12 relative z-10">
         <div className="max-w-[960px] mx-auto flex items-center justify-between">
           <Link to="/" className="font-display text-lg tracking-tight text-paper select-none">
             RESUME<span className="text-stamp">ROAST</span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <SoundToggle compact={true} />
             <Link to="/battle" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">
-              ⚔️ Battle Mode
+              ⚔️ Battle
             </Link>
             <Link to="/roast" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              Dusra resume roast karo →
+              Dusra resume →
             </Link>
           </div>
         </div>
       </header>
 
-      <div className="max-w-[960px] mx-auto px-4 space-y-16 text-center relative z-10">
+      {/* 1.1 Skip Indicator Overlay during reveal sequence */}
+      {canSkip && (
+        <aside
+          role="button"
+          tabIndex={0}
+          aria-label="Skip animation sequence"
+          onClick={skip}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') skip() }}
+          className="fixed bottom-6 right-6 z-40 bg-bg/95 border border-white/[0.18] px-3.5 py-2 rounded-sm shadow-2xl cursor-pointer hover:border-amber-400 hover:text-amber-300 transition-all flex items-center gap-2 font-mono text-xs text-tan select-none animate-pulse"
+        >
+          <span>Tap anywhere to skip</span>
+          <span>⏩</span>
+        </aside>
+      )}
+
+      <div className="max-w-[960px] mx-auto px-4 space-y-12 sm:space-y-16 text-center relative z-10">
         {/* ── 1. Top Verdict Banner (A.6) ── */}
         <section aria-label="Roast Verdict">
           <p className="section-label mb-3">DESK KA OFFICIAL VERDICT</p>
-          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-paper tracking-tight leading-tight max-w-[780px] mx-auto mb-6">
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-paper tracking-tight leading-tight max-w-[780px] mx-auto mb-4">
             "{result.one_line_verdict}"
           </h1>
           <p className="font-mono text-xs text-tan-dim">
             Red pen se poori marking neeche dekho
           </p>
+
+          {/* 1.5 Emoji Reactions Component */}
+          <div className="mt-5 flex justify-center">
+            <RoastReactions roastId={result.id} />
+          </div>
 
           {/* Notice if document was truncated (>10 pages) */}
           {result.was_document_truncated && (
@@ -153,24 +193,61 @@ export default function ResultsPage() {
           )}
         </section>
 
-        {/* ── 2. PaperMockup & ScoreStamp ── */}
-        <section aria-label="Graded Paper Mockup" className="relative inline-block w-full max-w-[660px]">
-          <PaperMockup
-            candidateName="SUBMITTED RESUME"
-            candidateTitle="EXTRACTED CANDIDATE PROFILE"
-            issues={result.issues}
-            rotation={-2}
-            animate={true}
-          />
-          {/* Stamp overlay positioned on paper */}
-          <div className="absolute -top-6 right-2 sm:right-6 z-20">
-            <ScoreStamp
-              score={result.overall_score}
-              band={result.band}
+        {/* ── 2. Paper Mockup Mode Switch & Viewport ── */}
+        <section aria-label="Graded Paper Mockup Container">
+          {/* 1.6 X-Ray Mode Toggle Bar & Sound Control */}
+          <div className="flex flex-wrap items-center justify-between gap-3 max-w-[620px] mx-auto mb-3 px-1">
+            <div className="flex items-center gap-1 p-1 bg-white/[0.04] border border-white/[0.08] rounded-sm">
+              <button
+                type="button"
+                onClick={() => setXRayMode(false)}
+                className={`font-mono text-xs px-2.5 py-1 rounded-xs transition-all ${
+                  !xRayMode
+                    ? 'bg-stamp/20 text-stamp font-semibold border border-stamp/40'
+                    : 'text-tan-dim hover:text-paper'
+                }`}
+              >
+                📝 Red Pen Marking
+              </button>
+              <button
+                type="button"
+                onClick={() => setXRayMode(true)}
+                className={`font-mono text-xs px-2.5 py-1 rounded-xs transition-all ${
+                  xRayMode
+                    ? 'bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40'
+                    : 'text-tan-dim hover:text-paper'
+                }`}
+              >
+                🩻 X-Ray Heatmap
+              </button>
+            </div>
+
+            <SoundToggle />
+          </div>
+
+          {/* Paper and Stamp */}
+          <div className="relative inline-block w-full max-w-[660px]">
+            <PaperMockup
+              candidateName="SUBMITTED RESUME"
+              candidateTitle="EXTRACTED CANDIDATE PROFILE"
+              issues={result.issues}
+              rotation={-2}
               animate={true}
-              size="lg"
-              rotation={-12}
+              controlledPaperSettled={paperSettled}
+              controlledMarkStep={markStep}
+              xRayMode={xRayMode}
             />
+            {/* Stamp overlay positioned on paper with synced appearance */}
+            <div className="absolute -top-6 right-2 sm:right-6 z-20">
+              <ScoreStamp
+                score={result.overall_score}
+                band={result.band}
+                animate={true}
+                visible={stampVisible}
+                size="lg"
+                rotation={-12}
+              />
+            </div>
           </div>
         </section>
 
@@ -209,7 +286,7 @@ export default function ResultsPage() {
           </section>
         )}
 
-        {/* ── 4. Detailed Flagged Issues (Section A.6) ── */}
+        {/* ── 4. Detailed Flagged Issues (Section A.6 with WhatsApp typing indicator) ── */}
         <section aria-label="Flagged Issues Breakdown" className="space-y-6">
           <div className="max-w-[640px] mx-auto text-left flex items-baseline justify-between border-b border-white/[0.08] pb-3">
             <div>
@@ -229,6 +306,7 @@ export default function ResultsPage() {
             issues={result.issues}
             totalIssues={result.total_issues}
             isTruncated={result.is_truncated}
+            roastId={result.id}
           />
         </section>
 
@@ -295,7 +373,7 @@ export default function ResultsPage() {
           </div>
         </section>
 
-        {/* ── 6. Live Share Card Generation Module (B.1 WhatsApp First) ── */}
+        {/* ── 6. Live Share Card Generation Module (B.1 WhatsApp First + 2.3 Torn Paper Variant) ── */}
         <section aria-label="Share score card" className="pt-6">
           <div className="max-w-[640px] mx-auto text-left mb-6">
             <p className="section-label mb-1">DAMAGE SHARE KARO</p>
