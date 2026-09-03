@@ -27,6 +27,7 @@ _memory_store: dict[str, dict] = {}
 _usage_memory: dict[str, int] = {}  # key -> count for today (UTC)
 _dedup_cache: dict[str, tuple[float, str]] = {}  # content_hash -> (timestamp, roast_id)
 _reactions_memory: dict[str, dict[str, int]] = {}  # roast_id -> {emoji: count}
+_unique_visitors_memory: set[str] = set()  # "visitor_hash:YYYY-MM-DD"
 
 
 def _get_conn():
@@ -111,10 +112,18 @@ CREATE TABLE IF NOT EXISTS roast_reactions (
     UNIQUE (roast_id, emoji)
 );
 
+CREATE TABLE IF NOT EXISTS daily_unique_visitors (
+    visitor_hash TEXT NOT NULL,
+    date DATE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (visitor_hash, date)
+);
+
 CREATE INDEX IF NOT EXISTS idx_roasts_expires_at ON roasts (expires_at);
 CREATE INDEX IF NOT EXISTS idx_battles_expires_at ON battles (expires_at);
 CREATE INDEX IF NOT EXISTS idx_wall_type_score ON wall_entries (type, hidden, score, created_at);
 CREATE INDEX IF NOT EXISTS idx_roast_reactions_roast_id ON roast_reactions (roast_id);
+CREATE INDEX IF NOT EXISTS idx_daily_visitors_date ON daily_unique_visitors (date);
 """
 
 
@@ -751,5 +760,212 @@ def add_roast_reaction(roast_id: str, emoji: str) -> dict[str, int]:
     except Exception as e:
         print(f"[WARN] Error updating roast reaction: {e}")
         return get_roast_reactions(roast_id)
+
+
+# ---------------------------------------------------------------------------
+# First-Party Analytics & Visitor Tracking
+# ---------------------------------------------------------------------------
+def record_visit(visitor_hash: str, path: str = "/") -> dict:
+    """
+    Record a first-party visitor hit.
+    Deduplicates unique visitors per UTC calendar day without storing raw IPs.
+    """
+    today_utc = datetime.now(timezone.utc).date().isoformat()
+    clean_path = (path.split("?")[0].strip() or "/")[:60]
+    is_new_unique = False
+
+    if not DATABASE_URL:
+        mem_key = f"{visitor_hash}:{today_utc}"
+        if mem_key not in _unique_visitors_memory:
+            _unique_visitors_memory.add(mem_key)
+            is_new_unique = True
+            _usage_memory[f"stats:unique:{today_utc}"] = _usage_memory.get(f"stats:unique:{today_utc}", 0) + 1
+
+        _usage_memory[f"stats:pageviews:{today_utc}"] = _usage_memory.get(f"stats:pageviews:{today_utc}", 0) + 1
+        path_key = f"stats:path:{clean_path}:{today_utc}"
+        _usage_memory[path_key] = _usage_memory.get(path_key, 0) + 1
+
+        return {
+            "is_unique_today": is_new_unique,
+            "unique_visitors_today": _usage_memory.get(f"stats:unique:{today_utc}", 0),
+            "pageviews_today": _usage_memory.get(f"stats:pageviews:{today_utc}", 0),
+        }
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                # 1. Insert unique visitor
+                cur.execute(
+                    """
+                    INSERT INTO daily_unique_visitors (visitor_hash, date)
+                    VALUES (%s, %s)
+                    ON CONFLICT DO NOTHING
+                    RETURNING visitor_hash
+                    """,
+                    (visitor_hash, today_utc),
+                )
+                if cur.fetchone():
+                    is_new_unique = True
+                    cur.execute(
+                        """
+                        INSERT INTO usage_counters (key, date, count)
+                        VALUES ('stats:unique', %s, 1)
+                        ON CONFLICT (key, date) DO UPDATE SET count = usage_counters.count + 1
+                        """,
+                        (today_utc,),
+                    )
+
+                # 2. Always increment pageviews
+                cur.execute(
+                    """
+                    INSERT INTO usage_counters (key, date, count)
+                    VALUES ('stats:pageviews', %s, 1)
+                    ON CONFLICT (key, date) DO UPDATE SET count = usage_counters.count + 1
+                    """,
+                    (today_utc,),
+                )
+
+                # 3. Increment path hits
+                cur.execute(
+                    """
+                    INSERT INTO usage_counters (key, date, count)
+                    VALUES (%s, %s, 1)
+                    ON CONFLICT (key, date) DO UPDATE SET count = usage_counters.count + 1
+                    """,
+                    (f"stats:path:{clean_path}", today_utc),
+                )
+            conn.commit()
+    except Exception as e:
+        print(f"[WARN] Error recording visit: {e}")
+
+    return {"is_unique_today": is_new_unique}
+
+
+def get_analytics_stats(days: int = 7) -> dict:
+    """Retrieve daily visitor metrics, total roasts, and top pages."""
+    today = datetime.now(timezone.utc).date()
+    today_str = today.isoformat()
+
+    daily_history = []
+    top_paths_today = []
+
+    if not DATABASE_URL:
+        unique_today = _usage_memory.get(f"stats:unique:{today_str}", 0)
+        pageviews_today = _usage_memory.get(f"stats:pageviews:{today_str}", 0)
+        total_roasts = len(_memory_store)
+        total_battles = len(_battles_memory)
+        total_pro = sum(1 for u in _users_memory.values() if u.get("subscription_status") == "pro")
+
+        # History for past N days
+        for i in range(days):
+            d_str = (today - timedelta(days=i)).isoformat()
+            daily_history.append({
+                "date": d_str,
+                "unique_visitors": _usage_memory.get(f"stats:unique:{d_str}", 0),
+                "pageviews": _usage_memory.get(f"stats:pageviews:{d_str}", 0),
+            })
+
+        # Top paths today
+        prefix = "stats:path:"
+        suffix = f":{today_str}"
+        for k, v in _usage_memory.items():
+            if k.startswith(prefix) and k.endswith(suffix):
+                p = k[len(prefix):-len(suffix)]
+                top_paths_today.append({"path": p, "views": v})
+        top_paths_today.sort(key=lambda x: x["views"], reverse=True)
+
+        return {
+            "today": today_str,
+            "unique_visitors_today": unique_today,
+            "pageviews_today": pageviews_today,
+            "totals": {
+                "roasts": total_roasts,
+                "battles": total_battles,
+                "pro_users": total_pro,
+            },
+            "daily_history": daily_history,
+            "top_paths_today": top_paths_today[:10],
+        }
+
+    # PostgreSQL query
+    unique_today = 0
+    pageviews_today = 0
+    total_roasts = 0
+    total_battles = 0
+    total_pro = 0
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                # Today's counts
+                cur.execute(
+                    "SELECT key, count FROM usage_counters WHERE date = %s AND key IN ('stats:unique', 'stats:pageviews')",
+                    (today_str,),
+                )
+                for row in cur.fetchall():
+                    if row["key"] == "stats:unique":
+                        unique_today = row["count"]
+                    elif row["key"] == "stats:pageviews":
+                        pageviews_today = row["count"]
+
+                # Totals
+                cur.execute("SELECT COUNT(*) as c FROM roasts")
+                total_roasts = cur.fetchone()["c"]
+                cur.execute("SELECT COUNT(*) as c FROM battles")
+                total_battles = cur.fetchone()["c"]
+                cur.execute("SELECT COUNT(*) as c FROM users WHERE subscription_status = 'pro'")
+                total_pro = cur.fetchone()["c"]
+
+                # Past N days history
+                start_date = (today - timedelta(days=days - 1)).isoformat()
+                cur.execute(
+                    """
+                    SELECT date, key, count FROM usage_counters
+                    WHERE date >= %s AND key IN ('stats:unique', 'stats:pageviews')
+                    ORDER BY date DESC
+                    """,
+                    (start_date,),
+                )
+                rows = cur.fetchall()
+                day_map: dict[str, dict] = {}
+                for i in range(days):
+                    d_str = (today - timedelta(days=i)).isoformat()
+                    day_map[d_str] = {"date": d_str, "unique_visitors": 0, "pageviews": 0}
+                for r in rows:
+                    ds = str(r["date"])
+                    if ds in day_map:
+                        if r["key"] == "stats:unique":
+                            day_map[ds]["unique_visitors"] = r["count"]
+                        elif r["key"] == "stats:pageviews":
+                            day_map[ds]["pageviews"] = r["count"]
+                daily_history = list(day_map.values())
+
+                # Top paths today
+                cur.execute(
+                    """
+                    SELECT key, count FROM usage_counters
+                    WHERE date = %s AND key LIKE 'stats:path:%'
+                    ORDER BY count DESC LIMIT 10
+                    """,
+                    (today_str,),
+                )
+                for r in cur.fetchall():
+                    top_paths_today.append({"path": r["key"].replace("stats:path:", ""), "views": r["count"]})
+    except Exception as e:
+        print(f"[WARN] Error fetching analytics: {e}")
+
+    return {
+        "today": today_str,
+        "unique_visitors_today": unique_today,
+        "pageviews_today": pageviews_today,
+        "totals": {
+            "roasts": total_roasts,
+            "battles": total_battles,
+            "pro_users": total_pro,
+        },
+        "daily_history": daily_history,
+        "top_paths_today": top_paths_today,
+    }
+
 
 

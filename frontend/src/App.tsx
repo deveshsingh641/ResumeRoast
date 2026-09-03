@@ -1,4 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
+import { PageTracker } from '@/components/PageTracker'
 import LandingPage from '@/pages/LandingPage'
 import RoastPage from '@/pages/RoastPage'
 import ResultsPage from '@/pages/ResultsPage'
@@ -38,6 +41,9 @@ export default function App() {
           }
         />
       </Routes>
+      <PageTracker />
+      <Analytics />
+      <SpeedInsights />
     </BrowserRouter>
   )
 }
