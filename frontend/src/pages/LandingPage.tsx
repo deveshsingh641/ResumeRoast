@@ -21,11 +21,14 @@ function StatsRow() {
     <div className="w-full max-w-[960px] mx-auto mt-16 px-4">
       <div className="gap-grid-1px grid-cols-2 md:grid-cols-4 rounded-sm overflow-hidden border border-white/[0.08]">
         {stats.map((stat, idx) => (
-          <div key={idx} className="p-6 text-center">
-            <div className="font-display text-2xl sm:text-3xl text-paper tracking-tight leading-none mb-2">
+          <div
+            key={idx}
+            className="py-6 px-3 sm:px-4 flex flex-col items-center justify-center text-center transition-colors duration-150 hover:bg-white/[0.02]"
+          >
+            <div className="font-display text-[26px] sm:text-[30px] md:text-[28px] lg:text-[34px] text-paper tracking-tight leading-none mb-2.5 whitespace-nowrap select-none">
               {stat.value}
             </div>
-            <div className="font-mono text-xs text-tan-dim lowercase tracking-wider">
+            <div className="font-mono text-[11px] sm:text-xs text-tan-dim lowercase tracking-wide leading-relaxed max-w-[160px] mx-auto select-none">
               {stat.label}
             </div>
           </div>
