@@ -1,4 +1,4 @@
-﻿import type { RoastResult } from '@/store/useAppStore'
+import type { RoastResult } from '@/store/useAppStore'
 
 export interface ExtendedRoastResult extends RoastResult {
   was_document_truncated?: boolean
@@ -248,14 +248,264 @@ const amanVerma: SampleResume = {
   },
 }
 
-export const SAMPLE_RESUMES: SampleResume[] = [rohanMehta, priyaSharma, amanVerma]
+// ---------------------------------------------------------------------------
+// English Sample Resumes (for US, UK, Global audiences)
+// ---------------------------------------------------------------------------
 
-export function getDailyRotationIndex(): number {
+const alexMorgan: SampleResume = {
+  roastData: {
+    id: 'demo-roast-alex',
+    overall_score: 22,
+    band: 'weak',
+    one_line_verdict: 'Is this a resume or a generic greeting card? 🎂',
+    total_issues: 6,
+    is_truncated: true,
+    was_document_truncated: false,
+    issues: [
+      {
+        quoted_text: 'To work in a dynamic environment where I can utilize my skills and contribute to organizational growth.',
+        category: 'buzzword',
+        roast: 'This objective sentence is copied and pasted on every second resume 💀 You blend in with 50,000 other applicants before anyone reads bullet two.',
+        fix: 'State directly what role and impact you want: "Seeking a Business Development role to expand enterprise client accounts and drive repeatable revenue."',
+        start_offset: 45, end_offset: 145, severity_rank: 1,
+      },
+      {
+        quoted_text: 'Responsible for handling client relationships',
+        category: 'no-metrics',
+        roast: '"Handling relationships" — did you get coffee together, or did you actually close revenue? 😩 Give recruiters a number.',
+        fix: '"Managed key relationships across 15+ enterprise accounts, maintaining a 92% annual retention rate."',
+        start_offset: 210, end_offset: 255, severity_rank: 2,
+      },
+      {
+        quoted_text: 'Team player with strong communication skills',
+        category: 'buzzword',
+        roast: 'Every human on earth claims to be a team player 🙃 Tell us what the team actually accomplished under your watch.',
+        fix: 'Show evidence: "Partnered with a 6-person cross-functional team to launch 3 client campaigns on schedule."',
+        start_offset: 260, end_offset: 304, severity_rank: 3,
+      },
+      {
+        quoted_text: 'Hardworking and dedicated professional',
+        category: 'buzzword',
+        roast: 'Nobody advertises themselves as lazy and unmotivated 🙃 This is default filler taking up prime page real estate.',
+        fix: 'Delete this line completely — replace the whitespace with a concrete, measurable win.',
+        start_offset: 308, end_offset: 346, severity_rank: 4,
+      },
+      {
+        quoted_text: 'Assisted in achieving sales targets',
+        category: 'no-metrics',
+        roast: 'What does "assisted in" mean? Did you generate the pipeline or just applaud in the all-hands? 👀',
+        fix: '"Contributed to beating quarterly sales targets by 24%, personally generating $180k in new ARR."',
+        start_offset: 350, end_offset: 385, severity_rank: 5,
+      },
+      {
+        quoted_text: 'Proficient in MS Office, hardworking, fast learner, good communication',
+        category: 'buzzword',
+        roast: 'Listing "MS Office" in 2026 is like listing "I breathe oxygen" 🫠 That is not a competitive skill, that is basic computer literacy.',
+        fix: 'List modern tools that prove workflow proficiency: "CRM: Salesforce, HubSpot · Modeling: Excel (Pivot Tables, VLOOKUP) · Pitch: Figma".',
+        start_offset: 400, end_offset: 470, severity_rank: 6,
+      },
+    ],
+    strengths: [
+      'Clean typography and ATS-parsable section layout 👍',
+      'Clear progression from junior to associate responsibilities',
+    ],
+  },
+  resumeInfo: {
+    candidateName: 'ALEX MORGAN',
+    candidateTitle: 'BUSINESS DEVELOPMENT ASSOCIATE',
+    experienceHeader: 'EXPERIENCE',
+    companyLine: 'Zenith Solutions Inc — Business Development Associate',
+    bullet1Text: 'To work in a dynamic environment where I can utilize my skills and contribute to organizational growth.',
+    bullet1Annotated: 'utilize my skills and contribute to organizational growth',
+    bullet1Tag: 'CLICHE OBJECTIVE',
+    bullet2Text: 'Responsible for handling client relationships and achieving sales targets.',
+    bullet2Annotated: 'handling client relationships',
+    bullet2Tag: 'ZERO METRICS',
+    bullet3Text: 'Team player with strong communication skills, hardworking, dedicated professional, proficient in MS Office.',
+    bullet3Annotated: 'proficient in MS Office',
+    bullet3Tag: 'BUZZWORD OVERLOAD',
+  },
+}
+
+const davidChen: SampleResume = {
+  roastData: {
+    id: 'demo-roast-david',
+    overall_score: 26,
+    band: 'weak',
+    one_line_verdict: 'Claimed full-stack mastery without a single link to prove it 😭',
+    total_issues: 6,
+    is_truncated: true,
+    was_document_truncated: false,
+    issues: [
+      {
+        quoted_text: 'Passionate software engineer with exceptional problem-solving skills',
+        category: 'buzzword',
+        roast: '"Passionate" and "exceptional" sound like an inspirational LinkedIn quote 🤡 Show the recruiter code, not emotional adjectives.',
+        fix: '"B.S. Computer Science. Built 4 full-stack projects using React + Node. Deployed on AWS. Seeking a backend-focused SWE role."',
+        start_offset: 0, end_offset: 66, severity_rank: 1,
+      },
+      {
+        quoted_text: 'Worked on a project using React, Node.js, MongoDB, AWS, Docker, Redis',
+        category: 'buzzword',
+        roast: 'All those technologies crammed into one student project? 👀 Explain your role, or this looks like a copy-pasted Wikipedia tech stack.',
+        fix: '"Built a room-booking platform (React SPA, Node.js REST API, MongoDB) — containerized with Docker, deployed on AWS EC2 at davidchen.dev."',
+        start_offset: 120, end_offset: 196, severity_rank: 2,
+      },
+      {
+        quoted_text: 'Improved the performance of the application',
+        category: 'no-metrics',
+        roast: 'Improved it by what? 5 milliseconds or 500%? Without data, this claim is pure fiction 📝',
+        fix: '"Cut API response latency from 1.2s to 340ms by implementing Redis caching for high-frequency database queries."',
+        start_offset: 250, end_offset: 293, severity_rank: 3,
+      },
+      {
+        quoted_text: 'Developed a machine learning model for sentiment analysis',
+        category: 'no-metrics',
+        roast: '"Developed a model" — what was the test accuracy? Recruiters evaluate outcomes, not methods 😬',
+        fix: '"Fine-tuned DistilBERT on customer reviews — achieved 88.4% F1 score across 50k labeled test records."',
+        start_offset: 310, end_offset: 365, severity_rank: 4,
+      },
+      {
+        quoted_text: 'Participated in various hackathons and coding competitions',
+        category: 'no-metrics',
+        roast: '"Participated in various" sounds like a participation ribbon 🏆 State your actual standing or podium finish.',
+        fix: '"2nd Place of 120 teams, HackMIT 2024 (Fintech track). Top 3% ranking across 40+ LeetCode weekly contests."',
+        start_offset: 420, end_offset: 477, severity_rank: 5,
+      },
+      {
+        quoted_text: 'Hobbies: Cooking, Travelling, Listening to music',
+        category: 'irrelevant',
+        roast: 'This isn’t a dating profile 😅 Culinary skills do not help your pull requests get merged. Reclaim this space for GitHub project links.',
+        fix: 'Drop the hobbies line. Use the whitespace to showcase live open-source PRs or portfolio demos.',
+        start_offset: 540, end_offset: 589, severity_rank: 6,
+      },
+    ],
+    strengths: [
+      'Modern, marketable tech stack explored in hands-on projects 🔥',
+      'Clean education details and standard computer science coursework 🎓',
+    ],
+  },
+  resumeInfo: {
+    candidateName: 'DAVID CHEN',
+    candidateTitle: 'JUNIOR SOFTWARE ENGINEER',
+    experienceHeader: 'PROJECTS & EXPERIENCE',
+    companyLine: 'CampusTech Labs — Junior Software Engineer Intern',
+    bullet1Text: 'Passionate software engineer with exceptional problem-solving skills and full-stack expertise.',
+    bullet1Annotated: 'exceptional problem-solving skills',
+    bullet1Tag: 'LINKEDIN CLICHE',
+    bullet2Text: 'Worked on a project using React, Node.js, MongoDB, AWS, Docker, and Redis to improve performance.',
+    bullet2Annotated: 'improve performance',
+    bullet2Tag: 'ZERO METRICS',
+    bullet3Text: 'Participated in various hackathons; hobbies include cooking and travelling.',
+    bullet3Annotated: 'cooking and travelling',
+    bullet3Tag: 'IRRELEVANT NOISE',
+  },
+}
+
+const sarahJenkins: SampleResume = {
+  roastData: {
+    id: 'demo-roast-sarah',
+    overall_score: 34,
+    band: 'weak',
+    one_line_verdict: 'High-octane buzzwords, zero evidence of actual business impact 🤖',
+    total_issues: 6,
+    is_truncated: true,
+    was_document_truncated: false,
+    issues: [
+      {
+        quoted_text: 'Spearheaded synergistic cross-functional initiatives to drive holistic brand value.',
+        category: 'buzzword',
+        roast: '"Spearheaded synergistic initiatives" is corporate word-salad at maximum velocity 🥗 Tell recruiters what you actually built.',
+        fix: '"Directed rebranding across 4 regional product lines, unifying visual guidelines and packaging for Q3 rollout."',
+        start_offset: 140, end_offset: 220, severity_rank: 1,
+      },
+      {
+        quoted_text: 'Managed end-to-end campaign lifecycle',
+        category: 'no-metrics',
+        roast: 'A campaign with no budget, no conversion rate, and no revenue is just a hobby 📉 Where are the numbers?',
+        fix: '"Owned $250K quarterly digital ad spend, lowering cost per lead by 22% while boosting qualified pipeline by 35%."',
+        start_offset: 230, end_offset: 275, severity_rank: 2,
+      },
+      {
+        quoted_text: 'Demonstrated exceptional leadership and strategic thinking',
+        category: 'buzzword',
+        roast: 'Self-proclaiming "exceptional leadership" is bold when you have zero team retention metrics to back it up 🙃',
+        fix: '"Led a team of 5 marketing associates; established weekly sprint OKRs and decreased project delivery turnaround by 40%."',
+        start_offset: 310, end_offset: 367, severity_rank: 3,
+      },
+      {
+        quoted_text: 'Collaborated with internal and external stakeholders',
+        category: 'buzzword',
+        roast: 'Everyone collaborates with stakeholders. Unless you work on a desert island, this adds zero differentiation 😂',
+        fix: '"Managed 3 agency partnerships and aligned executive leadership on campaign messaging — reduced review cycles from 5 to 2."',
+        start_offset: 390, end_offset: 441, severity_rank: 4,
+      },
+      {
+        quoted_text: 'Leveraged data-driven insights to optimize performance',
+        category: 'no-metrics',
+        roast: '"Data-driven insights" sounds impressive until the interviewer asks which data and what happened next 📉',
+        fix: '"Ran A/B tests on 6 landing page variants; winning variant lifted signup conversion from 3.2% to 5.8% across 45k monthly visitors."',
+        start_offset: 460, end_offset: 514, severity_rank: 5,
+      },
+      {
+        quoted_text: 'DECLARATION: I hereby declare that all information provided is true to the best of my knowledge.',
+        category: 'irrelevant',
+        roast: 'Declarations and legal disclaimers retired in 2005 ✋ Modern tech recruiters consider this a red flag for template bloat.',
+        fix: 'Delete this entire section. Reclaim the vertical page space for a live campaign portfolio link.',
+        start_offset: 590, end_offset: 688, severity_rank: 6,
+      },
+    ],
+    strengths: [
+      'Clear career progression documented across marketing responsibilities 📈',
+      'Standardized section headers formatted for automated ATS parsing 🎯',
+    ],
+  },
+  resumeInfo: {
+    candidateName: 'SARAH JENKINS',
+    candidateTitle: 'MARKETING MANAGER',
+    experienceHeader: 'EXPERIENCE',
+    companyLine: 'BrandPeak Global Inc — Marketing Manager',
+    bullet1Text: 'Spearheaded synergistic cross-functional initiatives to drive holistic brand value.',
+    bullet1Annotated: 'Spearheaded synergistic cross-functional initiatives',
+    bullet1Tag: 'EMPTY JARGON',
+    bullet2Text: 'Managed end-to-end campaign lifecycle and stakeholder communications.',
+    bullet2Annotated: 'end-to-end campaign lifecycle',
+    bullet2Tag: 'ZERO METRICS',
+    bullet3Text: 'Demonstrated exceptional leadership and strategic thinking across all verticals.',
+    bullet3Annotated: 'exceptional leadership and strategic thinking',
+    bullet3Tag: 'WHERE IS PROOF',
+  },
+}
+
+export const HINGLISH_SAMPLE_RESUMES: SampleResume[] = [rohanMehta, priyaSharma, amanVerma]
+export const ENGLISH_SAMPLE_RESUMES: SampleResume[] = [alexMorgan, davidChen, sarahJenkins]
+export const SAMPLE_RESUMES: SampleResume[] = HINGLISH_SAMPLE_RESUMES
+
+export function getSampleResumes(language?: string): SampleResume[] {
+  if (!language) return ENGLISH_SAMPLE_RESUMES
+  const lower = language.toLowerCase().trim()
+  if (lower === 'hi-in' || lower === 'hi' || lower.startsWith('hi')) {
+    return HINGLISH_SAMPLE_RESUMES
+  }
+  return ENGLISH_SAMPLE_RESUMES
+}
+
+export function getDailyRotationIndex(resumes: SampleResume[] = SAMPLE_RESUMES): number {
   const now = new Date()
   const start = new Date(now.getFullYear(), 0, 0)
   const diff = now.getTime() - start.getTime()
   const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24))
-  return dayOfYear % SAMPLE_RESUMES.length
+  return dayOfYear % resumes.length
+}
+
+export function getSampleRoastData(language?: string): ExtendedRoastResult {
+  const list = getSampleResumes(language)
+  return list[0].roastData
+}
+
+export function getSampleResumeInfo(language?: string) {
+  const list = getSampleResumes(language)
+  return list[0].resumeInfo
 }
 
 export const SAMPLE_ROAST_DATA: ExtendedRoastResult = rohanMehta.roastData

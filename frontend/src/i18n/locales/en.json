@@ -1,0 +1,108 @@
+{
+  "nav": {
+    "roast": "Roast",
+    "battle": "Battle 1v1",
+    "wall": "Wall of Shame",
+    "pricing": "Pricing",
+    "sample": "Sample",
+    "language": "Language"
+  },
+  "hero": {
+    "badge": "Brutally Honest AI Resume Roaster",
+    "title_part1": "Your resume is probably boring.",
+    "title_part2": "Let's fix that.",
+    "subtitle": "Get roasted by an AI recruiter with zero filter. Discover your missing metrics, corporate buzzwords, and formatting blunders before real hiring managers hit reject.",
+    "cta_upload": "Roast My Resume Free",
+    "cta_sample": "View Live Sample",
+    "cta_battle": "1v1 Resume Battle",
+    "free_daily_note": "1 free roast every 24 hours · No credit card required",
+    "privacy_note": "Privacy guaranteed: We never sell your resume or store raw documents permanently."
+  },
+  "upload": {
+    "dropzone_title": "Drag & drop your resume here",
+    "dropzone_sub": "Supports PDF or DOCX up to 5MB",
+    "browse_files": "Browse Files",
+    "analyzing_title": "Roasting in progress...",
+    "analyzing_sub": "Our AI is reading your bullet points and questioning your life choices",
+    "error_title": "Upload Failed",
+    "error_try_again": "Try Another File"
+  },
+  "results": {
+    "score_label": "Roast Score",
+    "out_of_100": "/ 100",
+    "verdict_title": "Official Verdict",
+    "issues_found": "Issues Found",
+    "filter_all": "All Issues",
+    "filter_metrics": "Zero Metrics",
+    "filter_buzzwords": "Buzzwords",
+    "filter_formatting": "Formatting",
+    "filter_typos": "Typos",
+    "roast_label": "The Roast",
+    "fix_label": "How to Fix It",
+    "strengths_title": "What You Actually Did Right",
+    "listen_voice": "Listen to Voice Roast",
+    "download_cert": "Download Certificate",
+    "share_card": "Share Roast Card",
+    "upgrade_pro": "Unlock All Issues with Pro",
+    "truncated_notice": "Showing top 3 critical issues. Unlock Pro to see all issues, unlimited battles, and watermark-free certificates."
+  },
+  "battle": {
+    "badge": "1-on-1 Head-to-Head",
+    "title": "Resume Roast Battle",
+    "subtitle": "Pit two resumes against each other. Our AI referee picks the winner with savage comparative commentary.",
+    "fighter_1": "Fighter 1",
+    "fighter_2": "Fighter 2",
+    "drop_f1": "Drop Fighter 1 Resume",
+    "drop_f2": "Drop Fighter 2 Resume",
+    "start_battle": "Start the Battle 🔥",
+    "winner_banner": "Winner",
+    "margin_landslide": "Landslide Victory",
+    "margin_close": "Close Call",
+    "margin_draw": "Dead Heat / Draw",
+    "rematch": "Battle Again"
+  },
+  "wall": {
+    "title": "The Public Wall",
+    "subtitle": "Community resumes that took the roast. Learn from their catastrophic mistakes and glorious wins.",
+    "tab_shame": "Wall of Shame 💀",
+    "tab_fame": "Wall of Fame 🏆",
+    "sort_recent": "Most Recent",
+    "sort_worst": "Worst Scored",
+    "sort_best": "Highest Scored",
+    "score": "Score",
+    "top_burn": "Top Burn",
+    "flag": "Flag as Inappropriate",
+    "flagged": "Flagged"
+  },
+  "voice": {
+    "title": "Audio Note Roast",
+    "subtitle": "Hear your feedback as a voice memo from a brutally honest friend.",
+    "generating": "Synthesizing audio note...",
+    "play": "Play Voice Note",
+    "pause": "Pause",
+    "disclaimer": "AI-generated voice memo for comedic and feedback purposes."
+  },
+  "pricing": {
+    "title": "Simple, Transparent Pricing",
+    "subtitle": "Everything you need to turn your rejected resume into an interview magnet.",
+    "free_tier": "Free Tier",
+    "free_price": "$0",
+    "free_desc": "1 roast per day, top 3 issues revealed.",
+    "pro_tier": "Pro Unlimited",
+    "pro_price": "$9",
+    "pro_desc": "Lifetime access to all issues, unlimited battles, and voice notes.",
+    "current_plan": "Current Plan",
+    "upgrade_btn": "Upgrade to Pro"
+  },
+  "ticker": {
+    "resumes_roasted": "Resumes Roasted",
+    "avg_score": "Average Score",
+    "rejected_pct": "Buzzword Infested",
+    "recent_quote": "\"Your bullet points read like corporate horoscopes.\""
+  },
+  "switcher": {
+    "english": "English",
+    "hinglish": "Hinglish",
+    "toggle_label": "Toggle language"
+  }
+}

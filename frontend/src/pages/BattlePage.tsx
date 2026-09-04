@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { normalizeLang } from '@/i18n/detector'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import axios from 'axios'
 import ScoreStamp from '@/components/ScoreStamp'
 import PaperMockup from '@/components/PaperMockup'
@@ -9,6 +12,8 @@ import DeskClutter from '@/components/DeskClutter'
 
 export default function BattlePage() {
   const { id } = useParams<{ id: string }>()
+  const { i18n } = useTranslation()
+  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
 
   const [file1, setFile1] = useState<File | null>(null)
   const [file2, setFile2] = useState<File | null>(null)
@@ -26,27 +31,27 @@ export default function BattlePage() {
         const { data } = await axios.get(`/api/battle/${id}`)
         setBattleData(data)
       } catch (err: any) {
-        setError('This battle could not be found or has expired.')
+        setError(isHinglish ? 'This battle could not be found or has expired.' : 'This battle could not be found or has expired.')
       } finally {
         setLoading(false)
       }
     }
     fetchBattle()
-  }, [id])
+  }, [id, isHinglish])
 
   const handleStartBattle = async () => {
     if (!file1 || !file2) {
-      setError('Please select both resumes before starting the battle.')
+      setError(isHinglish ? 'Please select both resumes before starting the battle.' : 'Please select both resumes before starting the battle.')
       return
     }
 
     if (file1.size === 0 || file2.size === 0) {
-      setError('One of your files is empty (0 bytes). Please upload complete resume documents.')
+      setError(isHinglish ? 'One of your files is empty (0 bytes). Please upload complete resume documents.' : 'One of your files is empty (0 bytes). Please upload complete resume documents.')
       return
     }
 
     if (file1.size > 5 * 1024 * 1024 || file2.size > 5 * 1024 * 1024) {
-      setError('Maximum supported size is 5MB per resume file.')
+      setError(isHinglish ? 'Maximum supported size is 5MB per resume file.' : 'Maximum supported size is 5MB per resume file.')
       return
     }
 
@@ -64,7 +69,7 @@ export default function BattlePage() {
       window.history.pushState({}, '', `/battle/${data.id}`)
     } catch (err: any) {
       const detail = err?.response?.data?.detail
-      let msg = 'Failed to start battle. Please check your files.'
+      let msg = isHinglish ? 'Failed to start battle. Please check your files.' : 'Failed to start battle. Please check your files.'
       if (typeof detail === 'object' && detail?.message) {
         msg = detail.message
       } else if (typeof detail === 'string') {
@@ -81,7 +86,7 @@ export default function BattlePage() {
   return (
     <main className="min-h-screen pb-24 desk-cursor relative overflow-hidden">
       {/* Tactile Desk Clutter */}
-      <DeskClutter stickyText="winner gets the referral 🥊" stickyRotation={3} />
+      <DeskClutter stickyText={isHinglish ? 'winner gets the referral 🥊' : 'winner gets the referral 🥊'} stickyRotation={3} />
 
       {/* Header */}
       <header className="border-b border-white/[0.08] py-4 px-6 mb-8 relative z-10">
@@ -91,11 +96,12 @@ export default function BattlePage() {
           </Link>
           <div className="flex items-center gap-4">
             <Link to="/wall" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              Wall of Fame/Shame →
+              {isHinglish ? 'Wall of Fame/Shame →' : 'Wall of Fame/Shame →'}
             </Link>
             <Link to="/roast" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              Single Roast →
+              {isHinglish ? 'Single Roast →' : 'Single Roast →'}
             </Link>
+            <LanguageSwitcher />
           </div>
         </div>
       </header>
@@ -103,12 +109,16 @@ export default function BattlePage() {
       <div className="max-w-[1100px] mx-auto px-4 space-y-12 text-center">
         {/* Title */}
         <div>
-          <p className="section-label mb-2">1-ON-1 RESUME KA DANGAL</p>
+          <p className="section-label mb-2">
+            {isHinglish ? '1-ON-1 RESUME KA DANGAL' : '1-ON-1 RESUME FACE-OFF'}
+          </p>
           <h1 className="font-display text-3xl sm:text-5xl text-paper tracking-tight">
             Resume <span className="text-stamp">Roast Battle</span>
           </h1>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-[600px] mx-auto">
-            Do resume desk pe daal. AI referee karega dangal aur batayega kiska kachra kam hai.
+            {isHinglish
+              ? 'Do resume desk pe daal. AI referee karega dangal aur batayega kiska kachra kam hai.'
+              : 'Drop two resumes on the desk. The AI referee crowns the winner and roasts both.'}
           </p>
         </div>
 

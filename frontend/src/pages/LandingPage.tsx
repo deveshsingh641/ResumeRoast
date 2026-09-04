@@ -1,20 +1,25 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { normalizeLang } from '@/i18n/detector'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import ScoreStamp from '@/components/ScoreStamp'
 import PaperMockup from '@/components/PaperMockup'
 import DeskClutter from '@/components/DeskClutter'
 import MarqueeTicker from '@/components/MarqueeTicker'
 import PlacementSeasonBanner from '@/components/PlacementSeasonBanner'
 import LiveRoastCounter from '@/components/LiveRoastCounter'
-import { SAMPLE_RESUMES, getDailyRotationIndex, SAMPLE_ROAST_DATA, SAMPLE_RESUME_INFO } from '@/data/sampleRoast'
+import { getSampleResumes, getDailyRotationIndex } from '@/data/sampleRoast'
 
 /* ── 4 Stats Hairline Gap Grid (Section A.6) ── */
 function StatsRow() {
+  const { i18n } = useTranslation()
+  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
   const stats = [
-    { value: '42,910', label: 'resumes ab tak roast ho chuke' },
-    { value: '15s', label: 'roast milne mein' },
-    { value: '100%', label: 'sign-up ki zaroorat nahi' },
-    { value: '94%', label: 'dobara roast karayenge' },
+    { value: '42,910', label: isHinglish ? 'resumes ab tak roast ho chuke' : 'resumes roasted so far' },
+    { value: '15s', label: isHinglish ? 'roast milne mein' : 'average turnaround' },
+    { value: '100%', label: isHinglish ? 'sign-up ki zaroorat nahi' : 'no sign-up required' },
+    { value: '94%', label: isHinglish ? 'dobara roast karayenge' : 'would roast again' },
   ]
 
   return (
@@ -40,23 +45,43 @@ function StatsRow() {
 
 /* ── 3 Numbered Feature Rows (Section A.6) ── */
 function FeatureSection() {
-  const steps = [
-    {
-      num: '01',
-      title: 'Apna resume desk pe daal de',
-      desc: 'Apna text-based PDF ya DOCX file submit karo. Koi superficial keyword matching ka jhol nahi, seedha asli bullet points, claims aur metrics check honge.',
-    },
-    {
-      num: '02',
-      title: 'Red pen se marking aur ek kadak score milega',
-      desc: '0 se 100 tak ka stamped score milega, saath mein circled buzzwords, unquantified claims, formatting ka kachra aur cringe lines.',
-    },
-    {
-      num: '03',
-      title: 'Har weak line ka exact rewrite solution lo',
-      desc: 'Sirf roast nahi karenge — jo bullet point bekaar hai uska exact better rewritten version likh ke denge with active verbs aur zero filler.',
-    },
-  ]
+  const { i18n } = useTranslation()
+  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
+  const steps = isHinglish
+    ? [
+        {
+          num: '01',
+          title: 'Apna resume desk pe daal de',
+          desc: 'Apna text-based PDF ya DOCX file submit karo. Koi superficial keyword matching ka jhol nahi, seedha asli bullet points, claims aur metrics check honge.',
+        },
+        {
+          num: '02',
+          title: 'Red pen se marking aur ek kadak score milega',
+          desc: '0 se 100 tak ka stamped score milega, saath mein circled buzzwords, unquantified claims, formatting ka kachra aur cringe lines.',
+        },
+        {
+          num: '03',
+          title: 'Har weak line ka exact rewrite solution lo',
+          desc: 'Sirf roast nahi karenge — jo bullet point bekaar hai uska exact better rewritten version likh ke denge with active verbs aur zero filler.',
+        },
+      ]
+    : [
+        {
+          num: '01',
+          title: 'Drop your resume on the desk',
+          desc: 'Submit your standard PDF or DOCX file. No superficial keyword matching tricks — our AI deeply analyzes your actual bullet points, claims, and missing metrics.',
+        },
+        {
+          num: '02',
+          title: 'Get brutal red pen marks & a raw score',
+          desc: 'Receive a stamped score from 0 to 100, alongside circled buzzwords, unquantified boasts, formatting mistakes, and cringe claims.',
+        },
+        {
+          num: '03',
+          title: 'Actionable rewrites for every single flaw',
+          desc: 'We do not just roast your resume — every flagged issue comes with a drop-in rewritten bullet point using active verbs, concrete metrics, and zero filler.',
+        },
+      ]
 
   return (
     <section className="py-24 px-4 border-t border-white/[0.08]" aria-label="How it works">
@@ -95,12 +120,16 @@ function FeatureSection() {
 
 /* ── Real Output Sample Roast (Section A.6) ── */
 function SampleSection() {
-  const [activeIdx, setActiveIdx] = useState(() => getDailyRotationIndex())
-  const sample = SAMPLE_RESUMES[activeIdx]
+  const { i18n } = useTranslation()
+  const lang = normalizeLang(i18n.language)
+  const isHinglish = lang === 'hi-IN'
+  const sampleList = getSampleResumes(lang)
+  const [activeIdx, setActiveIdx] = useState(() => getDailyRotationIndex(sampleList))
+  const sample = sampleList[activeIdx % sampleList.length]
   const { roastData, resumeInfo } = sample
 
   function shuffle() {
-    setActiveIdx((prev) => (prev + 1) % SAMPLE_RESUMES.length)
+    setActiveIdx((prev) => (prev + 1) % sampleList.length)
   }
 
   return (
@@ -108,7 +137,9 @@ function SampleSection() {
       <div className="max-w-[960px] mx-auto">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 mb-2 flex-wrap justify-center">
-            <p className="section-label">SAMPLE ROAST DEKH LE</p>
+            <p className="section-label">
+              {isHinglish ? 'SAMPLE ROAST DEKH LE' : 'LIVE SAMPLE ROAST'}
+            </p>
             <span className="font-mono text-[10px] text-tan-dim uppercase px-1.5 py-0.5 border border-white/10 rounded-[2px]">
               Live Preview
             </span>
@@ -118,14 +149,16 @@ function SampleSection() {
               aria-label="Show next sample resume"
               className="inline-flex items-center gap-1 font-mono text-[10px] text-tan-dim hover:text-ember px-2 py-0.5 border border-white/10 rounded-[2px] transition-colors duration-150"
             >
-              <span>↻</span> Shuffle ({activeIdx + 1}/3)
+              <span>↻</span> {isHinglish ? 'Shuffle' : 'Shuffle'} ({(activeIdx % sampleList.length) + 1}/{sampleList.length})
             </button>
           </div>
           <h2 className="font-display text-2xl sm:text-3xl text-paper">
-            Asli roast kaisa dikhta hai, khud dekh le.
+            {isHinglish ? 'Asli roast kaisa dikhta hai, khud dekh le.' : 'See what a brutal roast actually looks like.'}
           </h2>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-lg mx-auto">
-            {resumeInfo.candidateName} ka resume: har ek flaw real-time mein flagged.
+            {isHinglish
+              ? `${resumeInfo.candidateName} ka resume: har ek flaw real-time mein flagged.`
+              : `${resumeInfo.candidateName}'s resume: every critical flaw flagged in real time.`}
           </p>
         </div>
 
@@ -149,11 +182,15 @@ function SampleSection() {
           <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 bg-[#110E0A] border border-white/[0.08] p-4 rounded-sm max-w-xl w-full">
             <ScoreStamp score={roastData.overall_score} band={roastData.band} animate={false} size="sm" rotation={-12} />
             <div className="text-left font-mono text-xs text-tan flex-1">
-              <span className="text-stamp font-semibold uppercase block mb-1">Desk ka Official Verdict:</span>
+              <span className="text-stamp font-semibold uppercase block mb-1">
+                {isHinglish ? 'Desk ka Official Verdict:' : 'Desk Official Verdict:'}
+              </span>
               <span className="text-paper text-sm font-display">"{roastData.one_line_verdict}"</span>
               <div className="mt-2">
                 <Link to="/roast/demo" className="text-ember hover:underline text-[11px] inline-flex items-center gap-1">
-                  Poora 6-issue breakdown aur voice note suno →
+                  {isHinglish
+                    ? 'Poora 6-issue breakdown aur voice note suno →'
+                    : 'Listen to full voice note & 6-issue breakdown →'}
                 </Link>
               </div>
             </div>
@@ -166,16 +203,27 @@ function SampleSection() {
 
 /* ── Pricing ── */
 function PricingSection() {
+  const { i18n } = useTranslation()
+  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
   const [annual, setAnnual] = useState(false)
 
-  const features = [
-    { label: 'Roasts per day', free: '1/day', pro: 'Unlimited' },
-    { label: 'Issues dikhenge', free: 'Top 3 issues', pro: 'Saare 5–8 issues' },
-    { label: 'Red-pen rewritten lines', free: 'Preview only', pro: 'Full rewrite access' },
-    { label: 'Key strength breakdown', free: 'Included', pro: 'Included' },
-    { label: 'Shareable score stamp card', free: 'Included', pro: 'Included' },
-    { label: 'PDF re-export suggestions', free: '—', pro: 'Included' },
-  ]
+  const features = isHinglish
+    ? [
+        { label: 'Roasts per day', free: '1/day', pro: 'Unlimited' },
+        { label: 'Issues dikhenge', free: 'Top 3 issues', pro: 'Saare 5–8 issues' },
+        { label: 'Red-pen rewritten lines', free: 'Preview only', pro: 'Full rewrite access' },
+        { label: 'Key strength breakdown', free: 'Included', pro: 'Included' },
+        { label: 'Shareable score stamp card', free: 'Included', pro: 'Included' },
+        { label: 'PDF re-export suggestions', free: '—', pro: 'Included' },
+      ]
+    : [
+        { label: 'Roasts per day', free: '1/day', pro: 'Unlimited' },
+        { label: 'Issues displayed', free: 'Top 3 issues', pro: 'All 5–8 issues' },
+        { label: 'Red-pen rewritten lines', free: 'Preview only', pro: 'Full rewrite access' },
+        { label: 'Key strength breakdown', free: 'Included', pro: 'Included' },
+        { label: 'Shareable score stamp card', free: 'Included', pro: 'Included' },
+        { label: 'PDF re-export suggestions', free: '—', pro: 'Included' },
+      ]
 
   return (
     <section id="pricing" className="py-24 px-4 border-t border-white/[0.08]" aria-label="Pricing">
@@ -183,10 +231,10 @@ function PricingSection() {
         <div className="text-center mb-12">
           <p className="section-label mb-2">PRICING</p>
           <h2 className="font-display text-2xl sm:text-3xl text-paper">
-            Free hamesha ke liye. Aur deep roast chahiye toh Pro.
+            {isHinglish ? 'Free hamesha ke liye. Aur deep roast chahiye toh Pro.' : 'Free forever. Go Pro for deep, uncensored critiques.'}
           </h2>
           <p className="font-mono text-xs text-tan-dim mt-2">
-            Koi subscription ka jhol nahi. Instant access.
+            {isHinglish ? 'Koi subscription ka jhol nahi. Instant access.' : 'No hidden fees. Instant access.'}
           </p>
 
           {/* Billing Switch */}
@@ -198,7 +246,7 @@ function PricingSection() {
                 !annual ? 'bg-bg text-paper border border-white/[0.08]' : 'text-tan-dim hover:text-tan'
               }`}
             >
-              Mahina
+              {isHinglish ? 'Mahina' : 'Monthly'}
             </button>
             <button
               type="button"
@@ -207,7 +255,7 @@ function PricingSection() {
                 annual ? 'bg-bg text-paper border border-white/[0.08]' : 'text-tan-dim hover:text-tan'
               }`}
             >
-              Saal <span className="text-ember">(-33%)</span>
+              {isHinglish ? 'Saal' : 'Annual'} <span className="text-ember">(-33%)</span>
             </button>
           </div>
         </div>
@@ -222,10 +270,14 @@ function PricingSection() {
               </p>
               <div className="flex items-baseline gap-1 mb-4">
                 <span className="font-display text-3xl text-paper">₹0</span>
-                <span className="font-mono text-xs text-tan-dim">/ hamesha ke liye</span>
+                <span className="font-mono text-xs text-tan-dim">
+                  {isHinglish ? '/ hamesha ke liye' : '/ forever'}
+                </span>
               </div>
               <p className="font-body text-xs text-tan mb-6 leading-relaxed">
-                Apne top flaws ka fatak se sach jaan-ne ke liye best hai.
+                {isHinglish
+                  ? 'Apne top flaws ka fatak se sach jaan-ne ke liye best hai.'
+                  : 'Perfect for uncovering your most glaring resume flaws quickly.'}
               </p>
 
               <ul className="space-y-3 font-mono text-xs text-tan border-t border-white/[0.08] pt-6 mb-8">
@@ -239,7 +291,7 @@ function PricingSection() {
             </div>
 
             <Link to="/roast" className="btn-ghost w-full justify-center">
-              Free resume roast karo
+              {isHinglish ? 'Free resume roast karo' : 'Roast resume for free'}
             </Link>
           </div>
 
@@ -252,7 +304,7 @@ function PricingSection() {
           >
             <div className="absolute -top-3 right-4 bg-[#E8422D]/[0.15] border border-stamp px-2.5 py-0.5 rounded-sm">
               <span className="font-mono text-[10px] text-stamp font-semibold uppercase tracking-wider">
-                Zyada log ye lete hain
+                {isHinglish ? 'Zyada log ye lete hain' : 'Most Popular'}
               </span>
             </div>
 
@@ -265,11 +317,13 @@ function PricingSection() {
                   {annual ? '₹799' : '₹99'}
                 </span>
                 <span className="font-mono text-xs text-tan-dim">
-                  {annual ? '/ saal' : '/ mahina'}
+                  {annual ? (isHinglish ? '/ saal' : '/ year') : (isHinglish ? '/ mahina' : '/ month')}
                 </span>
               </div>
               <p className="font-body text-xs text-tan mb-6 leading-relaxed">
-                Full-line critique, saari rewritten lines, aur unlimited daily roasts.
+                {isHinglish
+                  ? 'Full-line critique, saari rewritten lines, aur unlimited daily roasts.'
+                  : 'Full-line critique, all rewritten bullet points, and unlimited daily roasts.'}
               </p>
 
               <ul className="space-y-3 font-mono text-xs text-tan border-t border-white/[0.08] pt-6 mb-8">
@@ -283,7 +337,7 @@ function PricingSection() {
             </div>
 
             <Link to="/pricing" className="btn-primary w-full justify-center">
-              Pro pe upgrade karo
+              {isHinglish ? 'Pro pe upgrade karo' : 'Upgrade to Pro'}
             </Link>
           </div>
         </div>
@@ -293,7 +347,7 @@ function PricingSection() {
 }
 
 /* ── FAQ Accordion ── */
-const FAQS = [
+const FAQS_HINGLISH = [
   {
     q: 'Kya AI sach mein mera poora resume padhta hai?',
     a: 'Haan bhai. Har ek line extract karke analyze hoti hai. Saare flagged comments directly tumhare text se quote honge, koi generic gyaan nahi.',
@@ -312,21 +366,45 @@ const FAQS = [
   },
 ]
 
+const FAQS_ENGLISH = [
+  {
+    q: 'Does the AI actually read my entire resume?',
+    a: 'Yes. Every line is extracted and analyzed. All flagged critiques quote directly from your text — no generic advice.',
+  },
+  {
+    q: 'Which file formats and sizes are supported?',
+    a: 'PDF and DOCX files up to 5MB. Please ensure your PDF contains selectable text, not scanned images.',
+  },
+  {
+    q: 'Is my resume shared with recruiters or third parties?',
+    a: 'Never. Anonymous roasts are permanently purged after 7 days. We do not sell your personal data.',
+  },
+  {
+    q: 'Why did my resume score below 40?',
+    a: 'A score under 40 indicates dense buzzwords, missing impact metrics, or structure that triggers instant recruiter rejections.',
+  },
+]
+
 function FAQSection() {
+  const { i18n } = useTranslation()
+  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
+  const faqs = isHinglish ? FAQS_HINGLISH : FAQS_ENGLISH
   const [openIdx, setOpenIdx] = useState<number | null>(null)
 
   return (
     <section className="py-24 px-4 border-t border-white/[0.08]" aria-label="Frequently Asked Questions">
       <div className="max-w-[800px] mx-auto text-left">
         <div className="text-center mb-16">
-          <p className="section-label mb-2">SAWAL JAWAB</p>
+          <p className="section-label mb-2">
+            {isHinglish ? 'SAWAL JAWAB' : 'FREQUENTLY ASKED'}
+          </p>
           <h2 className="font-display text-2xl sm:text-3xl text-paper">
-            Aamtaur pe pooche jaane wale sawaal.
+            {isHinglish ? 'Aamtaur pe pooche jaane wale sawaal.' : 'Straight answers to common questions.'}
           </h2>
         </div>
 
         <div className="space-y-3">
-          {FAQS.map((faq, idx) => {
+          {faqs.map((faq, idx) => {
             const isOpen = openIdx === idx
             return (
               <div
@@ -360,6 +438,12 @@ function FAQSection() {
 
 /* ── Main Landing Page ── */
 export default function LandingPage() {
+  const { i18n } = useTranslation()
+  const lang = normalizeLang(i18n.language)
+  const isHinglish = lang === 'hi-IN'
+  const sampleList = getSampleResumes(lang)
+  const heroSample = sampleList[0]
+
   return (
     <main className="min-h-screen desk-cursor">
       {/* B.4 Time-Boxed Placement Season Banner */}
@@ -371,23 +455,26 @@ export default function LandingPage() {
           <Link to="/" className="font-display text-lg tracking-tight text-paper select-none">
             RESUME<span className="text-stamp">ROAST</span>
           </Link>
-          <nav className="flex items-center gap-4 sm:gap-6" aria-label="Main Navigation">
-            <Link to="/battle" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">
-              ⚔️ Battle
-            </Link>
-            <Link to="/wall" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              🔥 Wall
-            </Link>
-            <a href="#sample" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden sm:inline">
-              Sample
-            </a>
-            <a href="#pricing" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden sm:inline">
-              Pricing
-            </a>
-            <Link to="/roast" className="btn-ghost btn-ghost-sm">
-              Roast karwao
-            </Link>
-          </nav>
+          <div className="flex items-center gap-3 sm:gap-6">
+            <nav className="flex items-center gap-3 sm:gap-5" aria-label="Main Navigation">
+              <Link to="/battle" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                ⚔️ Battle
+              </Link>
+              <Link to="/wall" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
+                🔥 Wall
+              </Link>
+              <a href="#sample" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden sm:inline">
+                {isHinglish ? 'Sample' : 'Sample'}
+              </a>
+              <a href="#pricing" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden sm:inline">
+                {isHinglish ? 'Pricing' : 'Pricing'}
+              </a>
+              <Link to="/roast" className="btn-ghost btn-ghost-sm">
+                {isHinglish ? 'Roast karwao' : 'Get Roasted'}
+              </Link>
+            </nav>
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
@@ -397,7 +484,10 @@ export default function LandingPage() {
       {/* ── Hero Section (Section A.2) ── */}
       <section className="pt-16 pb-16 px-4 text-center relative overflow-hidden">
         {/* Tactile Desk Clutter (Section A.5) */}
-        <DeskClutter stickyText="friday se pehle fix kar le yaar!! 😭" stickyRotation={4} />
+        <DeskClutter
+          stickyText={isHinglish ? 'friday se pehle fix kar le yaar!! 😭' : 'fix this before Monday please!! 😭'}
+          stickyRotation={4}
+        />
 
         <div className="max-w-[960px] mx-auto relative z-10">
           {/* B.2 Live Social Proof Counter */}
@@ -405,54 +495,71 @@ export default function LandingPage() {
 
           {/* Eyebrow Line */}
           <p className="section-label mb-4">
-            DESK PE POORA SACH // 100% RAW AI ROAST
+            {isHinglish ? 'DESK PE POORA SACH // 100% RAW AI ROAST' : 'THE UNFILTERED TRUTH // 100% RAW AI ROAST'}
           </p>
 
           {/* Headline with Rotated Red Pen Strikethrough (A.2 Exact Spec) */}
-          <h1 className="font-display text-4xl sm:text-6xl md:text-7xl text-paper tracking-tight leading-[0.98] mb-6">
-            TERA RESUME{' '}
-            <span className="red-pen-strike text-tan-dim">IMPRESSIVE</span> HAI...
-            <br />
-            <span className="text-stamp">BAS FLUFF HAI BHAI.</span>
-          </h1>
+          {isHinglish ? (
+            <h1 className="font-display text-4xl sm:text-6xl md:text-7xl text-paper tracking-tight leading-[0.98] mb-6">
+              TERA RESUME{' '}
+              <span className="red-pen-strike text-tan-dim">IMPRESSIVE</span> HAI...
+              <br />
+              <span className="text-stamp">BAS FLUFF HAI BHAI.</span>
+            </h1>
+          ) : (
+            <h1 className="font-display text-4xl sm:text-6xl md:text-7xl text-paper tracking-tight leading-[0.98] mb-6">
+              YOUR RESUME LOOKS{' '}
+              <span className="red-pen-strike text-tan-dim">IMPRESSIVE</span>...
+              <br />
+              <span className="text-stamp">UNTIL SOMEONE READS IT.</span>
+            </h1>
+          )}
 
           {/* Subcopy (A.2 Exact Spec) */}
           <p className="font-body text-base sm:text-lg text-tan max-w-[660px] mx-auto mb-8 leading-relaxed">
-            Red pen se poori marking hogi, ek pakka verdict stamp milega, aur exact line likh ke bhi denge ki fix kaise karna hai.
+            {isHinglish
+              ? 'Red pen se poori marking hogi, ek pakka verdict stamp milega, aur exact line likh ke bhi denge ki fix kaise karna hai.'
+              : 'Brutal red pen annotations, a definitive score stamp, and exact rewrite replacements with metrics and zero fluff.'}
           </p>
 
           {/* Primary + Ghost CTA Pair (A.2 Exact Spec) */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link to="/roast" id="hero-cta" className="btn-primary">
-              Resume daal de bhai
+              {isHinglish ? 'Resume daal de bhai' : 'Roast My Resume'}
             </Link>
             <a href="#sample" className="btn-ghost">
-              Pehle sample dekh le
+              {isHinglish ? 'Pehle sample dekh le' : 'View Sample Roast'}
             </a>
           </div>
 
           {/* Hero Visual: PaperMockup + ScoreStamp */}
           <div className="relative inline-block w-full max-w-[660px]">
             <PaperMockup
-              candidateName={SAMPLE_RESUME_INFO.candidateName}
-              candidateTitle={SAMPLE_RESUME_INFO.candidateTitle}
-              companyLine={SAMPLE_RESUME_INFO.companyLine}
-              bullet1Text={SAMPLE_RESUME_INFO.bullet1Text}
-              bullet1Annotated={SAMPLE_RESUME_INFO.bullet1Annotated}
-              bullet1Tag={SAMPLE_RESUME_INFO.bullet1Tag}
-              bullet2Text={SAMPLE_RESUME_INFO.bullet2Text}
-              bullet2Annotated={SAMPLE_RESUME_INFO.bullet2Annotated}
-              bullet2Tag={SAMPLE_RESUME_INFO.bullet2Tag}
-              bullet3Text={SAMPLE_RESUME_INFO.bullet3Text}
-              bullet3Annotated={SAMPLE_RESUME_INFO.bullet3Annotated}
-              bullet3Tag={SAMPLE_RESUME_INFO.bullet3Tag}
+              candidateName={heroSample.resumeInfo.candidateName}
+              candidateTitle={heroSample.resumeInfo.candidateTitle}
+              companyLine={heroSample.resumeInfo.companyLine}
+              bullet1Text={heroSample.resumeInfo.bullet1Text}
+              bullet1Annotated={heroSample.resumeInfo.bullet1Annotated}
+              bullet1Tag={heroSample.resumeInfo.bullet1Tag}
+              bullet2Text={heroSample.resumeInfo.bullet2Text}
+              bullet2Annotated={heroSample.resumeInfo.bullet2Annotated}
+              bullet2Tag={heroSample.resumeInfo.bullet2Tag}
+              bullet3Text={heroSample.resumeInfo.bullet3Text}
+              bullet3Annotated={heroSample.resumeInfo.bullet3Annotated}
+              bullet3Tag={heroSample.resumeInfo.bullet3Tag}
               rotation={-2}
               animate={true}
             />
 
             {/* Score stamp placed on top-right of paper */}
             <div className="absolute -top-6 right-2 sm:right-6 z-20">
-              <ScoreStamp score={SAMPLE_ROAST_DATA.overall_score} band={SAMPLE_ROAST_DATA.band} animate={true} size="md" rotation={-12} />
+              <ScoreStamp
+                score={heroSample.roastData.overall_score}
+                band={heroSample.roastData.band}
+                animate={true}
+                size="md"
+                rotation={-12}
+              />
             </div>
           </div>
         </div>
@@ -478,13 +585,15 @@ export default function LandingPage() {
         <div className="max-w-[640px] mx-auto">
           <p className="section-label mb-3">INSTANT ROAST</p>
           <h2 className="font-display text-3xl sm:text-4xl text-paper mb-4 leading-tight">
-            Apna resume desk pe rakh do.
+            {isHinglish ? 'Apna resume desk pe rakh do.' : 'Drop your resume on the desk.'}
           </h2>
           <p className="font-mono text-xs text-tan-dim mb-8">
-            Free · 1 roast/day · Koi credit card nahi chahiye · ~15 seconds mein report
+            {isHinglish
+              ? 'Free · 1 roast/day · Koi credit card nahi chahiye · ~15 seconds mein report'
+              : 'Free · 1 roast/day · No credit card required · Report ready in ~15 seconds'}
           </p>
           <Link to="/roast" className="btn-primary">
-            Resume daal de bhai
+            {isHinglish ? 'Resume daal de bhai' : 'Roast My Resume Now'}
           </Link>
         </div>
       </section>
@@ -497,7 +606,9 @@ export default function LandingPage() {
               RESUME<span className="text-stamp">ROAST</span>
             </div>
             <p className="font-mono text-[11px] text-tan-dim mt-1">
-              resume roast — desk kabhi jhooth nahi bolta.
+              {isHinglish
+                ? 'resume roast — desk kabhi jhooth nahi bolta.'
+                : 'resume roast — the desk never lies.'}
             </p>
           </div>
           <nav className="flex items-center gap-4 font-mono text-xs text-tan-dim" aria-label="Legal footer links">

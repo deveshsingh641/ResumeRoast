@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from app.db import database
+from app.i18n.mapping import DEFAULT_LANGUAGE, language_from_request
 from app.services import voice_service
 
 router = APIRouter(prefix="/api/roast", tags=["voice"])
@@ -27,15 +28,28 @@ DEMO_VOICE_ROAST = {
     ],
 }
 
+ENGLISH_DEMO_VOICE_ROAST = {
+    "id": "demo",
+    "overall_score": 28,
+    "band": "weak",
+    "one_line_verdict": "Is this a resume or a mystery novel? Let's see some evidence 🕵️",
+    "issues": [
+        {"quoted_text": "Responsible for building UI components", "category": "no-metrics", "roast": "This line has a verb and a shrug. Zero numbers and the recruiter keeps scrolling 📉"},
+        {"quoted_text": "DECLARATION: I hereby declare all information is true", "category": "formatting", "roast": "Declarations and signatures retired in 2005. Don't waste whitespace on legal disclaimers ✋"},
+    ],
+}
+
 
 @router.post("/{roast_id}/voice")
 async def generate_voice_roast(roast_id: str, request: Request) -> JSONResponse:
     """
-    Generate or retrieve an existing WhatsApp-style voice note roast.
+    Generate or retrieve an existing voice note roast in requested language.
     Uses stored one_line_verdict and top issues to compose natural spoken script.
     """
+    lang = language_from_request(request)
+
     if roast_id in ("demo", "demo-roast", "sample-roast-1"):
-        roast = DEMO_VOICE_ROAST
+        roast = DEMO_VOICE_ROAST if lang == "hi-IN" else ENGLISH_DEMO_VOICE_ROAST
     else:
         roast = database.get_roast(roast_id)
 
@@ -56,17 +70,18 @@ async def generate_voice_roast(roast_id: str, request: Request) -> JSONResponse:
     one_line_verdict = roast.get("one_line_verdict", "Resume needs major overhaul.")
     overall_score = roast.get("overall_score", 50)
 
-    # 1. Build script
+    # 1. Build script (rebuild if language preference differs or no script exists)
     script = roast.get("voice_script")
-    if not script:
+    if not script or roast_id.startswith("demo"):
         script = voice_service.build_voice_roast_script(
             one_line_verdict=one_line_verdict,
             issues=issues,
             overall_score=overall_score,
+            language=lang,
         )
 
     # 2. Generate audio
-    audio_path = voice_service.generate_voice_roast_audio(roast_id, script)
+    audio_path = voice_service.generate_voice_roast_audio(roast_id, script, language=lang)
     if roast_id not in ("demo", "demo-roast", "sample-roast-1"):
         database.update_roast_voice(roast_id, script, audio_path)
 
@@ -79,22 +94,23 @@ async def generate_voice_roast(roast_id: str, request: Request) -> JSONResponse:
             "roast_id": roast_id,
             "script": script,
             "duration_seconds": approx_duration,
-            "audio_url": f"/api/roast/{roast_id}/voice/audio",
+            "audio_url": f"/api/roast/{roast_id}/voice/audio?lang={lang}",
             "disclaimer": "AI-generated voice, for fun — not a real recruiter.",
         }
     )
 
 
 @router.get("/{roast_id}/voice/audio")
-async def get_voice_audio(roast_id: str) -> FileResponse:
+async def get_voice_audio(roast_id: str, request: Request) -> FileResponse:
     """
     Stream or download the cached voice roast MP3 audio file.
     """
-    audio_path = voice_service.get_cached_voice_audio_path(roast_id)
+    lang = language_from_request(request)
+    audio_path = voice_service.get_cached_voice_audio_path(roast_id, language=lang)
     if not audio_path or not os.path.exists(audio_path):
         # Generate on the fly if roast exists
         if roast_id in ("demo", "demo-roast", "sample-roast-1"):
-            roast = DEMO_VOICE_ROAST
+            roast = DEMO_VOICE_ROAST if lang == "hi-IN" else ENGLISH_DEMO_VOICE_ROAST
         else:
             roast = database.get_roast(roast_id)
 
@@ -112,8 +128,9 @@ async def get_voice_audio(roast_id: str) -> FileResponse:
             one_line_verdict=roast.get("one_line_verdict", ""),
             issues=issues,
             overall_score=roast.get("overall_score", 50),
+            language=lang,
         )
-        audio_path = voice_service.generate_voice_roast_audio(roast_id, script)
+        audio_path = voice_service.generate_voice_roast_audio(roast_id, script, language=lang)
 
     return FileResponse(
         path=audio_path,

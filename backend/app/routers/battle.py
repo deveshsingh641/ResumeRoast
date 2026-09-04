@@ -11,6 +11,7 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from app.db import database
+from app.i18n.mapping import DEFAULT_LANGUAGE, language_from_request
 from app.routers.roast import _device_fingerprint, MAX_FILE_SIZE
 from app.services import ai_analyzer, battle_service, extractor
 
@@ -65,14 +66,15 @@ async def create_battle(
         raise HTTPException(status_code=422, detail=f"Fighter 2 file error: {str(e)}")
 
     # 4. Analyze both resumes
+    lang = language_from_request(request)
     try:
-        f1_analysis = ai_analyzer.analyze_resume(f1_text)
-        f2_analysis = ai_analyzer.analyze_resume(f2_text)
+        f1_analysis = ai_analyzer.analyze_resume(f1_text, language=lang)
+        f2_analysis = ai_analyzer.analyze_resume(f2_text, language=lang)
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to analyze resumes during battle.")
 
     # 5. Comparative battle referee AI
-    comparison = battle_service.analyze_battle(f1_analysis, f2_analysis)
+    comparison = battle_service.analyze_battle(f1_analysis, f2_analysis, language=lang)
 
     fingerprint = _device_fingerprint(request)
 

@@ -63,12 +63,15 @@ def generate_certificate_pdf(
     one_line_verdict: str = "Bhai ye resume hai ya birthday card ka message? 🎂",
     created_at: Optional[str] = None,
     is_pro: bool = False,
+    language: str = "en",
 ) -> str:
     """
     Renders an ornate parody certificate and saves it to storage.
     Returns the absolute path to the generated PDF file.
     """
-    pdf_filename = f"certificate-{roast_id}{'-pro' if is_pro else ''}.pdf"
+    from app.i18n.mapping import normalize_language
+    lang = normalize_language(language)
+    pdf_filename = f"certificate-{roast_id}-{lang}{'-pro' if is_pro else ''}.pdf"
     pdf_path = CERTIFICATE_DIR / pdf_filename
 
     # If cached version exists, return it
@@ -202,7 +205,10 @@ def generate_certificate_pdf(
     c.circle(seal_x, seal_y, 40, stroke=1, fill=0)
 
     # Inside Stamp Text
-    band_label = "KAMZOR" if band == "weak" else "THIK-THAK" if band == "mid" else "DAMDAAR"
+    if lang == "hi-IN":
+        band_label = "KAMZOR" if band == "weak" else "THIK-THAK" if band == "mid" else "DAMDAAR"
+    else:
+        band_label = "CRITICAL" if band == "weak" else "NEEDS WORK" if band == "mid" else "STRONG"
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(seal_x, seal_y + 8, str(score))
     c.setFont("Helvetica-Bold", 8)

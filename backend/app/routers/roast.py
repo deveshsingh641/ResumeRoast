@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from app.db import database
+from app.i18n.mapping import DEFAULT_LANGUAGE, language_from_request
 from app.services import ai_analyzer, extractor
 from app.services.certificate_service import generate_certificate_pdf, get_credential_title
 
@@ -80,6 +81,76 @@ SAMPLE_ROAST_RESPONSE = {
     "strengths": [
         "Tech stack modern hai — FastAPI aur React achha combination hai 🚀",
         "Projects section mein GitHub links live hain 🔥",
+    ],
+    "is_truncated": False,
+    "created_at": "2026-09-01T12:00:00Z",
+}
+
+ENGLISH_SAMPLE_ROAST_RESPONSE = {
+    "id": "demo",
+    "overall_score": 28,
+    "band": "weak",
+    "one_line_verdict": "Is this a resume or a mystery novel? Let's see some evidence 🕵️",
+    "issues": [
+        {
+            "quoted_text": "Responsible for building reusable UI components and collaborating across teams",
+            "category": "no-metrics",
+            "roast": "This line has a verb and a shrug. Zero numbers and the recruiter keeps scrolling 📉",
+            "fix": "Quantify this: 'Built 12 reusable UI components in React/TS, reducing average page load time by 30%'.",
+            "start_offset": 45,
+            "end_offset": 125,
+            "severity_rank": 1,
+        },
+        {
+            "quoted_text": "Leveraged synergistic paradigms to accelerate core business outcomes",
+            "category": "buzzword",
+            "roast": "Every resume on earth says this. Recruiters stopped reading it as information around 2015 🤖",
+            "fix": "Cut the corporate jargon and write: 'Led checkout redesign, reducing cart abandonment rate by 18%'.",
+            "start_offset": 130,
+            "end_offset": 200,
+            "severity_rank": 2,
+        },
+        {
+            "quoted_text": "DECLARATION: I hereby declare that all information is true to my knowledge",
+            "category": "formatting",
+            "roast": "Declarations and signatures retired in 2005. Don't spend premium whitespace on legal disclaimers ✋",
+            "fix": "Delete the entire declaration section and use the space for live portfolio or GitHub project links.",
+            "start_offset": 210,
+            "end_offset": 285,
+            "severity_rank": 3,
+        },
+        {
+            "quoted_text": "Hobbies: Playing cricket, watching movies, listening to music",
+            "category": "irrelevant",
+            "roast": "Was this detail required, or did it just wander in? A recruiter does not need to know this 🤔",
+            "fix": "Remove hobbies and highlight hackathon achievements, certifications, or open-source PRs.",
+            "start_offset": 290,
+            "end_offset": 350,
+            "severity_rank": 4,
+        },
+        {
+            "quoted_text": "Curriculum Vitae (Page 1 of 4) — Detailed Experience",
+            "category": "length",
+            "roast": "Recruiters give this six seconds. You gave them a four-page novella 📚",
+            "fix": "Condense to a single sharp page. Remove outdated schooling and obvious generic job duties.",
+            "start_offset": 355,
+            "end_offset": 405,
+            "severity_rank": 5,
+        },
+        {
+            "quoted_text": "SKILS: Pythno, Jacascript, C++",
+            "category": "typo",
+            "roast": "One typo and 'detail-oriented' becomes a joke at your expense 😩",
+            "fix": "Correct spelling: 'Python, JavaScript, C++' — run spellcheck before submitting any application.",
+            "start_offset": 410,
+            "end_offset": 440,
+            "severity_rank": 6,
+        },
+    ],
+    "total_issues": 6,
+    "strengths": [
+        "Modern tech stack highlighted — FastAPI and React are an attractive combination 🚀",
+        "Direct GitHub links included under key project entries 🔥",
     ],
     "is_truncated": False,
     "created_at": "2026-09-01T12:00:00Z",
@@ -196,8 +267,9 @@ async def create_roast(
         )
 
     # 5. AI analysis
+    lang = language_from_request(request)
     try:
-        analysis = ai_analyzer.analyze_resume(resume_text)
+        analysis = ai_analyzer.analyze_resume(resume_text, language=lang)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
@@ -245,8 +317,10 @@ async def create_roast(
 
 
 @router.get("/roast/demo")
-async def get_demo_roast() -> JSONResponse:
-    return JSONResponse(content=SAMPLE_ROAST_RESPONSE)
+async def get_demo_roast(request: Request) -> JSONResponse:
+    lang = language_from_request(request)
+    demo_data = SAMPLE_ROAST_RESPONSE if lang == "hi-IN" else ENGLISH_SAMPLE_ROAST_RESPONSE
+    return JSONResponse(content=demo_data)
 
 
 @router.get("/roast/{roast_id}")
@@ -258,7 +332,9 @@ async def get_roast(roast_id: str, request: Request, email: Optional[str] = None
         is_pro = (database.get_user_subscription(user_email.strip().lower()) == "pro")
 
     if roast_id in ("demo", "demo-roast", "sample-roast-1"):
-        demo_resp = dict(SAMPLE_ROAST_RESPONSE)
+        lang = language_from_request(request)
+        demo_source = SAMPLE_ROAST_RESPONSE if lang == "hi-IN" else ENGLISH_SAMPLE_ROAST_RESPONSE
+        demo_resp = dict(demo_source)
         if is_pro:
             demo_resp["is_truncated"] = False
         return JSONResponse(content=demo_resp)
@@ -337,9 +413,10 @@ async def get_certificate_info(roast_id: str) -> JSONResponse:
 
 
 @router.get("/roast/{roast_id}/certificate/download")
-async def download_certificate(roast_id: str) -> FileResponse:
+async def download_certificate(roast_id: str, request: Request) -> FileResponse:
+    lang = language_from_request(request)
     if roast_id in ("demo", "demo-roast", "sample-roast-1"):
-        row = SAMPLE_ROAST_RESPONSE
+        row = SAMPLE_ROAST_RESPONSE if lang == "hi-IN" else ENGLISH_SAMPLE_ROAST_RESPONSE
     else:
         row = database.get_roast(roast_id)
         if row is None:
@@ -352,6 +429,7 @@ async def download_certificate(roast_id: str) -> FileResponse:
         band=row["band"],
         one_line_verdict=row["one_line_verdict"],
         created_at=str(row.get("created_at", "")),
+        language=lang,
     )
 
     if not os.path.exists(pdf_path):

@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { normalizeLang } from '@/i18n/detector'
 
-const ROAST_LINES = [
+const HINGLISH_ROAST_LINES = [
   '⚡ "Bhai resume hai ya suspense novel? Recruiter ko number chahiye, kahani nahi." 🕵️',
   '⚡ "Responsible for likhna band karo yaar 😩 impact dikhao!"',
   '⚡ "4 page ka resume? Novel likh rahe ho kya bhai?" 💀',
@@ -10,8 +12,21 @@ const ROAST_LINES = [
   '⚡ "Arre yaar spellcheck skip kar diya kya? 🤡"',
 ]
 
+const ENGLISH_ROAST_LINES = [
+  '⚡ "Is this a resume or a mystery novel? Recruiters need metrics, not cliffhangers." 🕵️',
+  '⚡ "Stop writing \'Responsible for\' 😩 Show what actually shipped!"',
+  '⚡ "Four pages? Recruiters give this six seconds, not a book review." 💀',
+  '⚡ "\'Worked closely with design team\' — so who wrote the code? ☕"',
+  '⚡ "Cut the hobbies section. This is a resume, not a dating profile 😅"',
+  '⚡ "Declarations and signatures retired in 2005 ✋ Reclaim the whitespace."',
+  '⚡ "Spellcheck is free and faster than an automated rejection 🤡"',
+]
+
 export default function MarqueeTicker() {
+  const { i18n } = useTranslation()
   const [isPaused, setIsPaused] = useState(false)
+  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
+  const lines = isHinglish ? HINGLISH_ROAST_LINES : ENGLISH_ROAST_LINES
 
   return (
     <div
@@ -28,7 +43,7 @@ export default function MarqueeTicker() {
           display: 'inline-flex',
         }}
       >
-        {ROAST_LINES.concat(ROAST_LINES).map((line, idx) => (
+        {lines.concat(lines).map((line, idx) => (
           <span key={idx} className="flex items-center gap-2 hover:text-tan transition-colors">
             {line}
           </span>

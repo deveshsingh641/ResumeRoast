@@ -21,16 +21,22 @@ STORAGE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "storage", "vo
 os.makedirs(STORAGE_DIR, exist_ok=True)
 
 
+from app.i18n.mapping import DEFAULT_LANGUAGE, normalize_language
+
+
 def build_voice_roast_script(
     one_line_verdict: str,
     issues: list[dict],
     overall_score: int,
+    language: str = DEFAULT_LANGUAGE,
 ) -> str:
     """
-    Composes a natural, conversational 3-4 sentence spoken Hinglish script
-    optimized for 25-40 seconds of voice memo playback.
+    Composes a natural, conversational 3-4 sentence spoken script
+    in the requested language (English or Hinglish) optimized for 25-40 seconds of playback.
     Strips raw emojis and markdown so TTS engine speaks cleanly.
     """
+    lang = normalize_language(language)
+
     # Clean text from emojis and markdown formatting
     def _clean(t: str) -> str:
         t = re.sub(r"[\U00010000-\U0010ffff]", "", t)
@@ -39,14 +45,6 @@ def build_voice_roast_script(
 
     clean_verdict = _clean(one_line_verdict)
 
-    # Opening lines pool
-    openers = [
-        "Arre bhai, maine tera resume poora check kiya.",
-        "Sun bhai, tere resume ka official post-mortem taiyar hai.",
-        "Arey yaar, resume desk pe aate hi maine padhna shuru kiya.",
-    ]
-    opener = openers[overall_score % len(openers)]
-
     # Pick top 2 roasts
     roast_points = []
     for issue in issues[:2]:
@@ -54,43 +52,73 @@ def build_voice_roast_script(
         if r_text:
             roast_points.append(r_text)
 
-    roast_body = ""
-    if len(roast_points) >= 2:
-        roast_body = f"Pehli baat: {roast_points[0]} Aur doosri baat: {roast_points[1]}"
-    elif len(roast_points) == 1:
-        roast_body = f"Sabse bada issue: {roast_points[0]}"
-    else:
-        roast_body = f"Verdict ye hai: {clean_verdict}."
+    if lang == "hi-IN":
+        openers = [
+            "Arre bhai, maine tera resume poora check kiya.",
+            "Sun bhai, tere resume ka official post-mortem taiyar hai.",
+            "Arey yaar, resume desk pe aate hi maine padhna shuru kiya.",
+        ]
+        opener = openers[overall_score % len(openers)]
 
-    # Closing line
-    closers = [
-        f"Score mila hai {overall_score} out of 100. Jaldi se fixes check kar aur group chat mein share kar de!",
-        f"Overall score {overall_score} hai. Thoda metrics daalo boss, tabhi shortlist aayega. All the best!",
-        f"Score {overall_score} out of 100 bana hai. Bullet points rewrite karo aur agle round ke liye ready ho jao!",
-    ]
-    closer = closers[overall_score % len(closers)]
+        if len(roast_points) >= 2:
+            roast_body = f"Pehli baat: {roast_points[0]} Aur doosri baat: {roast_points[1]}"
+        elif len(roast_points) == 1:
+            roast_body = f"Sabse bada issue: {roast_points[0]}"
+        else:
+            roast_body = f"Verdict ye hai: {clean_verdict}."
+
+        closers = [
+            f"Score mila hai {overall_score} out of 100. Jaldi se fixes check kar aur group chat mein share kar de!",
+            f"Overall score {overall_score} hai. Thoda metrics daalo boss, tabhi shortlist aayega. All the best!",
+            f"Score {overall_score} out of 100 bana hai. Bullet points rewrite karo aur agle round ke liye ready ho jao!",
+        ]
+        closer = closers[overall_score % len(closers)]
+    else:
+        openers = [
+            "Look, I just went through your entire resume.",
+            "Alright, here is the honest post-mortem on your resume.",
+            "Okay, I just pulled your resume off the stack.",
+        ]
+        opener = openers[overall_score % len(openers)]
+
+        if len(roast_points) >= 2:
+            roast_body = f"First off: {roast_points[0]}. And second: {roast_points[1]}."
+        elif len(roast_points) == 1:
+            roast_body = f"The single biggest issue: {roast_points[0]}."
+        else:
+            roast_body = f"The bottom line: {clean_verdict}."
+
+        closers = [
+            f"You scored {overall_score} out of 100. Check the suggested fixes and give your bullets some real numbers!",
+            f"Overall score is {overall_score}. Add concrete metrics so recruiters have something to believe. Good luck!",
+            f"That's a score of {overall_score} out of 100. Tighten up the phrasing, cut the fluff, and get ready for interviews!",
+        ]
+        closer = closers[overall_score % len(closers)]
 
     script = f"{opener} {clean_verdict}. {roast_body} {closer}"
     return script.strip()
 
 
-def _synthesize_with_gtts(script_text: str, output_path: str) -> bool:
-    """Synthesize voice using gTTS with Hindi/Indian English support."""
+def _synthesize_with_gtts(script_text: str, output_path: str, language: str = DEFAULT_LANGUAGE) -> bool:
+    """Synthesize voice using gTTS with language-appropriate accent."""
+    lang = normalize_language(language)
     try:
         from gtts import gTTS
-        # gTTS with Indian English accent
-        tts = gTTS(text=script_text, lang="en", tld="co.in", slow=False)
+        if lang == "hi-IN":
+            tts = gTTS(text=script_text, lang="en", tld="co.in", slow=False)
+        else:
+            tts = gTTS(text=script_text, lang="en", tld="com", slow=False)
         tts.save(output_path)
         return True
     except Exception as e:
-        print(f"[WARN] gTTS en-in failed: {e}. Trying fallback...")
+        print(f"[WARN] gTTS primary failed: {e}. Trying fallback...")
         try:
             from gtts import gTTS
-            tts = gTTS(text=script_text, lang="hi", slow=False)
+            tts = gTTS(text=script_text, lang="en", slow=False)
             tts.save(output_path)
             return True
         except Exception as e2:
-            print(f"[WARN] gTTS hi failed: {e2}")
+            print(f"[WARN] gTTS en fallback failed: {e2}")
             return False
 
 
@@ -136,12 +164,14 @@ def _generate_synthetic_tone_mp3(output_path: str, duration_sec: int = 15) -> bo
         return False
 
 
-def generate_voice_roast_audio(roast_id: str, script_text: str) -> str:
+def generate_voice_roast_audio(roast_id: str, script_text: str, language: str = DEFAULT_LANGUAGE) -> str:
     """
-    Generates and caches MP3 audio for a given roast.
+    Generates and caches MP3 audio for a given roast and language.
     Returns the absolute path to the cached MP3 file.
     """
-    out_file = os.path.join(STORAGE_DIR, f"{roast_id}.mp3")
+    lang = normalize_language(language)
+    cache_key = f"{roast_id}_{lang}" if roast_id.startswith("demo") else roast_id
+    out_file = os.path.join(STORAGE_DIR, f"{cache_key}.mp3")
     if os.path.exists(out_file) and os.path.getsize(out_file) > 1000:
         return out_file
 
@@ -171,7 +201,7 @@ def generate_voice_roast_audio(roast_id: str, script_text: str) -> str:
             print(f"[WARN] ElevenLabs TTS failed: {e}. Falling back to gTTS...")
 
     # 2. Try gTTS
-    success = _synthesize_with_gtts(script_text, out_file)
+    success = _synthesize_with_gtts(script_text, out_file, language=lang)
     if success and os.path.exists(out_file) and os.path.getsize(out_file) > 500:
         return out_file
 
@@ -180,9 +210,14 @@ def generate_voice_roast_audio(roast_id: str, script_text: str) -> str:
     return out_file
 
 
-def get_cached_voice_audio_path(roast_id: str) -> Optional[str]:
+def get_cached_voice_audio_path(roast_id: str, language: str = DEFAULT_LANGUAGE) -> Optional[str]:
     """Returns path to cached audio file if present."""
-    path = os.path.join(STORAGE_DIR, f"{roast_id}.mp3")
+    lang = normalize_language(language)
+    cache_key = f"{roast_id}_{lang}" if roast_id.startswith("demo") else roast_id
+    path = os.path.join(STORAGE_DIR, f"{cache_key}.mp3")
     if os.path.exists(path) and os.path.getsize(path) > 500:
         return path
+    base_path = os.path.join(STORAGE_DIR, f"{roast_id}.mp3")
+    if os.path.exists(base_path) and os.path.getsize(base_path) > 500:
+        return base_path
     return None

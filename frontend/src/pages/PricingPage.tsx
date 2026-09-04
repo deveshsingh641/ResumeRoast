@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { normalizeLang } from '@/i18n/detector'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import axios from 'axios'
 import { useAppStore } from '@/store/useAppStore'
 import { loadRazorpaySDK, RazorpaySuccessResponse } from '@/utils/razorpay'
@@ -267,6 +270,7 @@ export default function PricingPage() {
             <Link to="/" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
               Desk Home
             </Link>
+            <LanguageSwitcher />
           </div>
         </div>
       </header>

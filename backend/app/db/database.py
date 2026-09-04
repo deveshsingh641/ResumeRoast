@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now(),
     stripe_customer_id TEXT,
-    subscription_status TEXT NOT NULL DEFAULT 'free'
+    subscription_status TEXT NOT NULL DEFAULT 'free',
+    preferred_language TEXT
 );
 
 CREATE TABLE IF NOT EXISTS roasts (
@@ -135,6 +136,7 @@ def init_db() -> None:
         with _get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(SCHEMA_SQL)
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT;")
             conn.commit()
     except Exception as e:
         print(f"[WARN] DB init error: {e}")
@@ -328,6 +330,7 @@ def create_or_get_user(email: str) -> dict:
                 "created_at": now_utc,
                 "stripe_customer_id": None,
                 "subscription_status": "free",
+                "preferred_language": None,
             }
         return _users_memory[email]
 
@@ -385,6 +388,39 @@ def get_user_subscription(email: str) -> str:
             cur.execute("SELECT subscription_status FROM users WHERE email = %s", (email,))
             row = cur.fetchone()
             return row["subscription_status"] if row else "free"
+
+
+def update_user_language(email: str, language: str) -> None:
+    """Update preferred language for user."""
+    if not DATABASE_URL:
+        user = create_or_get_user(email)
+        user["preferred_language"] = language
+        return
+
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE users
+                SET preferred_language = %s
+                WHERE email = %s
+                """,
+                (language, email),
+            )
+        conn.commit()
+
+
+def get_user_language(email: str) -> Optional[str]:
+    """Get preferred language for user email."""
+    if not DATABASE_URL:
+        user = _users_memory.get(email)
+        return user.get("preferred_language") if user else None
+
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT preferred_language FROM users WHERE email = %s", (email,))
+            row = cur.fetchone()
+            return row["preferred_language"] if row else None
 
 
 # In-memory stores for battles and wall entries

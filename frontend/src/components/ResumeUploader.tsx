@@ -1,6 +1,8 @@
 import React, { useCallback, useRef, useState } from 'react'
 import axios from 'axios'
 import { useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { normalizeLang } from '@/i18n/detector'
 import { useAppStore } from '@/store/useAppStore'
 import ProcessingState from './ProcessingState'
 
@@ -27,6 +29,8 @@ function validateFile(file: File): string | null {
 
 export default function ResumeUploader() {
   const navigate = useNavigate()
+  const { i18n } = useTranslation()
+  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
   const { setUploadStatus, setUploadError, setResult, uploadStatus } = useAppStore()
   const [isDragOver, setIsDragOver] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -163,10 +167,12 @@ export default function ResumeUploader() {
         </div>
 
         <p className="font-mono text-sm text-paper mb-1">
-          {isDragOver ? 'Abhi chhod do desk pe!' : 'Apna resume yahan drop karo'}
+          {isDragOver
+            ? (isHinglish ? 'Abhi chhod do desk pe!' : 'Drop it on the desk now!')
+            : (isHinglish ? 'Apna resume yahan drop karo' : 'Drop your resume here')}
         </p>
         <p className="font-mono text-xs text-tan-dim mb-6">
-          PDF ya DOCX format · Max 5MB
+          {isHinglish ? 'PDF ya DOCX format · Max 5MB' : 'PDF or DOCX format · Max 5MB'}
         </p>
 
         {/* Primary verb-first button */}
@@ -180,7 +186,7 @@ export default function ResumeUploader() {
             if (!isProcessing) fileInputRef.current?.click()
           }}
         >
-          File choose karo
+          {isHinglish ? 'File choose karo' : 'Choose File'}
         </button>
 
         <input

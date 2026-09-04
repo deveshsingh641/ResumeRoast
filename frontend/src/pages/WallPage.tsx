@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { normalizeLang } from '@/i18n/detector'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import axios from 'axios'
 import ScoreStamp from '@/components/ScoreStamp'
 import DeskClutter from '@/components/DeskClutter'
@@ -16,6 +19,9 @@ interface WallEntry {
 }
 
 export default function WallPage() {
+  const { i18n } = useTranslation()
+  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
+
   const [activeTab, setActiveTab] = useState<'shame' | 'fame'>('shame')
   const [sortBy, setSortBy] = useState<'recent' | 'score'>('recent')
   const [entries, setEntries] = useState<WallEntry[]>([])
@@ -38,11 +44,18 @@ export default function WallPage() {
                 type: 'shame',
                 score: 28,
                 band: 'weak',
-                one_line_verdict: 'Bhai resume hai ya suspense novel? 🕵️',
-                top_roast_lines: [
-                  '"Responsible for" likhna band karo yaar 😩 recruiter ko number chahiye, kahani nahi.',
-                  'Declaration 2005 ka kyu daal rakha hai? Modern resume mein iski zaroorat nahi.',
-                ],
+                one_line_verdict: isHinglish
+                  ? 'Bhai resume hai ya suspense novel? 🕵️'
+                  : 'Is this a resume or an unsolved mystery novel? 🕵️',
+                top_roast_lines: isHinglish
+                  ? [
+                      '"Responsible for" likhna band karo yaar 😩 recruiter ko number chahiye, kahani nahi.',
+                      'Declaration 2005 ka kyu daal rakha hai? Modern resume mein iski zaroorat nahi.',
+                    ]
+                  : [
+                      'Stop using "Responsible for" 😩 Recruiters want verifiable metrics, not generic bedtime stories.',
+                      'A declaration statement from 2005? Modern tech resumes do not include legal disclaimers.',
+                    ],
                 created_at: new Date().toISOString(),
               },
               {
@@ -50,11 +63,18 @@ export default function WallPage() {
                 type: 'shame',
                 score: 34,
                 band: 'weak',
-                one_line_verdict: 'Design dekh ke aankhon se aansu nikal gaye 😭',
-                top_roast_lines: [
-                  'Arre yaar "Pythno" aur "Jacascript"? 🤡 Spellcheck skip kar diya kya?',
-                  '4 page ka resume? Novel likh rahe ho kya bhai?',
-                ],
+                one_line_verdict: isHinglish
+                  ? 'Design dekh ke aankhon se aansu nikal gaye 😭'
+                  : 'Looking at this template brought tears to our eyes 😭',
+                top_roast_lines: isHinglish
+                  ? [
+                      'Arre yaar "Pythno" aur "Jacascript"? 🤡 Spellcheck skip kar diya kya?',
+                      '4 page ka resume? Novel likh rahe ho kya bhai?',
+                    ]
+                  : [
+                      'Did you really type "Pythno" and "Jacascript"? 🤡 Spellcheck has left the building.',
+                      '4 pages for an entry-level resume? What are you writing, an autobiography?',
+                    ],
                 created_at: new Date().toISOString(),
               },
             ]
@@ -64,11 +84,18 @@ export default function WallPage() {
                 type: 'fame',
                 score: 88,
                 band: 'strong',
-                one_line_verdict: 'Ekdum solid profile hai boss, bas thoda polish karo 🔥',
-                top_roast_lines: [
-                  'FastAPI aur React ka combination mast hai, metrics bhi crisp hain.',
-                  'GitHub live links clean hain, ATS easily parse karega.',
-                ],
+                one_line_verdict: isHinglish
+                  ? 'Ekdum solid profile hai boss, bas thoda polish karo 🔥'
+                  : 'Genuinely solid profile, just needs minor final polish 🔥',
+                top_roast_lines: isHinglish
+                  ? [
+                      'FastAPI aur React ka combination mast hai, metrics bhi crisp hain.',
+                      'GitHub live links clean hain, ATS easily parse karega.',
+                    ]
+                  : [
+                      'The FastAPI and React stack is well quantified with crisp business impact.',
+                      'GitHub live repository links are clean and effortlessly parseable by ATS systems.',
+                    ],
                 created_at: new Date().toISOString(),
               },
             ]
@@ -95,7 +122,7 @@ export default function WallPage() {
   return (
     <main className="min-h-screen pb-24 desk-cursor relative overflow-hidden">
       {/* Tactile Desk Clutter */}
-      <DeskClutter stickyText="hall of anonymous damage 🔥" stickyRotation={-3} />
+      <DeskClutter stickyText={isHinglish ? 'hall of anonymous damage 🔥' : 'hall of anonymous damage 🔥'} stickyRotation={-3} />
 
       {/* Header */}
       <header className="border-b border-white/[0.08] py-4 px-6 mb-8 relative z-10">
@@ -105,11 +132,12 @@ export default function WallPage() {
           </Link>
           <div className="flex items-center gap-4">
             <Link to="/battle" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              ⚔️ Battle Mode →
+              {isHinglish ? '⚔️ Battle Mode →' : '⚔️ Battle Mode →'}
             </Link>
             <Link to="/roast" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              Grade Resume →
+              {isHinglish ? 'Grade Resume →' : 'Grade Resume →'}
             </Link>
+            <LanguageSwitcher />
           </div>
         </div>
       </header>
@@ -117,12 +145,16 @@ export default function WallPage() {
       <div className="max-w-[1100px] mx-auto px-4 space-y-10 relative z-10">
         {/* Title */}
         <div className="text-center">
-          <p className="section-label mb-2">PUBLIC ANONYMOUS HALL OF DAMAGE</p>
+          <p className="section-label mb-2">
+            {isHinglish ? 'PUBLIC ANONYMOUS HALL OF DAMAGE' : 'PUBLIC ANONYMOUS HALL OF DAMAGE'}
+          </p>
           <h1 className="font-display text-3xl sm:text-5xl text-paper tracking-tight">
             Wall of <span className={activeTab === 'shame' ? 'text-stamp' : 'text-amber-400'}>{activeTab === 'shame' ? 'Shame' : 'Fame'}</span>
           </h1>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-[580px] mx-auto">
-            Real anonymized resumes submitted by brave candidates. All personal data, emails, and company names have been pre-sanitized.
+            {isHinglish
+              ? 'Real anonymized resumes submitted by brave candidates. All personal data, emails, and company names have been pre-sanitized.'
+              : 'Real anonymized resumes submitted by brave candidates. All personal data, emails, and company names have been pre-sanitized.'}
           </p>
         </div>
 

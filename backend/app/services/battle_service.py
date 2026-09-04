@@ -12,55 +12,50 @@ from typing import Any
 from dotenv import load_dotenv
 import httpx
 
-from app.services.ai_analyzer import SYSTEM_PROMPT, _extract_json
+from app.i18n.mapping import DEFAULT_LANGUAGE, normalize_language
+from app.prompts import get_battle_system_prompt
+from app.services.ai_analyzer import _extract_json
 
 load_dotenv()
 
-BATTLE_SYSTEM_PROMPT = SYSTEM_PROMPT + """
 
-BATTLE MODE RULES:
-You are now refereeing a 1-on-1 Resume Roast Battle between Fighter 1 and Fighter 2.
-You have the already-analyzed structured scores and issues for both candidates.
-Compare them savagely in natural WhatsApp-style Hinglish Roman script.
-
-Rules:
-- Declare a clear winner ("fighter_1", "fighter_2", or "draw") based on the higher score and fewer catastrophic flaws.
-- Margin must be "landslide" (score diff > 20), "close" (score diff 5-20), or "draw" (score diff < 5).
-- Write a 2-3 sentence savage verdict in Hinglish comparing their choices. Ground the commentary in their actual scores and quotes.
-- Give a punchy best_line for each fighter (praise if strong, hilarious roast callout if weak).
-
-RETURN EXACTLY THIS JSON SCHEMA:
-{
-  "winner": "<fighter_1 | fighter_2 | draw>",
-  "margin": "<landslide | close | draw>",
-  "verdict": "<2-3 sentence savage comparative commentary in Hinglish with 1-2 emojis>",
-  "fighter_1_best_line": "<single sharpest praise or roast for fighter 1>",
-  "fighter_2_best_line": "<single sharpest praise or roast for fighter 2>"
-}
-"""
-
-
-def _generate_fallback_battle(f1: dict, f2: dict) -> dict[str, Any]:
+def _generate_fallback_battle(f1: dict, f2: dict, language: str = DEFAULT_LANGUAGE) -> dict[str, Any]:
     """Deterministic fallback comparator if external AI call is unavailable."""
+    lang = normalize_language(language)
     s1 = f1.get("overall_score", 50)
     s2 = f2.get("overall_score", 50)
     diff = s1 - s2
 
-    if abs(diff) < 5:
-        winner = "draw"
-        margin = "draw"
-        verdict = f"Dono ka haal lagbhag ek jaisa hai bhai! 🤝 Fighter 1 ka score {s1} aur Fighter 2 ka {s2}. Dono ko metrics daalne ki sakht zaroorat hai."
-    elif s1 > s2:
-        winner = "fighter_1"
-        margin = "landslide" if diff > 20 else "close"
-        verdict = f"Fighter 1 ne Fighter 2 ko dho diya! 🥊 Score {s1} vs {s2}. Fighter 2 ke resume mein buzzwords itne hain ki ATS bhi behosh ho gaya."
+    if lang == "hi-IN":
+        if abs(diff) < 5:
+            winner = "draw"
+            margin = "draw"
+            verdict = f"Dono ka haal lagbhag ek jaisa hai bhai! 🤝 Fighter 1 ka score {s1} aur Fighter 2 ka {s2}. Dono ko metrics daalne ki sakht zaroorat hai."
+        elif s1 > s2:
+            winner = "fighter_1"
+            margin = "landslide" if diff > 20 else "close"
+            verdict = f"Fighter 1 ne Fighter 2 ko dho diya! 🥊 Score {s1} vs {s2}. Fighter 2 ke resume mein buzzwords itne hain ki ATS bhi behosh ho gaya."
+        else:
+            winner = "fighter_2"
+            margin = "landslide" if abs(diff) > 20 else "close"
+            verdict = f"Fighter 2 ne baazi maar li! 🏆 Score {s2} vs {s1}. Fighter 1 ka resume padhke lagta hai 2010 ka biodata dekh rahe hain."
+        f1_roast = f1.get("issues", [{}])[0].get("roast", f1.get("one_line_verdict", "Format theek hai par numbers gayab hain."))
+        f2_roast = f2.get("issues", [{}])[0].get("roast", f2.get("one_line_verdict", "Thoda aur concrete kaam dikhana padega."))
     else:
-        winner = "fighter_2"
-        margin = "landslide" if abs(diff) > 20 else "close"
-        verdict = f"Fighter 2 ne baazi maar li! 🏆 Score {s2} vs {s1}. Fighter 1 ka resume padhke lagta hai 2010 ka biodata dekh rahe hain."
-
-    f1_roast = f1.get("issues", [{}])[0].get("roast", f1.get("one_line_verdict", "Format theek hai par numbers gayab hain."))
-    f2_roast = f2.get("issues", [{}])[0].get("roast", f2.get("one_line_verdict", "Thoda aur concrete kaam dikhana padega."))
+        if abs(diff) < 5:
+            winner = "draw"
+            margin = "draw"
+            verdict = f"It's a dead heat! 🤝 Fighter 1 scored {s1} and Fighter 2 scored {s2}. Both candidates need to stop relying on adjectives and put real metrics on the page."
+        elif s1 > s2:
+            winner = "fighter_1"
+            margin = "landslide" if diff > 20 else "close"
+            verdict = f"Fighter 1 takes the match! 🥊 Score {s1} vs {s2}. Fighter 2's resume had so much corporate fluff that even an ATS parser gave up."
+        else:
+            winner = "fighter_2"
+            margin = "landslide" if abs(diff) > 20 else "close"
+            verdict = f"Fighter 2 wins the duel! 🏆 Score {s2} vs {s1}. Fighter 1's resume reads like a generic job description from a decade ago."
+        f1_roast = f1.get("issues", [{}])[0].get("roast", f1.get("one_line_verdict", "Clean structure, but metrics are missing."))
+        f2_roast = f2.get("issues", [{}])[0].get("roast", f2.get("one_line_verdict", "Needs more concrete, quantifiable accomplishments."))
 
     return {
         "winner": winner,
@@ -71,8 +66,11 @@ def _generate_fallback_battle(f1: dict, f2: dict) -> dict[str, Any]:
     }
 
 
-def analyze_battle(f1: dict, f2: dict) -> dict[str, Any]:
+def analyze_battle(f1: dict, f2: dict, language: str = DEFAULT_LANGUAGE) -> dict[str, Any]:
     """Compare two structured resume analyses using LLM or fallback."""
+    lang = normalize_language(language)
+    battle_system_prompt = get_battle_system_prompt(lang)
+
     gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
     groq_key = os.getenv("GROQ_API_KEY", "").strip()
     anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
@@ -99,7 +97,7 @@ Declare the winner and generate the savage comparative JSON verdict now.
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
             payload = {
                 "contents": [
-                    {"parts": [{"text": f"{BATTLE_SYSTEM_PROMPT}\n\n{prompt_content}"}]}
+                    {"parts": [{"text": f"{battle_system_prompt}\n\n{prompt_content}"}]}
                 ],
                 "generationConfig": {"responseMimeType": "application/json", "temperature": 0.7},
             }
@@ -121,7 +119,7 @@ Declare the winner and generate the savage comparative JSON verdict now.
             payload = {
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
-                    {"role": "system", "content": BATTLE_SYSTEM_PROMPT},
+                    {"role": "system", "content": battle_system_prompt},
                     {"role": "user", "content": prompt_content},
                 ],
                 "response_format": {"type": "json_object"},
@@ -138,4 +136,4 @@ Declare the winner and generate the savage comparative JSON verdict now.
             print(f"[WARN] Groq battle error: {e}")
 
     # 3. Fallback
-    return _generate_fallback_battle(f1, f2)
+    return _generate_fallback_battle(f1, f2, language=lang)

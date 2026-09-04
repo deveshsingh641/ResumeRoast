@@ -1,0 +1,108 @@
+{
+  "nav": {
+    "roast": "Roast",
+    "battle": "Battle 1v1",
+    "wall": "Wall of Shame",
+    "pricing": "Pricing",
+    "sample": "Sample",
+    "language": "भाषा"
+  },
+  "hero": {
+    "badge": "Brutally Honest AI Resume Roaster",
+    "title_part1": "Aapka resume shayad boring hai.",
+    "title_part2": "Chalo fix karte hain.",
+    "subtitle": "Zero filter AI dost se roast karwao. Asli recruiter ke reject karne se pehle missing metrics, heavy buzzwords aur formatting mistakes pakdo.",
+    "cta_upload": "Roast My Resume Free 🔥",
+    "cta_sample": "Live Sample Dekho",
+    "cta_battle": "1v1 Resume Battle",
+    "free_daily_note": "Har 24 ghante mein 1 free roast · Credit card ki zaroorat nahi",
+    "privacy_note": "Privacy guarantee: Hum aapka resume kisi ko nahi bechte aur raw files store nahi karte."
+  },
+  "upload": {
+    "dropzone_title": "Resume yahan drag & drop karo",
+    "dropzone_sub": "PDF ya DOCX (upto 5MB) supported",
+    "browse_files": "Browse Files",
+    "analyzing_title": "Roast ho raha hai...",
+    "analyzing_sub": "Hamara AI aapke bullet points padhke hairan ho raha hai 🤯",
+    "error_title": "Upload Fail Hua",
+    "error_try_again": "Doosri File Try Karo"
+  },
+  "results": {
+    "score_label": "Roast Score",
+    "out_of_100": "/ 100",
+    "verdict_title": "Official Verdict",
+    "issues_found": "Issues Mile",
+    "filter_all": "Saare Issues",
+    "filter_metrics": "Bina Metrics Wale",
+    "filter_buzzwords": "Buzzwords",
+    "filter_formatting": "Formatting",
+    "filter_typos": "Spelling Mistakes",
+    "roast_label": "The Roast",
+    "fix_label": "Isko Kaise Sudharein",
+    "strengths_title": "Ye Cheezein Actually Sahi Thi 👍",
+    "listen_voice": "Voice Note Roast Suno 🎙️",
+    "download_cert": "Certificate Download Karo",
+    "share_card": "Roast Card Share Karo",
+    "upgrade_pro": "Pro Se Saare Issues Unlock Karo",
+    "truncated_notice": "Top 3 critical issues dikha rahe hain. Saare issues, unlimited battles aur clean certificate ke liye Pro unlock karo."
+  },
+  "battle": {
+    "badge": "1-on-1 Head-to-Head",
+    "title": "Resume Roast Battle",
+    "subtitle": "Do resumes ko aamne-saamne ladao. Hamara AI referee savage commentary ke saath winner declare karega.",
+    "fighter_1": "Fighter 1",
+    "fighter_2": "Fighter 2",
+    "drop_f1": "Fighter 1 Resume Drop Karo",
+    "drop_f2": "Fighter 2 Resume Drop Karo",
+    "start_battle": "Battle Shuru Karo 🔥",
+    "winner_banner": "Winner",
+    "margin_landslide": "One-Sided Jeet 🏆",
+    "margin_close": "Barabari Ka Muqabla",
+    "margin_draw": "Draw Ho Gaya 🤝",
+    "rematch": "Ek Baar Aur Ladao"
+  },
+  "wall": {
+    "title": "The Public Wall",
+    "subtitle": "Community ke wo resumes jinhone roast jhela. Inke bhari mistakes aur mast wins se seekho.",
+    "tab_shame": "Wall of Shame 💀",
+    "tab_fame": "Wall of Fame 🏆",
+    "sort_recent": "Sabse Naye",
+    "sort_worst": "Sabse Kam Score",
+    "sort_best": "Sabse Zyada Score",
+    "score": "Score",
+    "top_burn": "Sabse Bada Burn",
+    "flag": "Report Karo",
+    "flagged": "Report Ho Gaya"
+  },
+  "voice": {
+    "title": "WhatsApp-Style Voice Note",
+    "subtitle": "Apne resume ka feedback savage dost ki aawaz mein suno.",
+    "generating": "Voice note taiyar ho raha hai...",
+    "play": "Voice Note Suno",
+    "pause": "Pause",
+    "disclaimer": "AI voice note sirf fun aur constructive feedback ke liye hai."
+  },
+  "pricing": {
+    "title": "Seedha aur Simple Pricing",
+    "subtitle": "Interview shortlisting badhane ke liye jo chahiye sab yahan hai.",
+    "free_tier": "Free Plan",
+    "free_price": "₹0",
+    "free_desc": "1 free roast daily, top 3 issues unlock.",
+    "pro_tier": "Pro Unlimited",
+    "pro_price": "₹799",
+    "pro_desc": "Lifetime access: saare issues, unlimited battles, audio roasts.",
+    "current_plan": "Current Plan",
+    "upgrade_btn": "Pro Upgrade Karo"
+  },
+  "ticker": {
+    "resumes_roasted": "Resumes Roasted",
+    "avg_score": "Average Score",
+    "rejected_pct": "Buzzword Bhare Huye",
+    "recent_quote": "\"Bhai resume banate waqt neend aa rahi thi kya?\""
+  },
+  "switcher": {
+    "english": "English",
+    "hinglish": "Hinglish",
+    "toggle_label": "Bhasha badlo"
+  }
+}

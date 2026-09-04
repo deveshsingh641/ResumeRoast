@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { normalizeLang } from '@/i18n/detector'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import axios from 'axios'
 import { useAppStore } from '@/store/useAppStore'
 import ScoreStamp from '@/components/ScoreStamp'
@@ -17,10 +20,14 @@ import SoundToggle from '@/components/SoundToggle'
 import RoastReactions from '@/components/RoastReactions'
 import PaperSkeleton from '@/components/PaperSkeleton'
 import { useCinematicReveal } from '@/hooks/useCinematicReveal'
-import { SAMPLE_ROAST_DATA, ExtendedRoastResult } from '@/data/sampleRoast'
+import { ExtendedRoastResult, getSampleRoastData } from '@/data/sampleRoast'
 
 export default function ResultsPage() {
   const { id } = useParams<{ id: string }>()
+  const { i18n } = useTranslation()
+  const lang = normalizeLang(i18n.language)
+  const isHinglish = lang === 'hi-IN'
+
   const { result: storeResult, setResult } = useAppStore()
   const [result, setLocalResult] = useState<ExtendedRoastResult | null>(storeResult)
   const [loading, setLoading] = useState(!storeResult && id !== 'demo')
@@ -61,14 +68,14 @@ export default function ResultsPage() {
   }
 
   useEffect(() => {
-    if (storeResult?.id === id) {
-      setLocalResult(storeResult)
+    if (id === 'demo' || !id) {
+      setLocalResult(getSampleRoastData(lang))
+      setLoading(false)
       return
     }
 
-    if (id === 'demo' || !id) {
-      setLocalResult(SAMPLE_ROAST_DATA)
-      setLoading(false)
+    if (storeResult?.id === id) {
+      setLocalResult(storeResult)
       return
     }
 
@@ -87,11 +94,17 @@ export default function ResultsPage() {
       } catch (err: any) {
         const msg = err?.response?.data?.detail
         if (err?.response?.status === 404) {
-          setError(typeof msg === 'string' ? msg : 'Ye roast link expire ho gaya hai ya galat hai (anonymous reports 7 din mein expunge ho jaati hain).')
+          setError(
+            typeof msg === 'string'
+              ? msg
+              : (isHinglish
+                  ? 'Ye roast link expire ho gaya hai ya galat hai (anonymous reports 7 din mein expunge ho jaati hain).'
+                  : 'This roast link has expired or does not exist (anonymous reports are purged after 7 days).')
+          )
         } else {
           // Fallback to sample result if offline or network error
           setLocalResult({
-            ...SAMPLE_ROAST_DATA,
+            ...getSampleRoastData(lang),
             id: id || 'demo-roast',
           })
         }
@@ -101,11 +114,15 @@ export default function ResultsPage() {
     }
 
     fetchResult()
-  }, [id, storeResult, setResult])
+  }, [id, lang, storeResult, setResult, isHinglish])
 
   // 2.4 Themed Loading Skeleton with paper & stamp branding
   if (loading) {
-    return <PaperSkeleton label="Desk pe report taiyyar ho rahi hai…" />
+    return (
+      <PaperSkeleton
+        label={isHinglish ? 'Desk pe report taiyyar ho rahi hai…' : 'Preparing roast on the desk…'}
+      />
+    )
   }
 
   if (error || !result) {
@@ -152,8 +169,9 @@ export default function ResultsPage() {
               ⚔️ Battle
             </Link>
             <Link to="/roast" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              Dusra resume →
+              {isHinglish ? 'Dusra resume →' : 'Another resume →'}
             </Link>
+            <LanguageSwitcher />
           </div>
         </div>
       </header>
@@ -168,7 +186,7 @@ export default function ResultsPage() {
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') skip() }}
           className="fixed bottom-6 right-6 z-40 bg-bg/95 border border-white/[0.18] px-3.5 py-2 rounded-sm shadow-2xl cursor-pointer hover:border-amber-400 hover:text-amber-300 transition-all flex items-center gap-2 font-mono text-xs text-tan select-none animate-pulse"
         >
-          <span>Tap anywhere to skip</span>
+          <span>{isHinglish ? 'Tap anywhere to skip' : 'Tap anywhere to skip'}</span>
           <span>⏩</span>
         </aside>
       )}
@@ -176,12 +194,14 @@ export default function ResultsPage() {
       <div className="max-w-[960px] mx-auto px-4 space-y-12 sm:space-y-16 text-center relative z-10">
         {/* ── 1. Top Verdict Banner (A.6) ── */}
         <section aria-label="Roast Verdict">
-          <p className="section-label mb-3">DESK KA OFFICIAL VERDICT</p>
+          <p className="section-label mb-3">
+            {isHinglish ? 'DESK KA OFFICIAL VERDICT' : 'DESK OFFICIAL VERDICT'}
+          </p>
           <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-paper tracking-tight leading-tight max-w-[780px] mx-auto mb-4">
             "{result.one_line_verdict}"
           </h1>
           <p className="font-mono text-xs text-tan-dim">
-            Red pen se poori marking neeche dekho
+            {isHinglish ? 'Red pen se poori marking neeche dekho' : 'See full red-pen annotations below'}
           </p>
 
           {/* 1.5 Emoji Reactions Component */}
@@ -192,7 +212,9 @@ export default function ResultsPage() {
           {/* Notice if document was truncated (>10 pages) */}
           {result.was_document_truncated && (
             <div className="mt-4 inline-block bg-white/[0.04] border border-white/[0.08] rounded-sm px-4 py-2 text-xs font-mono text-amber-200/80">
-              Note: Unusually lamba resume tha (10+ pages) — sirf pehla part analyze hua hai.
+              {isHinglish
+                ? 'Note: Unusually lamba resume tha (10+ pages) — sirf pehla part analyze hua hai.'
+                : 'Note: Unusually long resume (10+ pages) — only the first section was analyzed.'}
             </div>
           )}
         </section>
@@ -211,7 +233,7 @@ export default function ResultsPage() {
                     : 'text-tan-dim hover:text-paper'
                 }`}
               >
-                📝 Red Pen Marking
+                📝 {isHinglish ? 'Red Pen Marking' : 'Red Pen Marks'}
               </button>
               <button
                 type="button"
@@ -222,7 +244,7 @@ export default function ResultsPage() {
                     : 'text-tan-dim hover:text-paper'
                 }`}
               >
-                🩻 X-Ray Heatmap
+                🩻 {isHinglish ? 'X-Ray Heatmap' : 'X-Ray Heatmap'}
               </button>
             </div>
 
@@ -278,7 +300,11 @@ export default function ResultsPage() {
             aria-label="Working elements"
             className="max-w-[640px] mx-auto text-left border border-white/[0.08] rounded-sm p-6 bg-bg"
           >
-            <p className="section-label mb-3 text-tan">Red pen se bach gayi ye cheezein (kuch toh accha tha 👍)</p>
+            <p className="section-label mb-3 text-tan">
+              {isHinglish
+                ? 'Red pen se bach gayi ye cheezein (kuch toh accha tha 👍)'
+                : 'Spared by the red pen (some bright spots 👍)'}
+            </p>
             <ul className="space-y-2">
               {result.strengths.map((strength, idx) => (
                 <li key={idx} className="font-mono text-xs text-paper flex items-start gap-2">
@@ -294,14 +320,20 @@ export default function ResultsPage() {
         <section aria-label="Flagged Issues Breakdown" className="space-y-6">
           <div className="max-w-[640px] mx-auto text-left flex items-baseline justify-between border-b border-white/[0.08] pb-3">
             <div>
-              <p className="section-label mb-1">LINE-BY-LINE PAKAD MEIN AAYA</p>
+              <p className="section-label mb-1">
+                {isHinglish ? 'LINE-BY-LINE PAKAD MEIN AAYA' : 'LINE-BY-LINE CRITIQUE'}
+              </p>
               <h2 className="font-display text-xl text-paper">
-                Itni galtiyaan mili bhai ({result.total_issues})
+                {isHinglish
+                  ? `Itni galtiyaan mili bhai (${result.total_issues})`
+                  : `Critical flaws flagged (${result.total_issues})`}
               </h2>
             </div>
             {result.is_truncated && (
               <span className="font-mono text-xs text-ember">
-                {result.issues.length} dikha rahe hain, {result.total_issues} mein se
+                {isHinglish
+                  ? `${result.issues.length} dikha rahe hain, ${result.total_issues} mein se`
+                  : `Showing ${result.issues.length} of ${result.total_issues}`}
               </span>
             )}
           </div>
@@ -323,17 +355,21 @@ export default function ResultsPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
               <div>
                 <p className="font-display text-xl text-paper mb-1">
-                  {result.total_issues - result.issues.length} aur galtiyaan desk ke neeche chhipi hain.
+                  {isHinglish
+                    ? `${result.total_issues - result.issues.length} aur galtiyaan desk ke neeche chhipi hain.`
+                    : `${result.total_issues - result.issues.length} more critical flaws hidden below the desk.`}
                 </p>
                 <p className="font-mono text-xs text-tan leading-relaxed">
-                  Pro plan mein saari chhipi galtiyaan, exact rewritten lines, aur unlimited daily roasts khul jayenge.
+                  {isHinglish
+                    ? 'Pro plan mein saari chhipi galtiyaan, exact rewritten lines, aur unlimited daily roasts khul jayenge.'
+                    : 'Upgrade to Pro to uncover all hidden flaws, full drop-in rewritten lines, and unlimited daily roasts.'}
                 </p>
               </div>
               <Link
                 to={typeof window !== 'undefined' ? `/pricing?from=${encodeURIComponent(window.location.pathname)}` : '/pricing'}
                 className="btn-primary shrink-0"
               >
-                Poora roast unlock karo
+                {isHinglish ? 'Poora roast unlock karo' : 'Unlock Full Roast'}
               </Link>
             </div>
           </section>
@@ -362,10 +398,14 @@ export default function ResultsPage() {
                 </span>
               </div>
               <h3 className="font-display text-lg sm:text-xl text-paper">
-                Official Parody Certificate Download Karo
+                {isHinglish
+                  ? 'Official Parody Certificate Download Karo'
+                  : 'Download Official Parody Certificate'}
               </h3>
               <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
-                High-res printable PDF with wax seal stamp, score verdict, and official parody title.
+                {isHinglish
+                  ? 'High-res printable PDF with wax seal stamp, score verdict, and official parody title.'
+                  : 'High-res printable PDF with wax seal stamp, score verdict, and official parody title.'}
               </p>
             </div>
             <button
@@ -374,7 +414,7 @@ export default function ResultsPage() {
               disabled={downloadingCert}
               className="btn-primary shrink-0 !text-xs !py-2.5 !px-4 flex items-center gap-1.5 font-bold whitespace-nowrap"
             >
-              <span>{downloadingCert ? 'Generating PDF…' : 'Download Certificate (PDF)'}</span>
+              <span>{downloadingCert ? (isHinglish ? 'Generating PDF…' : 'Generating PDF…') : (isHinglish ? 'Download Certificate (PDF)' : 'Download Certificate (PDF)')}</span>
               <span>📥</span>
             </button>
           </div>
@@ -383,9 +423,11 @@ export default function ResultsPage() {
         {/* ── 6. Live Share Card Generation Module (B.1 WhatsApp First + 2.3 Torn Paper Variant) ── */}
         <section aria-label="Share score card" className="pt-6">
           <div className="max-w-[640px] mx-auto text-left mb-6">
-            <p className="section-label mb-1">DAMAGE SHARE KARO</p>
+            <p className="section-label mb-1">
+              {isHinglish ? 'DAMAGE SHARE KARO' : 'SHARE THE DAMAGE'}
+            </p>
             <h2 className="font-display text-xl text-paper">
-              Shareable Grade Card
+              {isHinglish ? 'Shareable Grade Card' : 'Shareable Grade Card'}
             </h2>
           </div>
 
@@ -402,10 +444,12 @@ export default function ResultsPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <p className="font-display text-base text-paper flex items-center gap-2">
-                <span>📢 Public Wall pe anonymously daal do</span>
+                <span>{isHinglish ? '📢 Public Wall pe anonymously daal do' : '📢 Post anonymously to Public Wall'}</span>
               </p>
               <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
-                Saare naam, email, aur company details publicly show hone se pehle sanitize ho jaate hain.
+                {isHinglish
+                  ? 'Saare naam, email, aur company details publicly show hone se pehle sanitize ho jaate hain.'
+                  : 'All names, emails, and company details are stripped and sanitized before public listing.'}
               </p>
             </div>
 
@@ -414,21 +458,21 @@ export default function ResultsPage() {
               onClick={async () => {
                 try {
                   const btn = document.getElementById('wall-btn')
-                  if (btn) btn.innerText = 'Publishing…'
+                  if (btn) btn.innerText = isHinglish ? 'Publishing…' : 'Publishing…'
                   await axios.post('/api/wall/publish', { roast_id: result.id })
                   if (btn) {
-                    btn.innerText = '✓ Wall pe post ho gaya!'
+                    btn.innerText = isHinglish ? '✓ Wall pe post ho gaya!' : '✓ Added to Wall!'
                     btn.setAttribute('disabled', 'true')
                   }
                 } catch {
                   const btn = document.getElementById('wall-btn')
-                  if (btn) btn.innerText = '✓ Added to Wall'
+                  if (btn) btn.innerText = isHinglish ? '✓ Added to Wall' : '✓ Added to Wall'
                 }
               }}
               id="wall-btn"
               className="btn-ghost shrink-0 text-xs text-amber-400 hover:border-amber-400"
             >
-              Wall pe daal do
+              {isHinglish ? 'Wall pe daal do' : 'Post to Wall'}
             </button>
           </div>
         </section>
@@ -436,13 +480,13 @@ export default function ResultsPage() {
         {/* ── 7. Bottom Navigation ── */}
         <div className="pt-8 flex flex-wrap justify-center gap-4">
           <Link to="/battle" className="btn-ghost">
-            ⚔️ 1-on-1 Battle Try Karo
+            {isHinglish ? '⚔️ 1-on-1 Battle Try Karo' : '⚔️ Try 1-on-1 Battle'}
           </Link>
           <Link to="/wall" className="btn-ghost">
-            🔥 Wall of Shame/Fame Dekho
+            {isHinglish ? '🔥 Wall of Shame/Fame Dekho' : '🔥 View Wall of Shame/Fame'}
           </Link>
           <Link to="/roast" className="btn-ghost">
-            Dusra resume roast karo
+            {isHinglish ? 'Dusra resume roast karo' : 'Roast Another Resume'}
           </Link>
         </div>
       </div>

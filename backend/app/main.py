@@ -25,7 +25,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.db.database import init_db, cleanup_expired_roasts
-from app.routers import analytics, battle, payment, roast, usage, voice, wall
+from app.routers import analytics, battle, i18n, payment, roast, usage, voice, wall
 
 # ---------------------------------------------------------------------------
 # Rate limiter (per-IP, using slowapi)
@@ -82,6 +82,7 @@ app.include_router(wall.router)
 app.include_router(usage.router)
 app.include_router(payment.router)
 app.include_router(analytics.router)
+app.include_router(i18n.router)
 
 
 from fastapi import FastAPI, HTTPException, Request

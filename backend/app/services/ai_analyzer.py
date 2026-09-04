@@ -16,6 +16,9 @@ import httpx
 
 from app.services.extractor import map_quoted_text_to_offsets
 from app.services.anti_repeat_service import anti_repeat_memory, BASELINE_JOKE_BANKS
+from app.i18n.mapping import DEFAULT_LANGUAGE, HINGLISH_LANGUAGE, normalize_language
+from app.prompts import get_system_prompt, get_user_prompt_template
+from app.prompts.joke_banks import get_joke_banks
 
 load_dotenv()
 
@@ -289,9 +292,11 @@ HINGLISH_MARKERS = {
 # Provider 1: Google Gemini (Free API Key from https://aistudio.google.com)
 # ---------------------------------------------------------------------------
 
-def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "") -> dict:
+def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "", language: str = DEFAULT_LANGUAGE) -> dict:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-    formatted_user_prompt = USER_PROMPT_TEMPLATE.format(
+    sys_prompt = get_system_prompt(language)
+    user_template = get_user_prompt_template(language)
+    formatted_user_prompt = user_template.format(
         resume_text=resume_text[:12000],
         exclusion_block=f"\n{exclusion_block}\n" if exclusion_block else "",
     )
@@ -300,7 +305,7 @@ def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "") 
             {
                 "parts": [
                     {
-                        "text": f"{SYSTEM_PROMPT}\n\n{formatted_user_prompt}"
+                        "text": f"{sys_prompt}\n\n{formatted_user_prompt}"
                     }
                 ]
             }
@@ -323,20 +328,22 @@ def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "") 
 # Provider 2: Groq (Free API Key from https://console.groq.com)
 # ---------------------------------------------------------------------------
 
-def _call_groq_api(api_key: str, resume_text: str, exclusion_block: str = "") -> dict:
+def _call_groq_api(api_key: str, resume_text: str, exclusion_block: str = "", language: str = DEFAULT_LANGUAGE) -> dict:
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    formatted_user_prompt = USER_PROMPT_TEMPLATE.format(
+    sys_prompt = get_system_prompt(language)
+    user_template = get_user_prompt_template(language)
+    formatted_user_prompt = user_template.format(
         resume_text=resume_text[:12000],
         exclusion_block=f"\n{exclusion_block}\n" if exclusion_block else "",
     )
     payload = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": sys_prompt},
             {"role": "user", "content": formatted_user_prompt},
         ],
         "response_format": {"type": "json_object"},
@@ -355,17 +362,19 @@ def _call_groq_api(api_key: str, resume_text: str, exclusion_block: str = "") ->
 # Provider 3: Anthropic Claude
 # ---------------------------------------------------------------------------
 
-def _call_anthropic_api(api_key: str, resume_text: str, exclusion_block: str = "") -> dict:
+def _call_anthropic_api(api_key: str, resume_text: str, exclusion_block: str = "", language: str = DEFAULT_LANGUAGE) -> dict:
     from anthropic import Anthropic
     client = Anthropic(api_key=api_key, timeout=45.0)
-    formatted_user_prompt = USER_PROMPT_TEMPLATE.format(
+    sys_prompt = get_system_prompt(language)
+    user_template = get_user_prompt_template(language)
+    formatted_user_prompt = user_template.format(
         resume_text=resume_text[:12000],
         exclusion_block=f"\n{exclusion_block}\n" if exclusion_block else "",
     )
     response = client.messages.create(
         model="claude-sonnet-4-5",
         max_tokens=4096,
-        system=SYSTEM_PROMPT,
+        system=sys_prompt,
         messages=[{"role": "user", "content": formatted_user_prompt}],
         temperature=0.7,
     )
@@ -377,13 +386,17 @@ def _call_anthropic_api(api_key: str, resume_text: str, exclusion_block: str = "
 # Fallback Roast Generator in Authentic Hinglish
 # ---------------------------------------------------------------------------
 
-def _generate_fallback_roast(resume_text: str, exclusion_block: str = "") -> dict[str, Any]:
+def _generate_fallback_roast(
+    resume_text: str, exclusion_block: str = "", language: str = HINGLISH_LANGUAGE
+) -> dict[str, Any]:
     """
-    Intelligent heuristic fallback analyzer with hilarious WhatsApp-style Hinglish tone.
-    Quotes actual candidate lines and generates shareable Hinglish roasts from vocabulary pool,
+    Intelligent heuristic fallback analyzer with language-specific persona.
+    Quotes actual candidate lines and generates shareable roasts from vocabulary pool,
     actively avoiding recently used lines.
     """
     import random
+    lang = normalize_language(language)
+    joke_bank = get_joke_banks(lang)
     lines = [
         line.strip() for line in resume_text.splitlines()
         if len(line.strip()) > 20 and not line.strip().startswith("http")
@@ -412,21 +425,36 @@ def _generate_fallback_roast(resume_text: str, exclusion_block: str = "") -> dic
 
         if tool:
             t_name = tool.title()
-            if cat == "no-metrics":
-                grounded_options = [
-                    f"'{t_name}' pe kaam kiya, par kitne users ya requests handle kiye? Number bata na.",
-                    f"'{t_name}' mein performance kitni improve hui bhai? 2% ya 200%? Data do 📊",
-                    f"'{t_name}' use kiya sahi hai, par scale kitna kiya bhai? Numbers chhupa kyun rahe ho? 👀",
-                    f"'{t_name}' ke saath exact metric daal do bas — bina data ke credit nahi milta 📉",
-                ]
-            elif cat == "buzzword":
-                grounded_options = [
-                    f"'{t_name}' ke saath itna heavy buzzword daal diya, ab concrete kaam bhi dikha do na.",
-                    f"Har resume mein '{t_name}' ke aage yahi generic line milti hai bhai, tu unique kaise banega?",
-                    f"'{t_name}' use kiya achha hai, par ye line copy-paste lagti hai LinkedIn se 😅",
-                ]
+            if lang == "hi-IN":
+                if cat == "no-metrics":
+                    grounded_options = [
+                        f"'{t_name}' pe kaam kiya, par kitne users ya requests handle kiye? Number bata na.",
+                        f"'{t_name}' mein performance kitni improve hui bhai? 2% ya 200%? Data do 📊",
+                        f"'{t_name}' use kiya sahi hai, par scale kitna kiya bhai? Numbers chhupa kyun rahe ho? 👀",
+                        f"'{t_name}' ke saath exact metric daal do bas — bina data ke credit nahi milta 📉",
+                    ]
+                elif cat == "buzzword":
+                    grounded_options = [
+                        f"'{t_name}' ke saath itna heavy buzzword daal diya, ab concrete kaam bhi dikha do na.",
+                        f"Har resume mein '{t_name}' ke aage yahi generic line milti hai bhai, tu unique kaise banega?",
+                        f"'{t_name}' use kiya achha hai, par ye line copy-paste lagti hai LinkedIn se 😅",
+                    ]
+            else:
+                if cat == "no-metrics":
+                    grounded_options = [
+                        f"Claimed scale with '{t_name}', but how many users or queries? Give us the numbers.",
+                        f"Mentioned '{t_name}' performance gains — was that 2% or 200%? The data went missing 📊",
+                        f"Using '{t_name}' is fine, but at what production volume? What scale are we talking? 👀",
+                        f"Pair '{t_name}' with an exact measurable outcome — claims without numbers are just vibes 📉",
+                    ]
+                elif cat == "buzzword":
+                    grounded_options = [
+                        f"Stuffed corporate buzzwords around '{t_name}'. Now show what actually shipped.",
+                        f"Every resume on earth pairs '{t_name}' with this generic phrase. What made your work unique?",
+                        f"Good to know you used '{t_name}', but this bullet sounds like it was copied straight from LinkedIn 😅",
+                    ]
 
-        pool = list(BASELINE_JOKE_BANKS.get(cat, BASELINE_JOKE_BANKS["other"]))
+        pool = list(joke_bank.get(cat, joke_bank.get("other", [fallback_default])))
         combined = grounded_options + pool
         candidates = [r for r in combined if r not in used_roasts and r not in recent_exclusions]
         if not candidates:
@@ -436,24 +464,40 @@ def _generate_fallback_roast(resume_text: str, exclusion_block: str = "") -> dic
         return chosen
 
     issues = []
-    buzzwords = [
-        ("responsible for", "no-metrics", "Kuch is tarah likho: 'Built 12 reusable UI components, cutting page load time by 30%' — number daalo, impact dikhao."),
-        ("worked closely with", "buzzword", "Specific batao: 'Collaborated with 3 designers to ship checkout redesign, reducing drop-off by 18%.'"),
-        ("synerg", "buzzword", "Corporate jargon cut karo aur exact tools/outcomes list karo."),
-        ("spearheaded", "buzzword", "Action-first likho: 'Led a team of 4 to architect the notification engine from scratch.'"),
-        ("passionate", "buzzword", "Adjectives hatao aur shipped projects ke live metrics daalo."),
-        ("assisted", "no-metrics", "Rewrite karo: 'Resolved 45+ critical production bugs in PostgreSQL, reducing ticket backlog by 40%.'"),
-        ("curriculum vitae", "length", "Header clean karo: Top pe 'Full Stack Engineer' aur LinkedIn/GitHub link rakho."),
-        ("declaration", "irrelevant", "Ye section delete kardo aur resume ka vertical whitespace save karo."),
-        ("hobbies", "irrelevant", "Hobbies hatao aur hackathon rank ya open-source contribution mention karo."),
-    ]
+    if lang == "hi-IN":
+        buzzwords = [
+            ("responsible for", "no-metrics", "Kuch is tarah likho: 'Built 12 reusable UI components, cutting page load time by 30%' — number daalo, impact dikhao."),
+            ("worked closely with", "buzzword", "Specific batao: 'Collaborated with 3 designers to ship checkout redesign, reducing drop-off by 18%.'"),
+            ("synerg", "buzzword", "Corporate jargon cut karo aur exact tools/outcomes list karo."),
+            ("spearheaded", "buzzword", "Action-first likho: 'Led a team of 4 to architect the notification engine from scratch.'"),
+            ("passionate", "buzzword", "Adjectives hatao aur shipped projects ke live metrics daalo."),
+            ("assisted", "no-metrics", "Rewrite karo: 'Resolved 45+ critical production bugs in PostgreSQL, reducing ticket backlog by 40%.'"),
+            ("curriculum vitae", "length", "Header clean karo: Top pe 'Full Stack Engineer' aur LinkedIn/GitHub link rakho."),
+            ("declaration", "irrelevant", "Ye section delete kardo aur resume ka vertical whitespace save karo."),
+            ("hobbies", "irrelevant", "Hobbies hatao aur hackathon rank ya open-source contribution mention karo."),
+        ]
+    else:
+        buzzwords = [
+            ("responsible for", "no-metrics", "Rewrite as: 'Built 12 reusable UI components, cutting page load time by 30%' — add numbers, show concrete impact."),
+            ("worked closely with", "buzzword", "Be specific: 'Collaborated with 3 designers to ship checkout redesign, reducing drop-off by 18%'."),
+            ("synerg", "buzzword", "Cut corporate buzzwords and list the exact tools and business outcomes."),
+            ("spearheaded", "buzzword", "Action-first: 'Led an engineering team of 4 to architect the notification engine from scratch.'"),
+            ("passionate", "buzzword", "Drop adjectives and state shipped projects with live production metrics."),
+            ("assisted", "no-metrics", "Rewrite: 'Resolved 45+ critical production bugs in PostgreSQL, reducing ticket backlog by 40%'."),
+            ("curriculum vitae", "length", "Keep header clean: Top title 'Full Stack Engineer' with GitHub and LinkedIn links."),
+            ("declaration", "irrelevant", "Delete this section completely and reclaim valuable vertical whitespace."),
+            ("hobbies", "irrelevant", "Remove hobbies and highlight hackathons, certifications, or open-source PRs."),
+        ]
+
+    default_cat_joke = joke_bank.get("other", ["Need more details"])[0]
 
     for line in lines:
         lower = line.lower()
         for bw, cat, fix_txt in buzzwords:
             if bw in lower and len(issues) < 6:
                 if not any(iss["quoted_text"] == line[:110] for iss in issues):
-                    roast_text = _select_roast(cat, line, BASELINE_JOKE_BANKS[cat][0])
+                    fallback_text = joke_bank.get(cat, [default_cat_joke])[0]
+                    roast_text = _select_roast(cat, line, fallback_text)
                     issues.append({
                         "quoted_text": line[:110],
                         "category": cat,
@@ -467,52 +511,82 @@ def _generate_fallback_roast(resume_text: str, exclusion_block: str = "") -> dic
         for line in lines:
             if not any(char.isdigit() for char in line) and len(line) > 35 and len(issues) < 6:
                 if not any(iss["quoted_text"] == line[:110] for iss in issues):
-                    roast_text = _select_roast("no-metrics", line, BASELINE_JOKE_BANKS["no-metrics"][0])
+                    fallback_text = joke_bank.get("no-metrics", [default_cat_joke])[0]
+                    roast_text = _select_roast("no-metrics", line, fallback_text)
+                    fix_advice = (
+                        "Quantify karo: 'Scaled server throughput by 35% handling 50,000+ requests/min.'"
+                        if lang == "hi-IN"
+                        else "Quantify this: 'Scaled server throughput by 35% handling 50,000+ requests/min.'"
+                    )
                     issues.append({
                         "quoted_text": line[:110],
                         "category": "no-metrics",
                         "roast": roast_text,
-                        "fix": "Quantify karo: 'Scaled server throughput by 35% handling 50,000+ requests/min.'",
+                        "fix": fix_advice,
                     })
 
     # Typos check in skills or text
     for line in lines:
         lower = line.lower()
         if any(mis in lower for mis in ["skils", "pythno", "javascrip", "mangment", "experiance"]):
-            roast_text = _select_roast("typo", line, BASELINE_JOKE_BANKS["typo"][0])
+            fallback_text = joke_bank.get("typo", [default_cat_joke])[0]
+            roast_text = _select_roast("typo", line, fallback_text)
+            fix_advice = (
+                "Typo fix karo aur submission se pehle spellcheck zaroor run karo."
+                if lang == "hi-IN"
+                else "Fix typos and run spellcheck before submitting your application."
+            )
             issues.append({
                 "quoted_text": line[:100],
                 "category": "typo",
                 "roast": roast_text,
-                "fix": "Typo fix karo aur submission se pehle spellcheck zaroor run karo.",
+                "fix": fix_advice,
             })
             break
 
     if not issues:
         sample_line = lines[0] if lines else "Experienced Software Developer"
-        roast_text = _select_roast("buzzword", sample_line, BASELINE_JOKE_BANKS["buzzword"][0])
+        fallback_text = joke_bank.get("buzzword", [default_cat_joke])[0]
+        roast_text = _select_roast("buzzword", sample_line, fallback_text)
+        fix_advice = (
+            "Apne core stack aur standout accomplishments ko highlight karo."
+            if lang == "hi-IN"
+            else "Highlight your core stack and standout measurable accomplishments."
+        )
         issues.append({
             "quoted_text": sample_line[:100],
             "category": "buzzword",
             "roast": roast_text,
-            "fix": "Apne core stack aur standout accomplishments ko highlight karo.",
+            "fix": fix_advice,
         })
 
     score = 38 if len(issues) >= 4 else 56
     band = "weak" if score <= 40 else "mid"
 
-    verdicts = [
-        "Bhai resume hai ya suspense novel? 🕵️",
-        "Dum hai boss, bas thoda masala aur metrics kam hain 🍛",
-        "Acha effort hai yaar, par buzzwords zyada bhar diye hain 🤖",
-        "Design dekh ke aankhon se aansu nikal gaye 😭",
-    ]
-    verdict = verdicts[len(lines) % len(verdicts)]
+    if lang == "hi-IN":
+        verdicts = [
+            "Bhai resume hai ya suspense novel? 🕵️",
+            "Dum hai boss, bas thoda masala aur metrics kam hain 🍛",
+            "Acha effort hai yaar, par buzzwords zyada bhar diye hain 🤖",
+            "Design dekh ke aankhon se aansu nikal gaye 😭",
+        ]
+        strengths = [
+            "Formatting overall clean hai boss, ATS ko padhne mein asani hogi 👍",
+            "Core technical domain samajh aa raha hai, bas thodi polishing chahiye 🚀",
+        ]
+    else:
+        verdicts = [
+            "Is this a resume or a mystery novel? Let's see some evidence 🕵️",
+            "Solid technical foundation, but your metrics went missing in action 📉",
+            "Good effort, but drowned in corporate buzzwords and vague claims 🤖",
+            "Visually cramped — give your achievements room to breathe 📄",
+        ]
+        strengths = [
+            "Clean section hierarchy — ATS scanners and recruiters can parse this easily 👍",
+            "Core technical domain is evident — just needs sharper impact metrics 🚀",
+        ]
 
-    strengths = [
-        "Formatting overall clean hai boss, ATS ko padhne mein asani hogi 👍",
-        "Core technical domain samajh aa raha hai, bas thodi polishing chahiye 🚀",
-    ]
+    verdict = verdicts[len(lines) % len(verdicts)]
 
     return {
         "overall_score": score,
@@ -531,7 +605,7 @@ def _has_hinglish_tone(text: str) -> bool:
     return any(w in HINGLISH_MARKERS for w in words)
 
 
-def _validate_schema(data: dict, resume_text: str | None = None) -> None:
+def _validate_schema(data: dict, resume_text: str | None = None, language: str = HINGLISH_LANGUAGE) -> None:
     required_top = {"overall_score", "band", "one_line_verdict", "issues", "strengths"}
     missing = required_top - set(data.keys())
     if missing:
@@ -566,6 +640,7 @@ def _validate_schema(data: dict, resume_text: str | None = None) -> None:
     if not isinstance(data["issues"], list) or len(data["issues"]) < 1:
         raise ValueError("issues must be a non-empty list")
 
+    lang = normalize_language(language)
     validated_issues = []
     hinglish_roast_count = 0
     resume_lower = resume_text.lower() if resume_text else None
@@ -606,9 +681,13 @@ def _validate_schema(data: dict, resume_text: str | None = None) -> None:
     if not validated_issues:
         raise ValueError("No valid grounded issues found in analysis")
 
-    # Tone guard: At least one roast or the verdict must have authentic Hinglish markers
-    if hinglish_roast_count == 0 and not _has_hinglish_tone(verdict):
-        raise ValueError("AI response failed Hinglish tone check — missing conversational Hinglish markers")
+    # Tone guard: language-aware
+    if lang == "hi-IN":
+        if hinglish_roast_count == 0 and not _has_hinglish_tone(verdict):
+            raise ValueError("AI response failed Hinglish tone check — missing conversational Hinglish markers")
+    else:
+        if not verdict or len(verdict.strip()) < 5:
+            raise ValueError("AI response failed English quality check — verdict too short")
 
     data["issues"] = validated_issues
 
@@ -694,11 +773,11 @@ def _find_duplicate_roasts(issues: list[dict], threshold: float = 0.70) -> list[
     return duplicates
 
 
-def _deduplicate_roasts(data: dict) -> None:
+def _deduplicate_roasts(data: dict, language: str = HINGLISH_LANGUAGE) -> None:
     """
     Lightweight server-side safety net (Section 3.7).
     Compares all roast strings pairwise using normalized string similarity (>85%).
-    If duplicates remain after retry, substitutes the duplicate with varied Hinglish phrasing
+    If duplicates remain after retry, substitutes the duplicate with varied phrasing
     from the category's expanded joke pool, ensuring no duplicate within the response.
     """
     import difflib
@@ -707,6 +786,8 @@ def _deduplicate_roasts(data: dict) -> None:
     if len(issues) <= 1:
         return
 
+    lang = normalize_language(language)
+    joke_bank = get_joke_banks(lang)
     seen_norms: list[tuple[str, int]] = []
 
     for idx, iss in enumerate(issues):
@@ -724,7 +805,7 @@ def _deduplicate_roasts(data: dict) -> None:
 
         if is_dup:
             cat = iss.get("category", "other")
-            pool = BASELINE_JOKE_BANKS.get(cat, BASELINE_JOKE_BANKS["other"])
+            pool = joke_bank.get(cat, joke_bank.get("other", ["Need more details"]))
 
             alt = None
             for candidate in pool:
@@ -749,18 +830,20 @@ def _deduplicate_roasts(data: dict) -> None:
 # Main Router
 # ---------------------------------------------------------------------------
 
-def analyze_resume(resume_text: str) -> dict[str, Any]:
+def analyze_resume(resume_text: str, language: str = DEFAULT_LANGUAGE) -> dict[str, Any]:
     """
-    Analyzes resume using available provider with Hinglish roast persona:
+    Analyzes resume using available provider with requested language persona (English or Hinglish):
     1. GEMINI_API_KEY (Google Gemini Free)
     2. GROQ_API_KEY (Groq Free)
     3. ANTHROPIC_API_KEY (Claude)
-    4. Heuristic Hinglish Fallback
+    4. Heuristic Fallback
     Dynamically injects recent exclusions from anti-repeat memory (Section 1.3)
     and pushes newly generated roast strings into rolling memory.
     """
     if not resume_text or len(resume_text.strip()) < 80:
         raise ValueError("That doesn't look like a full resume — upload the whole document.")
+
+    lang = normalize_language(language)
 
     env_path = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
     load_dotenv(dotenv_path=os.path.abspath(env_path), override=True)
@@ -777,8 +860,8 @@ def analyze_resume(resume_text: str) -> dict[str, Any]:
     # 1. Try Google Gemini
     if gemini_key:
         try:
-            data = _call_gemini_api(gemini_key, resume_text, exclusion_block)
-            _validate_schema(data, resume_text)
+            data = _call_gemini_api(gemini_key, resume_text, exclusion_block, language=lang)
+            _validate_schema(data, resume_text, language=lang)
             _validate_no_metrics_categorization(data)
         except Exception as e:
             print(f"[WARN] Gemini API error: {e}")
@@ -787,8 +870,8 @@ def analyze_resume(resume_text: str) -> dict[str, Any]:
     # 2. Try Groq
     if not data and groq_key:
         try:
-            data = _call_groq_api(groq_key, resume_text, exclusion_block)
-            _validate_schema(data, resume_text)
+            data = _call_groq_api(groq_key, resume_text, exclusion_block, language=lang)
+            _validate_schema(data, resume_text, language=lang)
             _validate_no_metrics_categorization(data)
         except Exception as e:
             print(f"[WARN] Groq API error: {e}")
@@ -797,8 +880,8 @@ def analyze_resume(resume_text: str) -> dict[str, Any]:
     # 3. Try Anthropic Claude
     if not data and anthropic_key:
         try:
-            data = _call_anthropic_api(anthropic_key, resume_text, exclusion_block)
-            _validate_schema(data, resume_text)
+            data = _call_anthropic_api(anthropic_key, resume_text, exclusion_block, language=lang)
+            _validate_schema(data, resume_text, language=lang)
             _validate_no_metrics_categorization(data)
         except Exception as e:
             print(f"[WARN] Anthropic API error: {e}")
@@ -806,11 +889,11 @@ def analyze_resume(resume_text: str) -> dict[str, Any]:
 
     # 4. Fallback if external API calls fail
     if not data:
-        data = _generate_fallback_roast(resume_text, exclusion_block)
+        data = _generate_fallback_roast(resume_text, exclusion_block, language=lang)
         _validate_no_metrics_categorization(data)
 
     # Server-side anti-repetition / duplicate check safety net (Section 3.7)
-    _deduplicate_roasts(data)
+    _deduplicate_roasts(data, language=lang)
 
     # Push newly generated roasts into category rolling cache
     anti_repeat_memory.record_roasts(data.get("issues", []))
