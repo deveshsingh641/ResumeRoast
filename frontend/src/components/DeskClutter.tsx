@@ -103,19 +103,19 @@ export default function DeskClutter({
         </div>
       </div>
 
-      {/* ── 3. Handwritten Sticky Note (Top-Right, Desktop only) ── */}
+      {/* ── 3. Handwritten Sticky Note (Top-Right, Large Desktop only) ── */}
       <div
-        className="absolute top-24 right-2 sm:right-12 transition-transform duration-300 ease-out z-10 hidden md:block"
+        className="absolute top-16 right-4 lg:right-8 xl:right-12 2xl:right-20 transition-transform duration-300 ease-out z-10 hidden xl:block"
         style={{
           transform: isTouch
             ? `rotate(${stickyRotation}deg)`
             : `translate3d(${offset.x * -0.7}px, ${offset.y * -0.7}px, 0) rotate(${stickyRotation}deg)`,
         }}
       >
-        <div className="w-36 sm:w-44 bg-[#FFF59D] text-[#2B2620] p-3 shadow-md rounded-[1px] border border-amber-300/40 relative">
+        <div className="w-36 bg-[#FFF59D] text-[#2B2620] p-2.5 shadow-md rounded-[1px] border border-amber-300/40 relative">
           {/* Subtle pin/tape shadow at top */}
-          <div className="w-8 h-2 bg-amber-400/30 mx-auto -mt-3 mb-1 rounded-[1px]" />
-          <p className="font-handwritten text-lg sm:text-xl leading-tight font-bold text-[#8A2B1E]">
+          <div className="w-8 h-2 bg-amber-400/30 mx-auto -mt-2.5 mb-1 rounded-[1px]" />
+          <p className="font-handwritten text-base leading-tight font-bold text-[#8A2B1E]">
             "{stickyText}"
           </p>
         </div>

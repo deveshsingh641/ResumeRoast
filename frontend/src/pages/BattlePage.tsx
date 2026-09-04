@@ -114,7 +114,7 @@ export default function BattlePage() {
           <p className="section-label mb-2">
             {isHinglish ? '1-ON-1 RESUME KA DANGAL' : '1-ON-1 RESUME FACE-OFF'}
           </p>
-          <h1 className="font-display text-3xl sm:text-5xl text-paper tracking-tight">
+          <h1 className="font-display text-2xl sm:text-4xl text-paper tracking-tight">
             Resume <span className="text-stamp">Roast Battle</span>
           </h1>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-[600px] mx-auto">

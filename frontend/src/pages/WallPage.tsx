@@ -150,7 +150,7 @@ export default function WallPage() {
           <p className="section-label mb-2">
             {isHinglish ? 'ASLI CANDIDATES KA ANONYMOUS DAMAGE' : 'PUBLIC ANONYMOUS HALL OF DAMAGE'}
           </p>
-          <h1 className="font-display text-3xl sm:text-5xl text-paper tracking-tight">
+          <h1 className="font-display text-2xl sm:text-4xl text-paper tracking-tight">
             Wall of <span className={activeTab === 'shame' ? 'text-stamp' : 'text-amber-400'}>{activeTab === 'shame' ? 'Shame' : 'Fame'}</span>
           </h1>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-[580px] mx-auto">

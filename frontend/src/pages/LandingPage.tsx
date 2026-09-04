@@ -484,7 +484,7 @@ export default function LandingPage() {
       <MarqueeTicker />
 
       {/* ── Hero Section (Section A.2) ── */}
-      <section className="pt-8 pb-10 sm:pt-16 sm:pb-16 px-3 sm:px-4 text-center relative overflow-hidden">
+      <section className="pt-6 pb-8 sm:pt-10 sm:pb-12 px-3 sm:px-4 text-center relative overflow-hidden">
         {/* Tactile Desk Clutter (Section A.5 - Desktop only) */}
         <DeskClutter
           stickyText={isHinglish ? 'friday se pehle fix kar le yaar!! 😭' : 'fix this before Monday please!! 😭'}
@@ -496,20 +496,20 @@ export default function LandingPage() {
           <LiveRoastCounter />
 
           {/* Eyebrow Line */}
-          <p className="section-label mb-3 sm:mb-4 text-[11px] sm:text-xs">
+          <p className="section-label mb-2 sm:mb-3 text-[11px] sm:text-xs">
             {isHinglish ? 'DESK PE POORA SACH // 100% RAW AI ROAST' : 'THE UNFILTERED TRUTH // 100% RAW AI ROAST'}
           </p>
 
           {/* Headline with Rotated Red Pen Strikethrough (A.2 Exact Spec) */}
           {isHinglish ? (
-            <h1 className="font-display text-[clamp(1.75rem,5.2vw+0.25rem,4.25rem)] text-paper tracking-tight leading-[1.02] mb-4 sm:mb-6">
+            <h1 className="font-display text-[clamp(1.6rem,3.2vw+0.1rem,2.85rem)] text-paper tracking-tight leading-[1.08] mb-3 sm:mb-4">
               TERA RESUME{' '}
               <span className="red-pen-strike text-tan-dim">IMPRESSIVE</span> HAI...
               <br />
               <span className="text-stamp">BAS FLUFF HAI BHAI.</span>
             </h1>
           ) : (
-            <h1 className="font-display text-[clamp(1.75rem,5.2vw+0.25rem,4.25rem)] text-paper tracking-tight leading-[1.02] mb-4 sm:mb-6">
+            <h1 className="font-display text-[clamp(1.6rem,3.2vw+0.1rem,2.85rem)] text-paper tracking-tight leading-[1.08] mb-3 sm:mb-4">
               YOUR RESUME LOOKS{' '}
               <span className="red-pen-strike text-tan-dim">IMPRESSIVE</span>...
               <br />
@@ -518,14 +518,14 @@ export default function LandingPage() {
           )}
 
           {/* Subcopy (A.2 Exact Spec) */}
-          <p className="font-body text-sm sm:text-base md:text-lg text-tan max-w-[660px] mx-auto mb-6 sm:mb-8 leading-relaxed px-1">
+          <p className="font-body text-xs sm:text-sm md:text-base text-tan max-w-[580px] mx-auto mb-5 sm:mb-7 leading-relaxed px-1">
             {isHinglish
               ? 'Red pen se poori marking hogi, ek pakka verdict stamp milega, aur exact line likh ke bhi denge ki fix kaise karna hai.'
               : 'Brutal red pen annotations, a definitive score stamp, and exact rewrite replacements with metrics and zero fluff.'}
           </p>
 
           {/* Primary + Ghost CTA Pair (A.2 Exact Spec) */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-14 w-full px-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-10 w-full px-2">
             <Link to="/roast" id="hero-cta" className="btn-primary w-full sm:w-auto text-center justify-center">
               {isHinglish ? 'Resume daal de bhai' : 'Roast My Resume'}
             </Link>
@@ -535,7 +535,7 @@ export default function LandingPage() {
           </div>
 
           {/* Hero Visual: PaperMockup + ScoreStamp */}
-          <div className="relative inline-block w-full max-w-[640px] px-1 sm:px-0">
+          <div className="relative inline-block w-full max-w-[580px] px-1 sm:px-0">
             <PaperMockup
               candidateName={heroSample.resumeInfo.candidateName}
               candidateTitle={heroSample.resumeInfo.candidateTitle}
