@@ -489,6 +489,37 @@ class TestFullFeatureAudit(unittest.TestCase):
         )
         self.assertEqual(bad_amount.status_code, 400)
 
+    # =========================================================================
+    # FEATURE 10: ROAST BACK COMEBACK CHAT & ADMIN ROASTS EXPLORER
+    # =========================================================================
+    def test_feature_10_comeback_chat_and_admin_explorer(self):
+        # 10.1 Interactive Comeback Chat on demo roast
+        cb_resp = self.client.post(
+            "/api/roast/demo/comeback",
+            json={"message": "Maine sach mein 40% latency optimize ki thi!"},
+            headers={"X-Language": "hi-IN"},
+        )
+        self.assertEqual(cb_resp.status_code, 200)
+        self.assertTrue(cb_resp.json()["ok"])
+        self.assertIn("reply", cb_resp.json())
+        self.assertGreater(len(cb_resp.json()["reply"]), 5)
+
+        # 10.2 Empty message validation (422)
+        empty_cb = self.client.post("/api/roast/demo/comeback", json={"message": "   "})
+        self.assertEqual(empty_cb.status_code, 422)
+
+        # 10.3 Admin Roasts Explorer API
+        admin_resp = self.client.get("/api/admin/roasts?limit=5")
+        self.assertEqual(admin_resp.status_code, 200)
+        admin_data = admin_resp.json()
+        self.assertTrue(admin_data["ok"])
+        self.assertIsInstance(admin_data["roasts"], list)
+
+        # 10.4 /stats HTML dashboard includes explorer
+        stats_html = self.client.get("/stats", headers={"Accept": "text/html"})
+        self.assertEqual(stats_html.status_code, 200)
+        self.assertIn("Uploaded Resumes Explorer", stats_html.text)
+
 
 if __name__ == "__main__":
     unittest.main()

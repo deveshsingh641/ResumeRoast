@@ -101,6 +101,37 @@ async def get_stats(request: Request, days: int = 7, format: Optional[str] = Non
     if not paths_rows:
         paths_rows = '<div class="py-4 text-center text-xs text-stone-500 font-mono">No path data yet today.</div>'
 
+    recent_roasts = database.get_recent_roasts(limit=12)
+    recent_roasts_html = ""
+    for r in recent_roasts:
+        score = r.get("overall_score", 0)
+        band = r.get("band", "weak")
+        score_color = "#E8422D" if score <= 40 else "#FFB93C" if score <= 70 else "#10B981"
+        res_text = r.get("resume_text") or "No text content preserved."
+        created = (r.get("created_at") or "")[:19].replace("T", " ")
+        recent_roasts_html += f"""
+        <div class="bg-[#14110E] p-4 rounded border border-white/[0.06] text-left">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded text-xs font-mono font-bold" style="color: {score_color}; background-color: {score_color}22; border: 1px solid {score_color}55;">
+                        {score}/100 · {band.upper()}
+                    </span>
+                    <span class="text-xs font-mono text-stone-400">{created} UTC</span>
+                </div>
+                <a href="/roast/{r.get('id')}" target="_blank" class="text-xs font-mono text-amber-400 hover:underline">
+                    Open Public Roast ↗
+                </a>
+            </div>
+            <p class="font-bold text-sm text-stone-200 mb-2">"{r.get('one_line_verdict')}"</p>
+            <details class="text-xs font-mono text-stone-400 bg-black/40 p-2.5 rounded border border-white/5 cursor-pointer">
+                <summary class="hover:text-amber-300 select-none">📄 View Full Extracted Resume Text ({len(res_text)} chars)</summary>
+                <pre class="mt-2 text-stone-300 whitespace-pre-wrap font-mono text-[11px] max-h-64 overflow-y-auto leading-relaxed p-2 bg-black/60 rounded border border-white/5">{res_text}</pre>
+            </details>
+        </div>
+        """
+    if not recent_roasts_html:
+        recent_roasts_html = '<div class="py-6 text-center text-xs text-stone-500 font-mono">No resumes uploaded yet today.</div>'
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -200,10 +231,31 @@ async def get_stats(request: Request, days: int = 7, format: Optional[str] = Non
         </div>
     </div>
 
+    <!-- Uploaded Resumes Explorer (Live from Supabase) -->
+    <div class="mt-8 bg-[#1A1613] rounded-lg border border-white/10 overflow-hidden">
+        <div class="px-5 py-4 border-b border-white/10 flex justify-between items-center">
+            <div>
+                <h2 class="font-bold text-sm tracking-wide text-white font-mono uppercase">📄 Uploaded Resumes Explorer</h2>
+                <p class="text-xs text-stone-400 font-mono mt-0.5">Recently submitted candidate resumes, verdicts, and extracted text</p>
+            </div>
+            <span class="text-xs font-mono text-amber-400 bg-amber-400/10 px-2 py-1 rounded border border-amber-400/20">Live Supabase Sync</span>
+        </div>
+        <div class="p-4 space-y-4">
+            {recent_roasts_html}
+        </div>
+    </div>
+
+    <!-- Footer -->
     <footer class="mt-12 text-center text-xs text-stone-500 font-mono">
-        Resume Roast First-Party Telemetry · No cookies · Zero personal data stored
+        Resume Roast First-Party Analytics Engine · Zero Third-Party Trackers
     </footer>
 </body>
-</html>
-    """
+</html>"""
     return HTMLResponse(content=html)
+
+
+@router.get("/api/admin/roasts")
+async def get_admin_roasts(limit: int = 20) -> JSONResponse:
+    """List recent uploaded roasts with scores, verdicts, and full resume text."""
+    roasts = database.get_recent_roasts(limit=min(max(limit, 1), 100))
+    return JSONResponse(content={"ok": True, "count": len(roasts), "roasts": roasts})

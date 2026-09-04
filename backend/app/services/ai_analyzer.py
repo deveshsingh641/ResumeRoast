@@ -1381,3 +1381,52 @@ def analyze_resume(resume_text: str, language: str = DEFAULT_LANGUAGE) -> dict[s
         issue["severity_rank"] = i + 1
 
     return data
+
+
+def generate_roast_comeback(roast: dict, user_msg: str, lang: str = "hi-IN") -> str:
+    """
+    Generate a witty, savage in-character comeback when the candidate argues back.
+    """
+    verdict = roast.get("one_line_verdict", "")
+    score = roast.get("overall_score", 30)
+
+    # Check for Gemini API Key
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if gemini_key:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+            sys_prompt = (
+                "You are an elite, brutally honest comedic tech recruiter and resume roaster. "
+                f"You previously roasted this candidate's resume with a score of {score}/100 and verdict: '{verdict}'. "
+                f"The candidate is arguing back with: '{user_msg}'. "
+                f"Write a sharp, hilarious, savage 1-2 sentence comeback defending your roast. "
+                f"Language: {'Hinglish (mix of Hindi & English with emojis)' if lang == 'hi-IN' else 'English with emojis'}. "
+                "Keep it punchy, funny, and under 40 words."
+            )
+            resp = httpx.post(url, json={"contents": [{"parts": [{"text": sys_prompt}]}]}, timeout=5.0)
+            if resp.status_code == 200:
+                out = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if out:
+                    return out
+        except Exception as e:
+            print(f"[WARN] Gemini comeback error: {e}")
+
+    # Fallback smart comebacks tailored to user message keywords
+    msg_l = user_msg.lower()
+    if lang == "hi-IN":
+        if any(w in msg_l for w in ["percent", "%", "metric", "number", "data", "optimize"]):
+            return "Bhai agar itne numbers sach the, toh resume mein dalte na! Wahan toh sirf 'responsible for' likh ke hawa bana rakhi hai 😂📉"
+        elif any(w in msg_l for w in ["experience", "saal", "senior", "lead", "project"]):
+            return f"Experience ka ghamand mat dikha bhai, ATS ko saal nahi, measurable outcomes samajh aate hain! Score {score}/100 aise hi thodi aaya 💀"
+        elif any(w in msg_l for w in ["fake", "galat", "wrong", "lie", "sach"]):
+            return "Hum jhooth bol rahe hain ya tera bullet point? Recruiter ko 6 second lagte hain reject dabane mein, debate karne ka time nahi hota 🛑"
+        else:
+            return f"Defense accha hai bhai, kaash itna effort resume ke bullet points rewrite karne mein lagaya hota! Score fir bhi {score}/100 hi rahega 😈🔥"
+    else:
+        if any(w in msg_l for w in ["percent", "%", "metric", "number", "scale"]):
+            return "If those numbers were real, why did they go missing on your resume? You wrote 'helped with' and called it an accomplishment 😂📉"
+        elif any(w in msg_l for w in ["experience", "years", "senior", "lead"]):
+            return f"Years of experience mean nothing if you can't quantify impact. ATS filters keywords, not excuses! Score {score}/100 stands 💀"
+        else:
+            return "Great comeback! If only half that energy went into writing actionable bullet points instead of generic corporate jargon 😈🔥"
+

@@ -493,3 +493,27 @@ async def add_reaction(roast_id: str, payload: ReactionPayload, request: Request
     return JSONResponse(content={"roast_id": roast_id, "reactions": reactions})
 
 
+class ComebackRequest(BaseModel):
+    message: str
+
+
+@router.post("/roast/{roast_id}/comeback")
+async def roast_comeback(roast_id: str, payload: ComebackRequest, request: Request) -> JSONResponse:
+    """Generate in-character witty comeback when user argues back with the roast."""
+    user_msg = payload.message.strip()
+    if not user_msg:
+        raise HTTPException(status_code=422, detail="Message cannot be empty.")
+
+    roast = database.get_roast(roast_id)
+    if not roast:
+        if roast_id != "demo":
+            raise HTTPException(status_code=404, detail="Roast not found or expired.")
+        lang = language_from_request(request)
+        roast = SAMPLE_ROAST_RESPONSE if lang == "hi-IN" else ENGLISH_SAMPLE_ROAST_RESPONSE
+
+    lang = language_from_request(request)
+    reply = ai_analyzer.generate_roast_comeback(roast=roast, user_msg=user_msg, lang=lang)
+    return JSONResponse(content={"ok": True, "reply": reply})
+
+
+

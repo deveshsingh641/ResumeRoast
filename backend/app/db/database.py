@@ -1024,12 +1024,26 @@ def get_analytics_stats(days: int = 7) -> dict:
                         pageviews_today = row["count"]
 
                 # Totals
-                cur.execute("SELECT COUNT(*) as c FROM roasts")
-                total_roasts = cur.fetchone()["c"]
-                cur.execute("SELECT COUNT(*) as c FROM battles")
-                total_battles = cur.fetchone()["c"]
-                cur.execute("SELECT COUNT(*) as c FROM users WHERE subscription_status = 'pro'")
-                total_pro = cur.fetchone()["c"]
+                try:
+                    cur.execute("SELECT COUNT(*) as c FROM roasts")
+                    r_row = cur.fetchone()
+                    total_roasts = (r_row["c"] if isinstance(r_row, dict) and "c" in r_row else (r_row[0] if r_row else 0)) or 0
+                except Exception as e:
+                    logger.debug(f"Could not fetch total_roasts: {e}")
+                
+                try:
+                    cur.execute("SELECT COUNT(*) as c FROM battles")
+                    b_row = cur.fetchone()
+                    total_battles = (b_row["c"] if isinstance(b_row, dict) and "c" in b_row else (b_row[0] if b_row else 0)) or 0
+                except Exception as e:
+                    logger.debug(f"Could not fetch total_battles: {e}")
+
+                try:
+                    cur.execute("SELECT COUNT(*) as c FROM users WHERE subscription_status = 'pro'")
+                    u_row = cur.fetchone()
+                    total_pro = (u_row["c"] if isinstance(u_row, dict) and "c" in u_row else (u_row[0] if u_row else 0)) or 0
+                except Exception as e:
+                    logger.debug(f"Could not fetch total_pro: {e}")
 
                 # Past N days history
                 start_date = (today - timedelta(days=days - 1)).isoformat()
@@ -1059,10 +1073,10 @@ def get_analytics_stats(days: int = 7) -> dict:
                 cur.execute(
                     """
                     SELECT key, count FROM usage_counters
-                    WHERE date = %s AND key LIKE 'stats:path:%'
+                    WHERE date = %s AND key LIKE %s
                     ORDER BY count DESC LIMIT 10
                     """,
-                    (today_str,),
+                    (today_str, "stats:path:%"),
                 )
                 for r in cur.fetchall():
                     top_paths_today.append({"path": r["key"].replace("stats:path:", ""), "views": r["count"]})
@@ -1081,6 +1095,41 @@ def get_analytics_stats(days: int = 7) -> dict:
         "daily_history": daily_history,
         "top_paths_today": top_paths_today,
     }
+
+
+def get_recent_roasts(limit: int = 20) -> list[dict]:
+    """Retrieve recently uploaded roasts for admin review."""
+    if not DATABASE_URL:
+        items = list(_memory_store.values())
+        items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        return items[:limit]
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, overall_score, band, one_line_verdict, resume_text, created_at
+                    FROM roasts
+                    ORDER BY created_at DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+                rows = cur.fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            if isinstance(d.get("id"), uuid.UUID):
+                d["id"] = str(d["id"])
+            if isinstance(d.get("created_at"), (datetime, date)):
+                d["created_at"] = d["created_at"].isoformat()
+            result.append(d)
+        return result
+    except Exception as e:
+        print(f"[WARN] Error fetching recent roasts: {e}")
+        return []
+
 
 
 
