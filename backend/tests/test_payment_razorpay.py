@@ -56,8 +56,8 @@ class TestPaymentRazorpay(unittest.TestCase):
         self.assertIn("status", data)
         self.assertEqual(data["currency"], "INR")
         self.assertIn("plans", data)
-        self.assertEqual(data["plans"]["monthly"]["amount_paise"], 29900)
-        self.assertEqual(data["plans"]["annual"]["amount_paise"], 249900)
+        self.assertEqual(data["plans"]["monthly"]["amount_paise"], 9900)
+        self.assertEqual(data["plans"]["annual"]["amount_paise"], 79900)
 
     def test_billing_public_config(self):
         """Public config endpoint exposes safe client values."""
@@ -99,7 +99,7 @@ class TestPaymentRazorpay(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             data = response.json()
             self.assertEqual(data["status"], "success")
-            self.assertEqual(data["amount"], 29900)
+            self.assertEqual(data["amount"], 9900)
             self.assertEqual(data["currency"], "INR")
             self.assertTrue(data["order_id"].startswith("order_sim_"))
             self.assertTrue(data["simulated"])
@@ -121,20 +121,20 @@ class TestPaymentRazorpay(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["status"], "success")
-        self.assertEqual(data["amount"], 29900)
+        self.assertEqual(data["amount"], 9900)
         self.assertEqual(data["currency"], "INR")
         self.assertTrue(data["order_id"].startswith("order_"))
         self.assertFalse(data["simulated"])
 
     def test_create_order_annual_plan(self):
-        """Annual plan calculates 249900 paise server-side."""
+        """Annual plan calculates 79900 paise server-side."""
         response = self.client.post(
             "/api/create-order",
             json={"email": "candidate@example.com", "plan": "annual"},
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data["amount"], 249900)
+        self.assertEqual(data["amount"], 79900)
 
     def test_verify_simulation_payment(self):
         """Verifying simulation payment unlocks Pro in database immediately."""

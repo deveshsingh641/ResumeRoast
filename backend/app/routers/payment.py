@@ -23,10 +23,10 @@ logger = logging.getLogger("payment")
 router = APIRouter(prefix="/api", tags=["payment"])
 
 # Plan Pricing (always strictly computed server-side in paise)
-# INR 299 = 29900 paise; INR 2499 = 249900 paise
+# INR 99 = 9900 paise; INR 799 = 79900 paise
 PLAN_PRICES: Dict[str, int] = {
-    "monthly": 29900,   # ₹299.00 in paise
-    "annual":  249900,  # ₹2,499.00 in paise
+    "monthly": 9900,   # ₹99.00 in paise
+    "annual":  79900,  # ₹799.00 in paise
 }
 
 PLAN_NAMES: Dict[str, str] = {
@@ -486,7 +486,7 @@ async def create_checkout_session(payload: CheckoutRequest) -> JSONResponse:
         )
 
     stripe.api_key = stripe_key
-    price_in_inr = PLAN_PRICES.get(payload.plan, 29900)
+    price_in_inr = PLAN_PRICES.get(payload.plan, 9900)
     plan_name = PLAN_NAMES.get(payload.plan, "Resume Roast Pro (Monthly)")
 
     try:

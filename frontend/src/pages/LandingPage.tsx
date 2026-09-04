@@ -6,7 +6,7 @@ import DeskClutter from '@/components/DeskClutter'
 import MarqueeTicker from '@/components/MarqueeTicker'
 import PlacementSeasonBanner from '@/components/PlacementSeasonBanner'
 import LiveRoastCounter from '@/components/LiveRoastCounter'
-import { SAMPLE_ROAST_DATA, SAMPLE_RESUME_INFO } from '@/data/sampleRoast'
+import { SAMPLE_RESUMES, getDailyRotationIndex, SAMPLE_ROAST_DATA, SAMPLE_RESUME_INFO } from '@/data/sampleRoast'
 
 /* ── 4 Stats Hairline Gap Grid (Section A.6) ── */
 function StatsRow() {
@@ -95,46 +95,62 @@ function FeatureSection() {
 
 /* ── Real Output Sample Roast (Section A.6) ── */
 function SampleSection() {
+  const [activeIdx, setActiveIdx] = useState(() => getDailyRotationIndex())
+  const sample = SAMPLE_RESUMES[activeIdx]
+  const { roastData, resumeInfo } = sample
+
+  function shuffle() {
+    setActiveIdx((prev) => (prev + 1) % SAMPLE_RESUMES.length)
+  }
+
   return (
     <section id="sample" className="py-24 px-4 border-t border-white/[0.08]" aria-label="Sample roast">
       <div className="max-w-[960px] mx-auto">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 mb-2">
+          <div className="inline-flex items-center gap-2 mb-2 flex-wrap justify-center">
             <p className="section-label">SAMPLE ROAST DEKH LE</p>
             <span className="font-mono text-[10px] text-tan-dim uppercase px-1.5 py-0.5 border border-white/10 rounded-[2px]">
               Live Preview
             </span>
+            <button
+              type="button"
+              onClick={shuffle}
+              aria-label="Show next sample resume"
+              className="inline-flex items-center gap-1 font-mono text-[10px] text-tan-dim hover:text-ember px-2 py-0.5 border border-white/10 rounded-[2px] transition-colors duration-150"
+            >
+              <span>↻</span> Shuffle ({activeIdx + 1}/3)
+            </button>
           </div>
           <h2 className="font-display text-2xl sm:text-3xl text-paper">
             Asli roast kaisa dikhta hai, khud dekh le.
           </h2>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-lg mx-auto">
-            Fresher candidate ka sample resume: bhare hue buzzwords, number gayab, aur standard generic lines.
+            {resumeInfo.candidateName} ka resume: har ek flaw real-time mein flagged.
           </p>
         </div>
 
         <div className="relative flex flex-col items-center justify-center">
           <PaperMockup
-            candidateName={SAMPLE_RESUME_INFO.candidateName}
-            candidateTitle={SAMPLE_RESUME_INFO.candidateTitle}
-            companyLine={SAMPLE_RESUME_INFO.companyLine}
-            bullet1Text={SAMPLE_RESUME_INFO.bullet1Text}
-            bullet1Annotated={SAMPLE_RESUME_INFO.bullet1Annotated}
-            bullet1Tag={SAMPLE_RESUME_INFO.bullet1Tag}
-            bullet2Text={SAMPLE_RESUME_INFO.bullet2Text}
-            bullet2Annotated={SAMPLE_RESUME_INFO.bullet2Annotated}
-            bullet2Tag={SAMPLE_RESUME_INFO.bullet2Tag}
-            bullet3Text={SAMPLE_RESUME_INFO.bullet3Text}
-            bullet3Annotated={SAMPLE_RESUME_INFO.bullet3Annotated}
-            bullet3Tag={SAMPLE_RESUME_INFO.bullet3Tag}
+            candidateName={resumeInfo.candidateName}
+            candidateTitle={resumeInfo.candidateTitle}
+            companyLine={resumeInfo.companyLine}
+            bullet1Text={resumeInfo.bullet1Text}
+            bullet1Annotated={resumeInfo.bullet1Annotated}
+            bullet1Tag={resumeInfo.bullet1Tag}
+            bullet2Text={resumeInfo.bullet2Text}
+            bullet2Annotated={resumeInfo.bullet2Annotated}
+            bullet2Tag={resumeInfo.bullet2Tag}
+            bullet3Text={resumeInfo.bullet3Text}
+            bullet3Annotated={resumeInfo.bullet3Annotated}
+            bullet3Tag={resumeInfo.bullet3Tag}
             rotation={-1.5}
             animate={false}
           />
           <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 bg-[#110E0A] border border-white/[0.08] p-4 rounded-sm max-w-xl w-full">
-            <ScoreStamp score={SAMPLE_ROAST_DATA.overall_score} band={SAMPLE_ROAST_DATA.band} animate={false} size="sm" rotation={-12} />
+            <ScoreStamp score={roastData.overall_score} band={roastData.band} animate={false} size="sm" rotation={-12} />
             <div className="text-left font-mono text-xs text-tan flex-1">
               <span className="text-stamp font-semibold uppercase block mb-1">Desk ka Official Verdict:</span>
-              <span className="text-paper text-sm font-display">"{SAMPLE_ROAST_DATA.one_line_verdict}"</span>
+              <span className="text-paper text-sm font-display">"{roastData.one_line_verdict}"</span>
               <div className="mt-2">
                 <Link to="/roast/demo" className="text-ember hover:underline text-[11px] inline-flex items-center gap-1">
                   Poora 6-issue breakdown aur voice note suno →
@@ -191,7 +207,7 @@ function PricingSection() {
                 annual ? 'bg-bg text-paper border border-white/[0.08]' : 'text-tan-dim hover:text-tan'
               }`}
             >
-              Saal <span className="text-ember">(-30%)</span>
+              Saal <span className="text-ember">(-33%)</span>
             </button>
           </div>
         </div>
@@ -246,7 +262,7 @@ function PricingSection() {
               </p>
               <div className="flex items-baseline gap-1 mb-4">
                 <span className="font-display text-3xl text-paper">
-                  {annual ? '₹2,499' : '₹299'}
+                  {annual ? '₹799' : '₹99'}
                 </span>
                 <span className="font-mono text-xs text-tan-dim">
                   {annual ? '/ saal' : '/ mahina'}

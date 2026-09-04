@@ -59,6 +59,15 @@ Pool: 😩 😭 🤡 💀 😬 🫠 🔥 🙃 😅 🫡 👀 ✋
 
 Note: This is a vocabulary pool, not a script — combine these naturally rather than inserting them verbatim as templates.
 
+MANDATORY ACCURACY CHECK — DO THIS BEFORE ASSIGNING ANY CATEGORY:
+For every line you plan to flag, re-read the EXACT quoted_text you have copied from the resume:
+
+1. "no-metrics" is ONLY valid if quoted_text contains ZERO digits (0–9), ZERO percentage signs, ZERO counts, and ZERO spelled-out numbers (one, two, three, four, five, six, seven, eight, nine, ten, first, second, third). If the line already contains a number — ANY number — "no-metrics" CANNOT apply. Either find a different genuine flaw (buzzword, vague language, irrelevant) or skip that line entirely.
+
+2. Every "roast" field MUST be grounded in the specific quoted_text. It must reference an actual word, phrase, tool name, or claim from that exact line. Self-test before writing: "Could I copy this roast sentence under a completely different issue and it would still make sense?" If yes → it is too generic → rewrite it to be specific to this line.
+
+3. Before finalizing the full response, read all roast strings together. If any two sound like the same sentence with one word swapped → rewrite one of them completely using a different structure, different vocabulary, and a different reference to its specific quoted_text.
+
 CRITICAL ANTI-REPETITION ENFORCEMENT & DEDICATED CATEGORY JOKE BANKS:
 Never output the same roast sentence (or a near-identical sentence with only the quoted word swapped) more than once in a single response — even when multiple issues share the same category. If you have three "no-metrics" issues, each of the three roast lines must be built differently: different opening, different joke structure, different vocabulary-bank words, and ideally a reference to something specific in that particular quoted_text (not a generic template that could apply to any missing number).
 
@@ -607,6 +616,41 @@ def _validate_schema(data: dict, resume_text: str | None = None) -> None:
         data["strengths"] = [str(data["strengths"])] if data["strengths"] else []
 
 
+# Spelled-out numbers to catch (covers most realistic resume contexts)
+_SPELLED_NUMBERS = re.compile(
+    r"\b(one|two|three|four|five|six|seven|eight|nine|ten|"
+    r"eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|"
+    r"thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|"
+    r"first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b",
+    re.IGNORECASE,
+)
+
+
+def _validate_no_metrics_categorization(data: dict) -> None:
+    """
+    Server-side safety net: if the AI assigned 'no-metrics' to a line that already
+    contains a digit, percentage, or spelled-out number, the categorization is wrong.
+    Drop that issue rather than surface a false critique to the user.
+    """
+    issues = data.get("issues", [])
+    clean: list[dict] = []
+    for iss in issues:
+        if iss.get("category") != "no-metrics":
+            clean.append(iss)
+            continue
+        q = iss.get("quoted_text", "")
+        has_digit = bool(re.search(r"\d", q))
+        has_pct = "%" in q
+        has_spelled = bool(_SPELLED_NUMBERS.search(q))
+        if has_digit or has_pct or has_spelled:
+            safe_q = q.encode("ascii", "replace").decode("ascii")
+            print(
+                f"[GUARD] Dropping false 'no-metrics' — quoted_text already contains a number: {safe_q!r:.80}"
+            )
+        else:
+            clean.append(iss)
+    data["issues"] = clean
+
 
 def _extract_json(text: str) -> dict:
     text = text.strip()
@@ -620,7 +664,7 @@ def _extract_json(text: str) -> dict:
     return json.loads(text[start : end + 1])
 
 
-def _find_duplicate_roasts(issues: list[dict], threshold: float = 0.85) -> list[tuple[int, str, str]]:
+def _find_duplicate_roasts(issues: list[dict], threshold: float = 0.70) -> list[tuple[int, str, str]]:
     """
     Identifies pairwise duplicate or near-identical roast strings (>85% similarity).
     Returns list of (index, quoted_text, duplicate_roast).
@@ -674,7 +718,7 @@ def _deduplicate_roasts(data: dict) -> None:
         is_dup = False
         for prev_norm, _ in seen_norms:
             ratio = difflib.SequenceMatcher(None, norm, prev_norm).ratio()
-            if ratio >= 0.85:
+            if ratio >= 0.70:
                 is_dup = True
                 break
 
@@ -735,28 +779,35 @@ def analyze_resume(resume_text: str) -> dict[str, Any]:
         try:
             data = _call_gemini_api(gemini_key, resume_text, exclusion_block)
             _validate_schema(data, resume_text)
+            _validate_no_metrics_categorization(data)
         except Exception as e:
             print(f"[WARN] Gemini API error: {e}")
+            data = None
 
     # 2. Try Groq
     if not data and groq_key:
         try:
             data = _call_groq_api(groq_key, resume_text, exclusion_block)
             _validate_schema(data, resume_text)
+            _validate_no_metrics_categorization(data)
         except Exception as e:
             print(f"[WARN] Groq API error: {e}")
+            data = None
 
     # 3. Try Anthropic Claude
     if not data and anthropic_key:
         try:
             data = _call_anthropic_api(anthropic_key, resume_text, exclusion_block)
             _validate_schema(data, resume_text)
+            _validate_no_metrics_categorization(data)
         except Exception as e:
             print(f"[WARN] Anthropic API error: {e}")
+            data = None
 
     # 4. Fallback if external API calls fail
     if not data:
         data = _generate_fallback_roast(resume_text, exclusion_block)
+        _validate_no_metrics_categorization(data)
 
     # Server-side anti-repetition / duplicate check safety net (Section 3.7)
     _deduplicate_roasts(data)

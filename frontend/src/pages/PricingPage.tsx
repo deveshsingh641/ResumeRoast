@@ -116,7 +116,7 @@ export default function PricingPage() {
       }
 
       const planName = annual ? 'Resume Roast Pro (Annual)' : 'Resume Roast Pro (Monthly)'
-      const planAmount = annual ? '₹2,499' : '₹299'
+      const planAmount = annual ? '₹799' : '₹99'
       const razorpayKey = data.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID
 
       const options = {
@@ -354,7 +354,7 @@ export default function PricingPage() {
               </p>
               <div className="flex items-baseline gap-1 mb-4">
                 <span className="font-display text-3xl text-paper">
-                  {annual ? '₹2,499' : '₹299'}
+                  {annual ? '₹799' : '₹99'}
                 </span>
                 <span className="font-mono text-xs text-tan-dim">
                   {annual ? '/ year pass' : '/ month pass'}
@@ -388,7 +388,7 @@ export default function PricingPage() {
               }}
               className="btn-primary w-full justify-center text-sm py-3"
             >
-              Unlock Pro Now ({annual ? '₹2,499' : '₹299'})
+              Unlock Pro Now ({annual ? '₹799' : '₹99'})
             </button>
           </div>
         </div>
@@ -420,7 +420,7 @@ export default function PricingPage() {
               </h2>
 
               <p className="font-body text-xs text-tan leading-relaxed">
-                Selected: <strong className="text-paper">{annual ? 'Pro Annual Pass (₹2,499)' : 'Pro Monthly Pass (₹299)'}</strong>. Enter your email to open the in-page checkout modal.
+                Selected: <strong className="text-paper">{annual ? 'Pro Annual Pass (₹799)' : 'Pro Monthly Pass (₹99)'}</strong>. Enter your email to open the in-page checkout modal.
               </p>
 
               {/* SUCCESS STATE */}
@@ -545,7 +545,7 @@ export default function PricingPage() {
                       ) : checkoutStatus === 'failed' || checkoutStatus === 'cancelled' || checkoutStatus === 'error' ? (
                         'Retry Payment'
                       ) : (
-                        `Pay ${annual ? '₹2,499' : '₹299'} with UPI / Card`
+                        `Pay ${annual ? '₹799' : '₹99'} with UPI / Card`
                       )}
                     </button>
                     <button
