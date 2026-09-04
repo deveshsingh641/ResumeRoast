@@ -9,6 +9,7 @@ import PaperMockup from '@/components/PaperMockup'
 import { IssueList } from '@/components/IssueCard'
 import BattleShareCard from '@/components/BattleShareCard'
 import DeskClutter from '@/components/DeskClutter'
+import Footer from '@/components/Footer'
 
 export default function BattlePage() {
   const { id } = useParams<{ id: string }>()
@@ -337,6 +338,10 @@ export default function BattlePage() {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="mt-20">
+        <Footer />
       </div>
     </main>
   )

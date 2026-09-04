@@ -21,6 +21,7 @@ import RoastReactions from '@/components/RoastReactions'
 import PaperSkeleton from '@/components/PaperSkeleton'
 import StoryCardModal from '@/components/StoryCardModal'
 import RoastBackChat from '@/components/RoastBackChat'
+import Footer from '@/components/Footer'
 import { useCinematicReveal } from '@/hooks/useCinematicReveal'
 import { ExtendedRoastResult, getSampleRoastData } from '@/data/sampleRoast'
 
@@ -653,6 +654,10 @@ export default function ResultsPage() {
             {isHinglish ? 'Dusra resume roast karo' : 'Roast Another Resume'}
           </Link>
         </div>
+      </div>
+
+      <div className="mt-20">
+        <Footer />
       </div>
 
       {/* ── 9:16 Instagram & WhatsApp Story Card Modal ── */}

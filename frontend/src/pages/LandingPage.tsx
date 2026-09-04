@@ -9,6 +9,7 @@ import DeskClutter from '@/components/DeskClutter'
 import MarqueeTicker from '@/components/MarqueeTicker'
 import PlacementSeasonBanner from '@/components/PlacementSeasonBanner'
 import LiveRoastCounter from '@/components/LiveRoastCounter'
+import Footer from '@/components/Footer'
 import { getSampleResumes, getDailyRotationIndex } from '@/data/sampleRoast'
 
 /* ── 4 Stats Hairline Gap Grid (Section A.6) ── */
@@ -613,29 +614,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Footer (Section A.6 Tagline) ── */}
-      <footer className="border-t border-white/[0.08] py-8 px-6 text-center sm:text-left">
-        <div className="max-w-[960px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <div className="font-display text-sm text-paper">
-              RESUME<span className="text-stamp">ROAST</span>
-            </div>
-            <p className="font-mono text-[11px] text-tan-dim mt-1">
-              {isHinglish
-                ? 'resume roast — desk kabhi jhooth nahi bolta.'
-                : 'resume roast — the desk never lies.'}
-            </p>
-          </div>
-          <nav className="flex items-center gap-4 font-mono text-xs text-tan-dim" aria-label="Legal footer links">
-            <Link to="/pricing" className="hover:text-tan transition-colors">Pricing</Link>
-            <Link to="/privacy" className="hover:text-tan transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-tan transition-colors">Terms of Service</Link>
-          </nav>
-          <div className="font-mono text-xs text-tan-dim">
-            © {new Date().getFullYear()} ResumeRoast
-          </div>
-        </div>
-      </footer>
+      {/* ── Footer ── */}
+      <Footer />
     </main>
   )
 }

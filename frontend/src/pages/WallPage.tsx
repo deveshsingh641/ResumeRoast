@@ -6,6 +6,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 import axios from 'axios'
 import ScoreStamp from '@/components/ScoreStamp'
 import DeskClutter from '@/components/DeskClutter'
+import Footer from '@/components/Footer'
 import type { ScoreBand } from '@/store/useAppStore'
 
 interface WallEntry {
@@ -361,6 +362,10 @@ export default function WallPage() {
             })}
           </div>
         )}
+      </div>
+
+      <div className="mt-20">
+        <Footer />
       </div>
     </main>
   )

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { normalizeLang } from '@/i18n/detector'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import ResumeUploader from '@/components/ResumeUploader'
+import Footer from '@/components/Footer'
 import { useAppStore } from '@/store/useAppStore'
 
 export default function RoastPage() {
@@ -79,12 +80,15 @@ export default function RoastPage() {
         )}
       </div>
 
-      {/* Bottom Info Note */}
-      <footer className="max-w-[960px] w-full mx-auto text-center font-mono text-xs text-tan-dim py-4 border-t border-white/[0.08]">
-        {isHinglish
-          ? 'Har din 1 free roast · Text PDF ya DOCX · Anonymous files 7 din mein automatically delete ho jaati hain'
-          : '1 free roast daily · Text PDF or DOCX · Anonymous files automatically deleted after 7 days'}
-      </footer>
+      {/* Bottom Info Note & Creator Footer */}
+      <div className="w-full mt-12">
+        <p className="max-w-[960px] mx-auto text-center font-mono text-[11px] text-tan-dim py-3 mb-6 border-t border-white/[0.08]">
+          {isHinglish
+            ? 'Har din 1 free roast · Text PDF ya DOCX · Anonymous files 7 din mein automatically delete ho jaati hain'
+            : '1 free roast daily · Text PDF or DOCX · Anonymous files automatically deleted after 7 days'}
+        </p>
+        <Footer />
+      </div>
     </main>
   )
 }
