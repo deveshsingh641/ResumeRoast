@@ -240,8 +240,9 @@ async def create_roast(
             },
         )
 
-    # 3. Deduplication check (avoid double processing on rapid double-clicks)
-    content_hash = hashlib.sha256(file_bytes).hexdigest()
+    # 3. Deduplication check (avoid double processing on rapid double-clicks from the same user/device)
+    lang = language_from_request(request)
+    content_hash = hashlib.sha256(file_bytes + b":" + fingerprint.encode() + b":" + lang.encode()).hexdigest()
     existing_roast_id = database.check_dedup(content_hash)
     if existing_roast_id:
         existing_roast = database.get_roast(existing_roast_id)
@@ -279,7 +280,6 @@ async def create_roast(
         )
 
     # 5. AI analysis
-    lang = language_from_request(request)
     try:
         analysis = ai_analyzer.analyze_resume(resume_text, language=lang)
     except RuntimeError as e:

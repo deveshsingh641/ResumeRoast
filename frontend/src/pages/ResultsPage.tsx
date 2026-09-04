@@ -88,7 +88,7 @@ export default function ResultsPage() {
         const url = savedEmail
           ? `/api/roast/${id}?email=${encodeURIComponent(savedEmail)}`
           : `/api/roast/${id}`
-        const { data } = await axios.get(url, { timeout: 15000 })
+        const { data } = await axios.get(url, { timeout: 35000 })
         setLocalResult(data)
         setResult(data)
       } catch (err: any) {
@@ -101,12 +101,20 @@ export default function ResultsPage() {
                   ? 'Ye roast link expire ho gaya hai ya galat hai (anonymous reports 7 din mein expunge ho jaati hain).'
                   : 'This roast link has expired or does not exist (anonymous reports are purged after 7 days).')
           )
+        } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
+          setError(
+            isHinglish
+              ? 'Request timeout ho gayi. Server se report load nahi ho saki — dubara try karo.'
+              : 'The request timed out while loading the roast report. Please try again.'
+          )
         } else {
-          // Fallback to sample result if offline or network error
-          setLocalResult({
-            ...getSampleRoastData(lang),
-            id: id || 'demo-roast',
-          })
+          setError(
+            typeof msg === 'string'
+              ? msg
+              : (isHinglish
+                  ? 'Server se roast fetch karne mein dikkat aayi. Kripya thodi der mein dubara prayas karein.'
+                  : 'Unable to load roast report. Please check your connection and try again.')
+          )
         }
       } finally {
         setLoading(false)
@@ -115,6 +123,12 @@ export default function ResultsPage() {
 
     fetchResult()
   }, [id, lang, storeResult, setResult, isHinglish])
+
+  const handleRetry = () => {
+    if (id) {
+      window.location.reload()
+    }
+  }
 
   // 2.4 Themed Loading Skeleton with paper & stamp branding
   if (loading) {
@@ -129,14 +143,21 @@ export default function ResultsPage() {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <div className="max-w-[480px]">
-          <p className="section-label mb-2">NOT FOUND</p>
-          <h1 className="font-display text-3xl text-paper mb-3">Ye roast desk pe nahi mila bhai.</h1>
+          <p className="section-label mb-2">ERROR / NOT FOUND</p>
+          <h1 className="font-display text-3xl text-paper mb-3">
+            {isHinglish ? 'Ye roast desk pe load nahi hua.' : 'Could not load roast report.'}
+          </h1>
           <p className="font-mono text-xs text-tan-dim mb-8 leading-relaxed">
-            {error || 'Anonymous roasts 7 din baad desk se delete ho jaate hain.'}
+            {error || (isHinglish ? 'Report load karne mein asafal rahe.' : 'Failed to load report from server.')}
           </p>
-          <Link to="/roast" className="btn-primary">
-            Naya resume desk pe daalo
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button onClick={handleRetry} className="btn-primary w-full sm:w-auto">
+              {isHinglish ? 'Dubara try karo 🔄' : 'Try Again 🔄'}
+            </button>
+            <Link to="/roast" className="btn-secondary w-full sm:w-auto">
+              {isHinglish ? 'Naya resume daalo' : 'Upload New Resume'}
+            </Link>
+          </div>
         </div>
       </main>
     )

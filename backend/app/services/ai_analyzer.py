@@ -5,6 +5,7 @@ Supports Google Gemini, Groq, Anthropic Claude, and smart fallback engine.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -468,6 +469,349 @@ def _call_anthropic_api(api_key: str, resume_text: str, exclusion_block: str = "
 # ---------------------------------------------------------------------------
 # Fallback Roast Generator in Authentic Hinglish
 # ---------------------------------------------------------------------------
+# Heuristic Scoring & Fallback Roast Generator (Deep Grounded Engine)
+# ---------------------------------------------------------------------------
+
+DOMAIN_KEYWORDS = {
+    "healthcare": ["patient", "clinical", "nurse", "hospital", "triage", "surgery", "medical", "doctor", "physician", "health", "care", "diagnosis", "therapy"],
+    "finance": ["financial", "portfolio", "equity", "dcf", "valuation", "budget", "accounting", "ledger", "revenue", "audit", "banking", "capital", "sec", "earnings"],
+    "engineering": ["software", "engineer", "developer", "api", "react", "python", "kubernetes", "docker", "cloud", "aws", "database", "backend", "frontend", "devops", "code", "system"],
+    "culinary": ["chef", "kitchen", "culinary", "restaurant", "menu", "cook", "food", "haccp", "dining", "brigade", "recipes"],
+    "legal": ["attorney", "counsel", "litigation", "contract", "compliance", "law", "legal", "statute", "court", "regulatory", "due diligence"],
+    "education": ["teacher", "student", "curriculum", "school", "teaching", "education", "classroom", "physics", "academic", "course", "lecture"],
+    "marketing": ["marketing", "seo", "campaign", "ads", "growth", "social media", "conversion", "funnel", "brand", "content", "traffic"],
+    "design": ["figma", "designer", "ux", "ui", "wireframe", "prototype", "design system", "typography", "usability", "visual"],
+}
+
+VERDICT_POOLS = {
+    "hi-IN": {
+        "weak_metrics": [
+            "Bhai resume mein sirf baatein hain, proof kahan hai? Data missing hai 📊",
+            "Number daalna bhool gaye kya bhai? Recruiter suspense movie nahi dekhega 📉",
+            "Sab theek hai boss, par calculator leke baithna padega impact samajhne ke liye 🧮",
+            "Kahani achhi likhi hai yaar, par numbers bina recruiter aage scroll kar dega 🥱",
+            "Bina numbers ke ye claim hawa-hawaai lag raha hai, data daalo boss 💨",
+        ],
+        "weak_buzzwords": [
+            "Bhai resume hai ya buzzword dictionary? Thoda asli kaam batao 🤖",
+            "Itna corporate jargon bhar diya, recruiter ko oxygen mask lagega 😵",
+            "LinkedIn influencers ki tarah bolna band karo, seedha point pe aao 😅",
+            "Ye word har doosre resume mein hai bhai, tu unique kaise banega isse? 🎭",
+            "Adjectives bohot hain boss, par delivery proof ek bhi nahi dikh raha 🛑",
+        ],
+        "weak_general": [
+            "Bhai resume hai ya suspense novel? 🕵️",
+            "Design aur content dekh ke lag raha hai jaldi mein submit kiya tha 😭",
+            "Ekdum generic lag raha hai bhai, thoda effort aur specific details chahiye 📄",
+        ],
+        "mid_metrics": [
+            "Dum hai boss, bas thoda masala aur metrics kam hain 🍛",
+            "Base solid hai bhai, bas impact ko bold mein numbers ke saath dikhao 🚀",
+            "Acha effort hai yaar, par key bullets mein quantifiable metrics missing hain 📊",
+        ],
+        "mid_buzzwords": [
+            "Acha effort hai yaar, par buzzwords zyada bhar diye hain 🤖",
+            "Kaam solid dikh raha hai boss, par corporate jargon thoda trim karo ✂️",
+            "Profile mein dum hai, bas thodi generic lines delete karke punchy banao 💥",
+        ],
+        "mid_general": [
+            "Thodi polishing baaki hai boss, shortlist ke kaafi kareeb ho ✨",
+            "Section structure clean hai, bas bullet points ko impact-first banao 🎯",
+            "Acha profile hai, bas 2-3 killer numbers daal do toh recruiter mana nahi karega 📈",
+        ],
+        "strong": [
+            "Arey waah! Solid resume banaya hai, bas minor polishing ki zaroorat hai 🔥",
+            "Recruiter shortlist zaroor karega, bas 1-2 sharp tweaks kardo 🎯",
+            "Bohot badhiya draft hai boss — strong impact aur clear structure 🚀",
+            "Shaandaar profile hai, bas formatting ko 100% airtight rakhna 👍",
+        ],
+    },
+    "en": {
+        "weak_metrics": [
+            "Solid narrative, but your metrics went completely missing in action 📉",
+            "Where is the proof? Claims without numbers read like wishful thinking 📊",
+            "Recruiters give this six seconds — give them hard numbers to look at ⏱️",
+            "Lots of responsibilities listed, zero measurable outcomes delivered 🧮",
+            "Is this a resume or a mystery novel? Let's see some evidence 🕵️",
+        ],
+        "weak_buzzwords": [
+            "Drowned in corporate buzzwords — what did you actually ship? 🤖",
+            "Too much corporate fluff, not enough concrete business impact 😵",
+            "A dictionary of clichés that tells recruiters almost nothing 📄",
+            "Every second resume uses these exact phrases — stand out with facts 🎭",
+            "Heavy on corporate adjectives, light on actual verified accomplishments 🛑",
+        ],
+        "weak_general": [
+            "Visually cramped — give your achievements room to breathe 📄",
+            "Reads like a generic job description rather than a personal track record 📑",
+            "The foundation is unpolished — tighten the structure and prune the filler ✂️",
+        ],
+        "mid_metrics": [
+            "Solid technical foundation, but your metrics went missing in action 📉",
+            "Strong domain experience hiding behind vague responsibility statements 🎯",
+            "Good track record — just back up your top 3 claims with hard numbers 📊",
+        ],
+        "mid_buzzwords": [
+            "Good effort, but drowned in corporate buzzwords and vague claims 🤖",
+            "Good background — swap generic buzzwords for specific tools and outcomes 💡",
+            "Solid experience that gets diluted by overused corporate phrases ✂️",
+        ],
+        "mid_general": [
+            "Clean structure and clear direction — just needs sharper impact metrics 🚀",
+            "Promising candidate profile — tighten the phrasing and highlight key wins 🎯",
+            "Solid baseline — a few quantitative tweaks will make this shortlist-ready 📈",
+        ],
+        "strong": [
+            "Sharp, impactful, and clear — just needs minor edge polishing 🔥",
+            "Strong candidate profile with measurable accomplishments on display 🚀",
+            "Standout resume with clear impact, strong hierarchy, and credible metrics 📈",
+            "Impressive trajectory — minor phrasing tweaks will make this elite 🎯",
+        ],
+    },
+}
+
+
+def _detect_domain(text: str) -> str:
+    lower = text.lower()
+    scores: dict[str, int] = {}
+    for domain, kws in DOMAIN_KEYWORDS.items():
+        score = sum(1 for kw in kws if re.search(rf"\b{re.escape(kw)}\b", lower))
+        scores[domain] = score
+    best = max(scores, key=scores.get)
+    return best if scores[best] >= 2 else "general"
+
+
+def _generate_domain_fix(line: str, domain: str, cat: str, lang: str) -> str:
+    if cat == "no-metrics":
+        if domain == "healthcare":
+            return (
+                "Quantify karo: 'Triage kiya 25+ emergency patients per shift with zero protocol deviations'."
+                if lang == "hi-IN"
+                else "Quantify this: 'Triaged 25+ emergency patients per shift with zero protocol deviations'."
+            )
+        elif domain == "finance":
+            return (
+                "Number daalo: 'Modeled DCF valuations for 15+ tech equities managing $40M portfolio'."
+                if lang == "hi-IN"
+                else "Quantify this: 'Modeled DCF valuations for 15+ tech equities managing $40M portfolio'."
+            )
+        elif domain == "culinary":
+            return (
+                "Metric daalo: 'Supervised kitchen brigade of 14 cooks, cutting food cost percentage by 4.5%'."
+                if lang == "hi-IN"
+                else "Quantify this: 'Supervised kitchen brigade of 14 cooks, cutting food cost percentage by 4.5%'."
+            )
+        elif domain == "legal":
+            return (
+                "Exact count daalo: 'Negotiated 45+ enterprise SaaS agreements totaling $12M in ARR'."
+                if lang == "hi-IN"
+                else "Quantify this: 'Negotiated 45+ enterprise SaaS agreements totaling $12M in ARR'."
+            )
+        elif domain == "education":
+            return (
+                "Impact metric dikhao: 'Instructed 95+ students achieving an 88% AP pass rate'."
+                if lang == "hi-IN"
+                else "Quantify this: 'Instructed 95+ students achieving an 88% AP pass rate'."
+            )
+        elif domain == "marketing":
+            return (
+                "Performance number daalo: 'Optimized Google Ads CPA by 28%, driving 1,400+ qualified MQLs'."
+                if lang == "hi-IN"
+                else "Quantify this: 'Optimized Google Ads CPA by 28%, driving 1,400+ qualified MQLs'."
+            )
+        elif domain == "design":
+            return (
+                "Metric add karo: 'Designed mobile checkout flow tested with 30 users, reducing drop-off by 18%'."
+                if lang == "hi-IN"
+                else "Quantify this: 'Designed mobile checkout flow tested with 30 users, reducing drop-off by 18%'."
+            )
+        elif domain == "engineering":
+            return (
+                "Production scale likho: 'Architected microservice handling 45,000 req/min with 99.9% uptime'."
+                if lang == "hi-IN"
+                else "Quantify this: 'Architected microservice handling 45,000 req/min with 99.9% uptime'."
+            )
+        else:
+            return (
+                "Quantify karo: Action verb + exact number/percent + business outcome daalo."
+                if lang == "hi-IN"
+                else "Quantify this: Start with an active verb, insert concrete numbers/percentages, and end with the outcome."
+            )
+    elif cat == "buzzword":
+        return (
+            "Buzzword hatao aur direct bolo: Kaunsa tool use kiya aur uska tangible result kya tha."
+            if lang == "hi-IN"
+            else "Drop the corporate jargon and state the concrete tool used and the resulting business outcome."
+        )
+    elif cat == "length":
+        return (
+            "Header aur summary choti karo; purani schooling hata ke whitespace bachaao."
+            if lang == "hi-IN"
+            else "Trim summary and older schooling to ensure high-impact recent accomplishments stand out."
+        )
+    elif cat == "irrelevant":
+        return (
+            "Ye line delete karo aur wahan verifiable project links ya certifications mention karo."
+            if lang == "hi-IN"
+            else "Delete this line and replace the space with verified technical projects or certifications."
+        )
+    elif cat == "typo":
+        return (
+            "Typo correct karo aur submission se pehle automated spellcheck zaroor chalao."
+            if lang == "hi-IN"
+            else "Correct typo and run an automated spellchecker before submitting your application."
+        )
+    return (
+        "Rephrase with strong action verbs and specific facts."
+        if lang != "hi-IN"
+        else "Strong action verb aur specific facts ke saath rewrite karo."
+    )
+
+
+def _calculate_grounded_score(
+    resume_text: str, lines: list[str], issues: list[dict], domain: str
+) -> int:
+    """
+    Computes a realistic, nuanced 0-100 score based on actual document characteristics:
+    - Metric density (percentage of lines containing numbers/metrics)
+    - Action verb strength
+    - Buzzword and cliché count
+    - Length and depth balance
+    - Section presence
+    - Deterministic tie-breaker based on document content hash
+    """
+    raw_lower = resume_text.lower()
+    total_lines = max(1, len(lines))
+
+    # 1. Base Score
+    score = 52.0
+
+    # 2. Metric density evaluation
+    metric_lines = sum(
+        1 for line in lines
+        if any(c.isdigit() for c in line) or "%" in line or "$" in line or "₹" in line
+        or bool(_SPELLED_NUMBERS.search(line))
+    )
+    metric_ratio = metric_lines / total_lines
+
+    if metric_ratio >= 0.40:
+        score += 18.0
+    elif metric_ratio >= 0.25:
+        score += 10.0
+    elif metric_ratio >= 0.12:
+        score += 3.0
+    else:
+        score -= 12.0  # Penalty for metric desert
+
+    # 3. Strong Action Verbs vs Passive Verbs
+    strong_verbs = [
+        "led", "built", "architected", "spearheaded", "designed", "developed", "optimized",
+        "managed", "negotiated", "audited", "triaged", "directed", "executed", "conducted",
+        "authored", "engineered", "orchestrated", "automated", "streamlined", "formulated"
+    ]
+    weak_verbs = ["responsible for", "assisted", "helped", "worked on", "duties included", "participated in"]
+
+    strong_count = sum(1 for v in strong_verbs if re.search(rf"\b{re.escape(v)}\b", raw_lower))
+    weak_count = sum(1 for v in weak_verbs if v in raw_lower)
+
+    score += min(14.0, strong_count * 2.5)
+    score -= min(12.0, weak_count * 3.0)
+
+    # 4. Buzzword & Cliché penalties
+    buzzword_penalties = sum(1 for iss in issues if iss.get("category") == "buzzword")
+    score -= min(14.0, buzzword_penalties * 3.5)
+
+    # 5. Length & Substance balance
+    word_count = len(resume_text.split())
+    if word_count < 140:
+        score -= 16.0  # Too sparse
+    elif word_count < 250:
+        score -= 6.0
+    elif 300 <= word_count <= 950:
+        score += 6.0   # Sweet spot
+    elif word_count > 1600:
+        score -= 8.0   # Excessive novella
+
+    # 6. Structural sections presence
+    if any(h in raw_lower for h in ["experience", "employment", "work history", "clinical experience", "engagement history"]):
+        score += 4.0
+    if any(h in raw_lower for h in ["education", "academic", "degree", "university", "college"]):
+        score += 4.0
+    if any(h in raw_lower for h in ["skills", "certifications", "technical arsenal", "licens"]):
+        score += 4.0
+
+    # 7. Issue severity drag
+    score -= min(15.0, len(issues) * 2.0)
+
+    # 8. Deterministic content micro-variance (prevents exact artificial ties across distinct inputs)
+    content_hash_int = int(hashlib.sha256(resume_text.encode()).hexdigest()[:6], 16)
+    variance = (content_hash_int % 7) - 3  # -3 to +3
+    score += variance
+
+    # Clamp to valid, realistic range (16 - 88)
+    final_score = int(max(16, min(88, round(score))))
+    return final_score
+
+
+def _extract_grounded_strengths(resume_text: str, domain: str, lang: str) -> list[str]:
+    """
+    Extracts authentic, candidate-specific strengths from the uploaded resume text.
+    """
+    strengths: list[str] = []
+    lower = resume_text.lower()
+
+    # 1. Tech / Domain Tools detection
+    found_tools = []
+    ALL_TOOLS = [
+        "React", "TypeScript", "Python", "Kubernetes", "Docker", "AWS", "Terraform", "PostgreSQL",
+        "Redux", "Storybook", "Figma", "ETABS", "Revit", "SAP2000", "DCF", "Bloomberg", "VBA",
+        "Epic", "BLS", "ACLS", "HIPAA", "HACCP", "ServSafe", "Google Ads", "HubSpot", "Klaviyo",
+        "ArgoCD", "Prometheus", "Grafana", "OSCP", "CISSP", "Splunk", "Linux", "Java", "C++"
+    ]
+    for tool in ALL_TOOLS:
+        if re.search(rf"\b{re.escape(tool.lower())}\b", lower):
+            found_tools.append(tool)
+
+    if found_tools:
+        tools_sample = ", ".join(found_tools[:3])
+        if lang == "hi-IN":
+            strengths.append(f"Domain tech stack standout hai — {tools_sample} hands-on expertise clear dikhti hai 🚀")
+        else:
+            strengths.append(f"Core technical domain is evident — practical expertise in {tools_sample} highlighted 🚀")
+
+    # 2. Measurable Metrics detection
+    has_metrics = bool(re.search(r"\b\d+%\b|\$\d+|\b\d+\s*(users|clients|patients|requests|accounts|stocks|million|k)\b", lower))
+    if has_metrics:
+        if lang == "hi-IN":
+            strengths.append("Key accomplishments mein quantifiable numbers aur concrete impact shamil hai 📈")
+        else:
+            strengths.append("Features quantifiable data points and concrete business metrics in experience entries 📈")
+
+    # 3. Live Links / Verification detection
+    has_links = bool(re.search(r"github\.com|linkedin\.com|[a-zA-Z0-9.-]+\.(com|io|net|org|dev)", lower))
+    if has_links:
+        if lang == "hi-IN":
+            strengths.append("Live links aur professional profiles provided hain, recruiter easily verify kar sakta hai 🔗")
+        else:
+            strengths.append("Public profiles and verification links are present for recruiter cross-referencing 🔗")
+
+    # 4. Credentials & Degrees detection
+    has_credentials = bool(re.search(r"\b(ph\.d|m\.s\.|b\.s\.|cfa|pe|dvm|rn|oscp|cissp|j\.d\.|mba)\b", lower))
+    if has_credentials:
+        if lang == "hi-IN":
+            strengths.append("Educational pedigree aur certifications clearly structured hain 🎓")
+        else:
+            strengths.append("Professional credentials and academic background are prominently structured 🎓")
+
+    # 5. Clean Structure fallback
+    if len(strengths) < 2:
+        if lang == "hi-IN":
+            strengths.append("Section hierarchy clean hai boss, ATS scanners ko padhne mein asani hogi 👍")
+        else:
+            strengths.append("Clean section hierarchy — ATS scanners and hiring managers can parse this easily 👍")
+
+    return strengths[:2]
+
 
 def _generate_fallback_roast(
     resume_text: str, exclusion_block: str = "", language: str = HINGLISH_LANGUAGE
@@ -476,10 +820,13 @@ def _generate_fallback_roast(
     Intelligent heuristic fallback analyzer with language-specific persona.
     Quotes actual candidate lines and generates shareable roasts from vocabulary pool,
     actively avoiding recently used lines.
+    Calculates dynamic scores, varied verdicts, and context-aware fixes.
     """
     import random
     lang = normalize_language(language)
     joke_bank = get_joke_banks(lang)
+    domain = _detect_domain(resume_text)
+
     lines = [
         line.strip() for line in resume_text.splitlines()
         if len(line.strip()) > 20 and not line.strip().startswith("http")
@@ -493,6 +840,7 @@ def _generate_fallback_roast(
         "docker", "kubernetes", "postgres", "sql", "redis", "kafka", "spark", "flutter",
         "swift", "cypress", "selenium", "node", "java", "c++", "go", "ci/cd", "etl",
         "linux", "cloud", "ui", "database", "backend", "frontend", "devops",
+        "figma", "revit", "etabs", "dcf", "epic", "haccp", "splunk", "oscp"
     ]
 
     def _extract_tool(text: str) -> str | None:
@@ -560,40 +908,34 @@ def _generate_fallback_roast(
         return fallback
 
     issues = []
-    if lang == "hi-IN":
-        buzzwords = [
-            ("responsible for", "no-metrics", "Kuch is tarah likho: 'Built 12 reusable UI components, cutting page load time by 30%' — number daalo, impact dikhao."),
-            ("worked closely with", "buzzword", "Specific batao: 'Collaborated with 3 designers to ship checkout redesign, reducing drop-off by 18%.'"),
-            ("synerg", "buzzword", "Corporate jargon cut karo aur exact tools/outcomes list karo."),
-            ("spearheaded", "buzzword", "Action-first likho: 'Led a team of 4 to architect the notification engine from scratch.'"),
-            ("passionate", "buzzword", "Adjectives hatao aur shipped projects ke live metrics daalo."),
-            ("assisted", "no-metrics", "Rewrite karo: 'Resolved 45+ critical production bugs in PostgreSQL, reducing ticket backlog by 40%.'"),
-            ("curriculum vitae", "length", "Header clean karo: Top pe 'Full Stack Engineer' aur LinkedIn/GitHub link rakho."),
-            ("declaration", "irrelevant", "Ye section delete kardo aur resume ka vertical whitespace save karo."),
-            ("hobbies", "irrelevant", "Hobbies hatao aur hackathon rank ya open-source contribution mention karo."),
-        ]
-    else:
-        buzzwords = [
-            ("responsible for", "no-metrics", "Rewrite as: 'Built 12 reusable UI components, cutting page load time by 30%' — add numbers, show concrete impact."),
-            ("worked closely with", "buzzword", "Be specific: 'Collaborated with 3 designers to ship checkout redesign, reducing drop-off by 18%'."),
-            ("synerg", "buzzword", "Cut corporate buzzwords and list the exact tools and business outcomes."),
-            ("spearheaded", "buzzword", "Action-first: 'Led an engineering team of 4 to architect the notification engine from scratch.'"),
-            ("passionate", "buzzword", "Drop adjectives and state shipped projects with live production metrics."),
-            ("assisted", "no-metrics", "Rewrite: 'Resolved 45+ critical production bugs in PostgreSQL, reducing ticket backlog by 40%'."),
-            ("curriculum vitae", "length", "Keep header clean: Top title 'Full Stack Engineer' with GitHub and LinkedIn links."),
-            ("declaration", "irrelevant", "Delete this section completely and reclaim valuable vertical whitespace."),
-            ("hobbies", "irrelevant", "Remove hobbies and highlight hackathons, certifications, or open-source PRs."),
-        ]
+    buzzwords = [
+        ("responsible for", "no-metrics"),
+        ("worked closely with", "buzzword"),
+        ("synerg", "buzzword"),
+        ("spearheaded", "buzzword"),
+        ("passionate", "buzzword"),
+        ("assisted", "no-metrics"),
+        ("curriculum vitae", "length"),
+        ("declaration", "irrelevant"),
+        ("hobbies", "irrelevant"),
+        ("go-getter", "buzzword"),
+        ("detail-oriented", "buzzword"),
+        ("hardworking", "buzzword"),
+        ("dynamic environment", "buzzword"),
+        ("team player", "buzzword"),
+        ("proven track record", "buzzword"),
+    ]
 
     default_cat_joke = joke_bank.get("other", ["Need more details"])[0]
 
     for line in lines:
         lower = line.lower()
-        for bw, cat, fix_txt in buzzwords:
+        for bw, cat in buzzwords:
             if bw in lower and len(issues) < 6:
                 if not any(iss["quoted_text"] == line[:110] for iss in issues):
                     fallback_text = joke_bank.get(cat, [default_cat_joke])[0]
                     roast_text = _select_roast(cat, line, fallback_text)
+                    fix_txt = _generate_domain_fix(line, domain, cat, lang)
                     issues.append({
                         "quoted_text": line[:110],
                         "category": cat,
@@ -610,11 +952,7 @@ def _generate_fallback_roast(
                 if not any(iss["quoted_text"] == line[:110] for iss in issues):
                     fallback_text = joke_bank.get("no-metrics", [default_cat_joke])[0]
                     roast_text = _select_roast("no-metrics", line, fallback_text)
-                    fix_advice = (
-                        "Quantify karo: 'Scaled server throughput by 35% handling 50,000+ requests/min.'"
-                        if lang == "hi-IN"
-                        else "Quantify this: 'Scaled server throughput by 35% handling 50,000+ requests/min.'"
-                    )
+                    fix_advice = _generate_domain_fix(line, domain, "no-metrics", lang)
                     issues.append({
                         "quoted_text": line[:110],
                         "category": "no-metrics",
@@ -629,11 +967,7 @@ def _generate_fallback_roast(
         if any(mis in lower for mis in ["skils", "pythno", "javascrip", "mangment", "experiance"]):
             fallback_text = joke_bank.get("typo", [default_cat_joke])[0]
             roast_text = _select_roast("typo", line, fallback_text)
-            fix_advice = (
-                "Typo fix karo aur submission se pehle spellcheck zaroor run karo."
-                if lang == "hi-IN"
-                else "Fix typos and run spellcheck before submitting your application."
-            )
+            fix_advice = _generate_domain_fix(line, domain, "typo", lang)
             issues.append({
                 "quoted_text": line[:100],
                 "category": "typo",
@@ -644,14 +978,10 @@ def _generate_fallback_roast(
             break
 
     if not issues:
-        sample_line = lines[0] if lines else "Experienced Software Developer"
+        sample_line = lines[0] if lines else "Experienced Professional"
         fallback_text = joke_bank.get("buzzword", [default_cat_joke])[0]
         roast_text = _select_roast("buzzword", sample_line, fallback_text)
-        fix_advice = (
-            "Apne core stack aur standout accomplishments ko highlight karo."
-            if lang == "hi-IN"
-            else "Highlight your core stack and standout measurable accomplishments."
-        )
+        fix_advice = _generate_domain_fix(sample_line, domain, "buzzword", lang)
         issues.append({
             "quoted_text": sample_line[:100],
             "category": "buzzword",
@@ -660,33 +990,43 @@ def _generate_fallback_roast(
             "fix": fix_advice,
         })
 
-    score = 38 if len(issues) >= 4 else 56
-    band = "weak" if score <= 40 else "mid"
-
-    if lang == "hi-IN":
-        verdicts = [
-            "Bhai resume hai ya suspense novel? 🕵️",
-            "Dum hai boss, bas thoda masala aur metrics kam hain 🍛",
-            "Acha effort hai yaar, par buzzwords zyada bhar diye hain 🤖",
-            "Design dekh ke aankhon se aansu nikal gaye 😭",
-        ]
-        strengths = [
-            "Formatting overall clean hai boss, ATS ko padhne mein asani hogi 👍",
-            "Core technical domain samajh aa raha hai, bas thodi polishing chahiye 🚀",
-        ]
+    # Calculate dynamic, grounded score
+    score = _calculate_grounded_score(resume_text, lines, issues, domain)
+    if score <= 40:
+        band = "weak"
+    elif score <= 70:
+        band = "mid"
     else:
-        verdicts = [
-            "Is this a resume or a mystery novel? Let's see some evidence 🕵️",
-            "Solid technical foundation, but your metrics went missing in action 📉",
-            "Good effort, but drowned in corporate buzzwords and vague claims 🤖",
-            "Visually cramped — give your achievements room to breathe 📄",
-        ]
-        strengths = [
-            "Clean section hierarchy — ATS scanners and recruiters can parse this easily 👍",
-            "Core technical domain is evident — just needs sharper impact metrics 🚀",
-        ]
+        band = "strong"
 
-    verdict = verdicts[len(lines) % len(verdicts)]
+    # Select dynamic verdict based on band & dominant weakness
+    cat_counts: dict[str, int] = {}
+    for iss in issues:
+        cat_counts[iss["category"]] = cat_counts.get(iss["category"], 0) + 1
+    top_cat = max(cat_counts, key=cat_counts.get) if cat_counts else "general"
+
+    lang_pool = VERDICT_POOLS.get(lang, VERDICT_POOLS["en"])
+    if band == "strong":
+        candidates = lang_pool.get("strong", [])
+    elif band == "mid":
+        if top_cat == "no-metrics":
+            candidates = lang_pool.get("mid_metrics", lang_pool["mid_general"])
+        elif top_cat == "buzzword":
+            candidates = lang_pool.get("mid_buzzwords", lang_pool["mid_general"])
+        else:
+            candidates = lang_pool.get("mid_general", [])
+    else:
+        if top_cat == "no-metrics":
+            candidates = lang_pool.get("weak_metrics", lang_pool["weak_general"])
+        elif top_cat == "buzzword":
+            candidates = lang_pool.get("weak_buzzwords", lang_pool["weak_general"])
+        else:
+            candidates = lang_pool.get("weak_general", [])
+
+    content_hash_num = int(hashlib.sha256(resume_text.encode()).hexdigest()[:6], 16)
+    verdict = candidates[content_hash_num % len(candidates)] if candidates else "Resume needs focused improvements."
+
+    strengths = _extract_grounded_strengths(resume_text, domain, lang)
 
     return {
         "overall_score": score,
@@ -695,6 +1035,7 @@ def _generate_fallback_roast(
         "issues": issues,
         "strengths": strengths,
     }
+
 
 
 def _has_hinglish_tone(text: str) -> bool:

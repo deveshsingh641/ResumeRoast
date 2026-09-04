@@ -70,15 +70,13 @@ async def generate_voice_roast(roast_id: str, request: Request) -> JSONResponse:
     one_line_verdict = roast.get("one_line_verdict", "Resume needs major overhaul.")
     overall_score = roast.get("overall_score", 50)
 
-    # 1. Build script (rebuild if language preference differs or no script exists)
-    script = roast.get("voice_script")
-    if not script or roast_id.startswith("demo"):
-        script = voice_service.build_voice_roast_script(
-            one_line_verdict=one_line_verdict,
-            issues=issues,
-            overall_score=overall_score,
-            language=lang,
-        )
+    # 1. Build language-accurate script
+    script = voice_service.build_voice_roast_script(
+        one_line_verdict=one_line_verdict,
+        issues=issues,
+        overall_score=overall_score,
+        language=lang,
+    )
 
     # 2. Generate audio
     audio_path = voice_service.generate_voice_roast_audio(roast_id, script, language=lang)

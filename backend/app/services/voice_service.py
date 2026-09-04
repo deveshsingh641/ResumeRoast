@@ -170,7 +170,7 @@ def generate_voice_roast_audio(roast_id: str, script_text: str, language: str = 
     Returns the absolute path to the cached MP3 file.
     """
     lang = normalize_language(language)
-    cache_key = f"{roast_id}_{lang}" if roast_id.startswith("demo") else roast_id
+    cache_key = f"{roast_id}_{lang}"
     out_file = os.path.join(STORAGE_DIR, f"{cache_key}.mp3")
     if os.path.exists(out_file) and os.path.getsize(out_file) > 1000:
         return out_file
@@ -213,7 +213,7 @@ def generate_voice_roast_audio(roast_id: str, script_text: str, language: str = 
 def get_cached_voice_audio_path(roast_id: str, language: str = DEFAULT_LANGUAGE) -> Optional[str]:
     """Returns path to cached audio file if present."""
     lang = normalize_language(language)
-    cache_key = f"{roast_id}_{lang}" if roast_id.startswith("demo") else roast_id
+    cache_key = f"{roast_id}_{lang}"
     path = os.path.join(STORAGE_DIR, f"{cache_key}.mp3")
     if os.path.exists(path) and os.path.getsize(path) > 500:
         return path

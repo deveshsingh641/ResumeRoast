@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import axios from 'axios'
+import { getCurrentLanguage } from '@/i18n'
 
 interface VoiceNoteBubbleProps {
   roastId: string
@@ -24,9 +25,10 @@ export default function VoiceNoteBubble({ roastId, oneLineVerdict }: VoiceNoteBu
 
   // Generate or fetch voice roast
   const handleGenerateVoice = async () => {
+    const lang = getCurrentLanguage()
     try {
       setLoading(true)
-      const { data } = await axios.post(`/api/roast/${roastId}/voice`)
+      const { data } = await axios.post(`/api/roast/${roastId}/voice?lang=${lang}`)
       setAudioUrl(data.audio_url)
       setScript(data.script)
       if (data.duration_seconds) setDuration(data.duration_seconds)
@@ -37,8 +39,12 @@ export default function VoiceNoteBubble({ roastId, oneLineVerdict }: VoiceNoteBu
         }
       }, 200)
     } catch {
-      setAudioUrl(`/api/roast/${roastId}/voice/audio`)
-      setScript(`Arre bhai, maine tera resume check kiya: ${oneLineVerdict || 'Thoda numbers daalo boss!'}`)
+      setAudioUrl(`/api/roast/${roastId}/voice/audio?lang=${lang}`)
+      setScript(
+        lang === 'hi-IN'
+          ? `Arre bhai, maine tera resume check kiya: ${oneLineVerdict || 'Thoda numbers daalo boss!'}`
+          : `I reviewed your resume: ${oneLineVerdict || 'Add concrete metrics to your bullet points!'}`
+      )
       setTimeout(() => {
         if (audioRef.current) {
           audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {})
