@@ -262,11 +262,14 @@ def cleanup_expired_roasts() -> int:
             removed += 1
         return removed
 
-    with _get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM roasts WHERE expires_at IS NOT NULL AND expires_at < now()")
-            removed = cur.rowcount
-        conn.commit()
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM roasts WHERE expires_at IS NOT NULL AND expires_at < now()")
+                removed = cur.rowcount
+            conn.commit()
+    except Exception as e:
+        print(f"[WARN] Failed to cleanup expired roasts: {e}")
     return removed
 
 

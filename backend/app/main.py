@@ -113,8 +113,14 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 # ---------------------------------------------------------------------------
 @app.on_event("startup")
 async def on_startup() -> None:
-    init_db()
-    cleanup_expired_roasts()
+    try:
+        init_db()
+    except Exception as e:
+        logger.warning(f"Database init warning: {e}")
+    try:
+        cleanup_expired_roasts()
+    except Exception as e:
+        logger.warning(f"Database cleanup warning: {e}")
 
 
 # ---------------------------------------------------------------------------
