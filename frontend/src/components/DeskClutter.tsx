@@ -32,12 +32,12 @@ export default function DeskClutter({
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 overflow-hidden select-none z-0"
+      className="pointer-events-none absolute inset-0 overflow-hidden select-none z-0 hidden md:block"
       aria-hidden="true"
     >
-      {/* ── 1. Asymmetric Coffee Ring Stain (Top-Left or Bottom-Right) ── */}
+      {/* ── 1. Asymmetric Coffee Ring Stain (Top-Left, Desktop only) ── */}
       <div
-        className="absolute top-12 -left-16 sm:-left-8 opacity-25 transition-transform duration-300 ease-out"
+        className="absolute top-12 -left-16 sm:-left-8 opacity-25 transition-transform duration-300 ease-out hidden md:block"
         style={{
           transform: isTouch ? 'none' : `translate3d(${offset.x * 0.4}px, ${offset.y * 0.4}px, 0)`,
         }}
@@ -75,7 +75,7 @@ export default function DeskClutter({
         </svg>
       </div>
 
-      {/* ── 2. Crumpled / Rejected Mini Resume (Bottom-Left) ── */}
+      {/* ── 2. Crumpled / Rejected Mini Resume (Bottom-Left, Desktop only) ── */}
       <div
         className="absolute bottom-16 -left-8 sm:left-4 opacity-30 transition-transform duration-500 ease-out hidden md:block"
         style={{
@@ -103,9 +103,9 @@ export default function DeskClutter({
         </div>
       </div>
 
-      {/* ── 3. Handwritten Sticky Note (Top-Right) ── */}
+      {/* ── 3. Handwritten Sticky Note (Top-Right, Desktop only) ── */}
       <div
-        className="absolute top-24 right-2 sm:right-12 transition-transform duration-300 ease-out z-10"
+        className="absolute top-24 right-2 sm:right-12 transition-transform duration-300 ease-out z-10 hidden md:block"
         style={{
           transform: isTouch
             ? `rotate(${stickyRotation}deg)`

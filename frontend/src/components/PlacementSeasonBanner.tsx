@@ -32,9 +32,9 @@ export default function PlacementSeasonBanner() {
       aria-label="Campus Placement Season Alert"
     >
       <div className="max-w-[960px] mx-auto flex flex-wrap items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-2 text-paper text-left flex-1 min-w-[280px]">
-          <span className="text-amber-400 font-bold animate-pulse">🎯</span>
-          <p className="font-mono leading-tight">
+        <div className="flex items-center gap-2 text-paper text-left flex-1 min-w-0">
+          <span className="text-amber-400 font-bold animate-pulse shrink-0">🎯</span>
+          <p className="font-mono leading-tight text-xs">
             <strong className="text-amber-300">Placement season chal raha hai</strong>{' '}
             — resume ready hai ya jugaad se chal raha hai? 👀
           </p>

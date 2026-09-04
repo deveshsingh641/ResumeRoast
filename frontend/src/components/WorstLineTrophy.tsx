@@ -10,7 +10,7 @@ interface WorstLineTrophyProps {
 export default function WorstLineTrophy({ issue, candidateName }: WorstLineTrophyProps) {
   const [copied, setCopied] = useState(false)
 
-  const tagLabel = getHinglishTag(issue.category)
+  const tagLabel = issue.badge_label?.trim() || getHinglishTag(issue.category)
 
   const shareText = `🏆 BUZZWORD CHAMPION TROPHY 🏆\n\nMere resume ki sabse bekaar line pakdi gayi 😂:\n"${issue.quoted_text}"\n\nRed Pen Verdict: "${issue.roast}"\n\nApna resume test karwao: https://resumeroast.app`
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`

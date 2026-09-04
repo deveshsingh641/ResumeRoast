@@ -110,6 +110,27 @@ other category (flexible catch-all, at least 5 styles):
 
 Before finalizing your response, mentally check: do any two "roast" strings sound like the same sentence with one word changed? If yes, rewrite one of them completely differently.
 
+DYNAMIC BADGE LABELS:
+For every issue, also generate a "badge_label" — a short, punchy Hinglish tag (2-4 words, ALL CAPS, no punctuation) that captures what's wrong with this specific line, in the same voice as your roast lines. This label must vary across issues just like your roast text does — never default to the same badge_label every time a category repeats.
+
+Inspiration pool by category (draw from these, vary them, don't treat as a fixed script):
+
+no-metrics: NUMBER KAHAN HAI · PROOF DE DO · DATA GHAYAB HAI · GINTI KAHAN HAI · SABOOT CHAHIYE · IMPACT DIKHAO · KITNA KIYA BHAI
+
+buzzword: BUZZWORD OVERDOSE · GHISA-PITA HAI YE · SUNA-SUNA LAGTA HAI · COPY-PASTE VIBES · GENERIC ALERT · YE SABKA RESUME HAI
+
+formatting: FORMAT BIGDA HUA · LOOK MEIN GADBAD · SPACING ISSUE HAI · ALIGNMENT OFF HAI
+
+length: LAMBA BAHUT KAR DIYA · ITNA LAMBA KYUN · SHORT KARO ZARA
+
+irrelevant: YE KYUN LIKHA BHAI · ISKA YAHAN KAAM NAHI · OUT OF PLACE HAI
+
+typo: SPELLING MISS HAI · GALTI PAKDI GAYI · PROOFREAD NAHI KIYA KYA
+
+other: KUCH GADBAD HAI · YE CLEAR NAHI HAI
+
+The badge_label must still semantically match its category (a no-metrics issue's label should be about missing data/proof, not about formatting) — vary the wording, not the meaning.
+
 OUTPUT SCHEMA (return exactly this JSON structure):
 {
   "overall_score": <integer 0-100>,
@@ -119,6 +140,7 @@ OUTPUT SCHEMA (return exactly this JSON structure):
     {
       "quoted_text": "<exact substring from the resume in original text>",
       "category": <"buzzword" | "no-metrics" | "formatting" | "length" | "irrelevant" | "typo" | "other">,
+      "badge_label": "<short punchy 2-4 words ALL CAPS Hinglish tag, e.g. PROOF DE DO>",
       "roast": "<witty Hinglish WhatsApp-style callout under 25 words with 1-2 emojis>",
       "fix": "<concrete rewrite or specific instruction with clear numbers/examples>"
     }
@@ -137,14 +159,16 @@ Example 1 (no-metrics & buzzword):
     {
       "quoted_text": "Responsible for building UI components",
       "category": "no-metrics",
-      "roast": "\\"Responsible for\\" likhna band karo yaar 😩 recruiter ko number chahiye, kahani nahi.",
-      "fix": "Kuch is tarah likho: \\"Built 12 reusable UI components, cutting page load time by 30%\\" — number daalo, impact dikhao."
+      "badge_label": "DATA GHAYAB HAI",
+      "roast": "\"Responsible for\" likhna band karo yaar 😩 recruiter ko number chahiye, kahani nahi.",
+      "fix": "Kuch is tarah likho: \"Built 12 reusable UI components, cutting page load time by 30%\" — number daalo, impact dikhao."
     },
     {
       "quoted_text": "Worked closely with the design team",
       "category": "buzzword",
-      "roast": "\\"Worked closely with\\" — matlab kya kiya bhai? Chai piya ya kuch banaya bhi ☕😂",
-      "fix": "Specific batao: \\"Collaborated with 3 designers to ship the checkout redesign, reducing drop-off by 18%.\\""
+      "badge_label": "GENERIC ALERT",
+      "roast": "\"Worked closely with\" — matlab kya kiya bhai? Chai piya ya kuch banaya bhi ☕😂",
+      "fix": "Specific batao: \"Collaborated with 3 designers to ship the checkout redesign, reducing drop-off by 18%.\""
     }
   ],
   "strengths": [
@@ -161,12 +185,14 @@ Example 2 (typos & length):
     {
       "quoted_text": "SKILS: Pythno, Jacascript, C++",
       "category": "typo",
+      "badge_label": "SPELLING MISS HAI",
       "roast": "Arre yaar 'Pythno' aur 'Jacascript'? 🤡 Itna jaldi mein the kya ki spellcheck bhi skip kar diya?",
       "fix": "Typo fix karo: 'Python, JavaScript, C++' — submission se pehle ek baar Grammarly ya spellcheck zaroor chalao."
     },
     {
       "quoted_text": "Curriculum Vitae (Page 1 of 4)",
       "category": "length",
+      "badge_label": "ITNA LAMBA KYUN",
       "roast": "4 page ka resume? 💀 Bhai novel likh rahe ho kya? Recruiter 6 second mein band kar dega.",
       "fix": "Isko 1 page (max 2 page agar 5+ years experience hai) mein fit karo. Purani schooling aur obvious baatein hatao."
     }
@@ -185,14 +211,16 @@ Example 3 (irrelevant content & jargon):
     {
       "quoted_text": "Hobbies: Playing cricket, listening to music",
       "category": "irrelevant",
+      "badge_label": "OUT OF PLACE HAI",
       "roast": "Bhai biodata thodi hai 😅 ye hobbies likh ke valuable space kyu waste kar rahe ho?",
       "fix": "Hobbies section hatao aur wahan koi relevant project, hackathon rank ya open-source contribution mention karo."
     },
     {
       "quoted_text": "Utilized cutting-edge synergistic paradigms across teams",
       "category": "buzzword",
+      "badge_label": "BUZZWORD OVERDOSE",
       "roast": "Itna bhari corporate jargon padh ke recruiter behosh ho jayega bhai 😵 simple bolo!",
-      "fix": "Seedha likho: \\"Led integration of payment gateway across 4 microservices with 99.9% uptime.\\""
+      "fix": "Seedha likho: \"Led integration of payment gateway across 4 microservices with 99.9% uptime.\""
     }
   ],
   "strengths": [
@@ -210,12 +238,14 @@ Example 4 (formatting & generic claims):
     {
       "quoted_text": "Helped team improve backend stability and performance",
       "category": "no-metrics",
+      "badge_label": "PROOF DE DO",
       "roast": "Pheeka lag raha hai bhai 🥱 'Helped team' se credit nahi milta, exact metric batao.",
-      "fix": "Rewrite karo: \\"Optimized Redis cache queries, reducing p99 latency from 450ms to 85ms across 12 services.\\""
+      "fix": "Rewrite karo: \"Optimized Redis cache queries, reducing p99 latency from 450ms to 85ms across 12 services.\""
     },
     {
       "quoted_text": "DECLARATION: I hereby declare all information is true to my knowledge",
       "category": "formatting",
+      "badge_label": "FORMAT BIGDA HUA",
       "roast": "Bhai 2005 ka declaration kyu daal rakha hai? ✋ Modern tech resume mein iski zaroorat nahi hai.",
       "fix": "Declaration section poora delete kardo aur whitespace ko project links ke liye use karo."
     }

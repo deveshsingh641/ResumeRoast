@@ -89,19 +89,21 @@ export default function BattlePage() {
       <DeskClutter stickyText={isHinglish ? 'winner gets the referral 🥊' : 'winner gets the referral 🥊'} stickyRotation={3} />
 
       {/* Header */}
-      <header className="border-b border-white/[0.08] py-4 px-6 mb-8 relative z-10">
-        <div className="max-w-[1100px] mx-auto flex items-center justify-between">
-          <Link to="/" className="font-display text-lg tracking-tight text-paper select-none">
-            RESUME<span className="text-stamp">ROAST</span> <span className="text-ember font-mono text-xs ml-1">// BATTLE</span>
+      <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6 mb-6 sm:mb-8 relative z-10">
+        <div className="max-w-[1100px] mx-auto flex items-center justify-between gap-2">
+          <Link to="/" className="font-display text-base sm:text-lg tracking-tight text-paper select-none shrink-0">
+            RESUME<span className="text-stamp">ROAST</span> <span className="text-ember font-mono text-[10px] sm:text-xs ml-0.5 sm:ml-1">// BATTLE</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <Link to="/wall" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              {isHinglish ? 'Wall of Fame/Shame →' : 'Wall of Fame/Shame →'}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link to="/wall" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+              <span className="hidden sm:inline">Wall of Fame/Shame →</span>
+              <span className="sm:hidden">Wall →</span>
             </Link>
-            <Link to="/roast" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              {isHinglish ? 'Single Roast →' : 'Single Roast →'}
+            <Link to="/roast" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+              <span className="hidden sm:inline">Single Roast →</span>
+              <span className="sm:hidden">Roast →</span>
             </Link>
-            <LanguageSwitcher />
+            <LanguageSwitcher compact={true} className="shrink-0" />
           </div>
         </div>
       </header>

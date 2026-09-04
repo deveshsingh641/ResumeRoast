@@ -25,6 +25,7 @@ SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "Responsible for building reusable UI components and collaborating across teams",
             "category": "no-metrics",
+            "badge_label": "PROOF DE DO",
             "roast": "\"Responsible for\" likhna band karo yaar 😩 recruiter ko number chahiye, kahani nahi.",
             "fix": "Kuch is tarah likho: 'Built 12 reusable UI components, cutting page load time by 30%' — number daalo, impact dikhao.",
             "start_offset": 45,
@@ -34,6 +35,7 @@ SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "Leveraged synergistic paradigms to accelerate core business outcomes",
             "category": "buzzword",
+            "badge_label": "BUZZWORD OVERDOSE",
             "roast": "Ye word har second resume mein hai bhai, tu unique kaise banega isse?",
             "fix": "Corporate jargon cut karo aur seedha bolo: 'Led checkout redesign, reducing cart drop-off by 18%'.",
             "start_offset": 130,
@@ -43,6 +45,7 @@ SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "DECLARATION: I hereby declare that all information is true to my knowledge",
             "category": "formatting",
+            "badge_label": "FORMAT BIGDA HUA",
             "roast": "Bhai 2005 ka declaration kyu daal rakha hai? ✋ Modern tech resume mein iski zaroorat nahi hai.",
             "fix": "Declaration section poora delete kardo aur whitespace ko project links ke liye use karo.",
             "start_offset": 210,
@@ -52,6 +55,7 @@ SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "Hobbies: Playing cricket, watching movies, listening to music",
             "category": "irrelevant",
+            "badge_label": "YE KYUN LIKHA BHAI",
             "roast": "Ye yahan kyun hai bhai? Iska job se koi lena dena nahi 🤔",
             "fix": "Hobbies section hatao aur wahan hackathon rank ya open-source contributions mention karo.",
             "start_offset": 290,
@@ -61,6 +65,7 @@ SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "Curriculum Vitae (Page 1 of 4) — Detailed Experience",
             "category": "length",
+            "badge_label": "ITNA LAMBA KYUN",
             "roast": "Recruiter 6 second dekhta hai resume, tune usse 4 page bana diya.",
             "fix": "Isko 1 page mein fit karo. Purani schooling aur obvious baatein hatao.",
             "start_offset": 355,
@@ -70,6 +75,7 @@ SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "SKILS: Pythno, Jacascript, C++",
             "category": "typo",
+            "badge_label": "SPELLING MISS HAI",
             "roast": "Spelling mistake hai bhai, spellcheck bhi nahi chalaya kya? 😩",
             "fix": "Typo fix karo: 'Python, JavaScript, C++' — submission se pehle ek baar Grammarly zaroor run karo.",
             "start_offset": 410,
@@ -95,6 +101,7 @@ ENGLISH_SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "Responsible for building reusable UI components and collaborating across teams",
             "category": "no-metrics",
+            "badge_label": "WHERE IS PROOF",
             "roast": "This line has a verb and a shrug. Zero numbers and the recruiter keeps scrolling 📉",
             "fix": "Quantify this: 'Built 12 reusable UI components in React/TS, reducing average page load time by 30%'.",
             "start_offset": 45,
@@ -104,6 +111,7 @@ ENGLISH_SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "Leveraged synergistic paradigms to accelerate core business outcomes",
             "category": "buzzword",
+            "badge_label": "BUZZWORD OVERLOAD",
             "roast": "Every resume on earth says this. Recruiters stopped reading it as information around 2015 🤖",
             "fix": "Cut the corporate jargon and write: 'Led checkout redesign, reducing cart abandonment rate by 18%'.",
             "start_offset": 130,
@@ -113,6 +121,7 @@ ENGLISH_SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "DECLARATION: I hereby declare that all information is true to my knowledge",
             "category": "formatting",
+            "badge_label": "FORMATTING CHAOS",
             "roast": "Declarations and signatures retired in 2005. Don't spend premium whitespace on legal disclaimers ✋",
             "fix": "Delete the entire declaration section and use the space for live portfolio or GitHub project links.",
             "start_offset": 210,
@@ -122,6 +131,7 @@ ENGLISH_SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "Hobbies: Playing cricket, watching movies, listening to music",
             "category": "irrelevant",
+            "badge_label": "OUT OF PLACE",
             "roast": "Was this detail required, or did it just wander in? A recruiter does not need to know this 🤔",
             "fix": "Remove hobbies and highlight hackathon achievements, certifications, or open-source PRs.",
             "start_offset": 290,
@@ -131,6 +141,7 @@ ENGLISH_SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "Curriculum Vitae (Page 1 of 4) — Detailed Experience",
             "category": "length",
+            "badge_label": "TRIM THE FAT",
             "roast": "Recruiters give this six seconds. You gave them a four-page novella 📚",
             "fix": "Condense to a single sharp page. Remove outdated schooling and obvious generic job duties.",
             "start_offset": 355,
@@ -140,6 +151,7 @@ ENGLISH_SAMPLE_ROAST_RESPONSE = {
         {
             "quoted_text": "SKILS: Pythno, Jacascript, C++",
             "category": "typo",
+            "badge_label": "SPELLCHECK FAILED",
             "roast": "One typo and 'detail-oriented' becomes a joke at your expense 😩",
             "fix": "Correct spelling: 'Python, JavaScript, C++' — run spellcheck before submitting any application.",
             "start_offset": 410,

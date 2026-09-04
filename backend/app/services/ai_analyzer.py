@@ -136,6 +136,27 @@ other category (flexible catch-all, at least 5 styles):
 
 Before finalizing your response, mentally check: do any two "roast" strings sound like the same sentence with one word changed? If yes, rewrite one of them completely differently.
 
+DYNAMIC BADGE LABELS:
+For every issue, also generate a "badge_label" — a short, punchy Hinglish tag (2-4 words, ALL CAPS, no punctuation) that captures what's wrong with this specific line, in the same voice as your roast lines. This label must vary across issues just like your roast text does — never default to the same badge_label every time a category repeats.
+
+Inspiration pool by category (draw from these, vary them, don't treat as a fixed script):
+
+no-metrics: NUMBER KAHAN HAI · PROOF DE DO · DATA GHAYAB HAI · GINTI KAHAN HAI · SABOOT CHAHIYE · IMPACT DIKHAO · KITNA KIYA BHAI
+
+buzzword: BUZZWORD OVERDOSE · GHISA-PITA HAI YE · SUNA-SUNA LAGTA HAI · COPY-PASTE VIBES · GENERIC ALERT · YE SABKA RESUME HAI
+
+formatting: FORMAT BIGDA HUA · LOOK MEIN GADBAD · SPACING ISSUE HAI · ALIGNMENT OFF HAI
+
+length: LAMBA BAHUT KAR DIYA · ITNA LAMBA KYUN · SHORT KARO ZARA
+
+irrelevant: YE KYUN LIKHA BHAI · ISKA YAHAN KAAM NAHI · OUT OF PLACE HAI
+
+typo: SPELLING MISS HAI · GALTI PAKDI GAYI · PROOFREAD NAHI KIYA KYA
+
+other: KUCH GADBAD HAI · YE CLEAR NAHI HAI
+
+The badge_label must still semantically match its category (a no-metrics issue's label should be about missing data/proof, not about formatting) — vary the wording, not the meaning.
+
 OUTPUT SCHEMA (return exactly this JSON structure):
 {
   "overall_score": <integer 0-100>,
@@ -145,6 +166,7 @@ OUTPUT SCHEMA (return exactly this JSON structure):
     {
       "quoted_text": "<exact substring from the resume in original text>",
       "category": <"buzzword" | "no-metrics" | "formatting" | "length" | "irrelevant" | "typo" | "other">,
+      "badge_label": "<short punchy 2-4 words ALL CAPS Hinglish tag, e.g. PROOF DE DO>",
       "roast": "<witty Hinglish WhatsApp-style callout under 25 words with 1-2 emojis>",
       "fix": "<concrete rewrite or specific instruction with clear numbers/examples>"
     }
@@ -163,14 +185,16 @@ Example 1 (no-metrics & buzzword):
     {
       "quoted_text": "Responsible for building UI components",
       "category": "no-metrics",
-      "roast": "\\"Responsible for\\" likhna band karo yaar 😩 recruiter ko number chahiye, kahani nahi.",
-      "fix": "Kuch is tarah likho: \\"Built 12 reusable UI components, cutting page load time by 30%\\" — number daalo, impact dikhao."
+      "badge_label": "DATA GHAYAB HAI",
+      "roast": "\"Responsible for\" likhna band karo yaar 😩 recruiter ko number chahiye, kahani nahi.",
+      "fix": "Kuch is tarah likho: \"Built 12 reusable UI components, cutting page load time by 30%\" — number daalo, impact dikhao."
     },
     {
       "quoted_text": "Worked closely with the design team",
       "category": "buzzword",
-      "roast": "\\"Worked closely with\\" — matlab kya kiya bhai? Chai piya ya kuch banaya bhi ☕😂",
-      "fix": "Specific batao: \\"Collaborated with 3 designers to ship the checkout redesign, reducing drop-off by 18%.\\""
+      "badge_label": "GENERIC ALERT",
+      "roast": "\"Worked closely with\" — matlab kya kiya bhai? Chai piya ya kuch banaya bhi ☕😂",
+      "fix": "Specific batao: \"Collaborated with 3 designers to ship the checkout redesign, reducing drop-off by 18%.\""
     }
   ],
   "strengths": [
@@ -187,12 +211,14 @@ Example 2 (typos & length):
     {
       "quoted_text": "SKILS: Pythno, Jacascript, C++",
       "category": "typo",
+      "badge_label": "SPELLING MISS HAI",
       "roast": "Arre yaar 'Pythno' aur 'Jacascript'? 🤡 Itna jaldi mein the kya ki spellcheck bhi skip kar diya?",
       "fix": "Typo fix karo: 'Python, JavaScript, C++' — submission se pehle ek baar Grammarly ya spellcheck zaroor chalao."
     },
     {
       "quoted_text": "Curriculum Vitae (Page 1 of 4)",
       "category": "length",
+      "badge_label": "ITNA LAMBA KYUN",
       "roast": "4 page ka resume? 💀 Bhai novel likh rahe ho kya? Recruiter 6 second mein band kar dega.",
       "fix": "Isko 1 page (max 2 page agar 5+ years experience hai) mein fit karo. Purani schooling aur obvious baatein hatao."
     }
@@ -211,14 +237,16 @@ Example 3 (irrelevant content & jargon):
     {
       "quoted_text": "Hobbies: Playing cricket, listening to music",
       "category": "irrelevant",
+      "badge_label": "OUT OF PLACE HAI",
       "roast": "Bhai biodata thodi hai 😅 ye hobbies likh ke valuable space kyu waste kar rahe ho?",
       "fix": "Hobbies section hatao aur wahan koi relevant project, hackathon rank ya open-source contribution mention karo."
     },
     {
       "quoted_text": "Utilized cutting-edge synergistic paradigms across teams",
       "category": "buzzword",
+      "badge_label": "BUZZWORD OVERDOSE",
       "roast": "Itna bhari corporate jargon padh ke recruiter behosh ho jayega bhai 😵 simple bolo!",
-      "fix": "Seedha likho: \\"Led integration of payment gateway across 4 microservices with 99.9% uptime.\\""
+      "fix": "Seedha likho: \"Led integration of payment gateway across 4 microservices with 99.9% uptime.\""
     }
   ],
   "strengths": [
@@ -236,12 +264,14 @@ Example 4 (formatting & generic claims):
     {
       "quoted_text": "Helped team improve backend stability and performance",
       "category": "no-metrics",
+      "badge_label": "PROOF DE DO",
       "roast": "Pheeka lag raha hai bhai 🥱 'Helped team' se credit nahi milta, exact metric batao.",
-      "fix": "Rewrite karo: \\"Optimized Redis cache queries, reducing p99 latency from 450ms to 85ms across 12 services.\\""
+      "fix": "Rewrite karo: \"Optimized Redis cache queries, reducing p99 latency from 450ms to 85ms across 12 services.\""
     },
     {
       "quoted_text": "DECLARATION: I hereby declare all information is true to my knowledge",
       "category": "formatting",
+      "badge_label": "FORMAT BIGDA HUA",
       "roast": "Bhai 2005 ka declaration kyu daal rakha hai? ✋ Modern tech resume mein iski zaroorat nahi hai.",
       "fix": "Declaration section poora delete kardo aur whitespace ko project links ke liye use karo."
     }
@@ -272,6 +302,59 @@ Return ONLY the JSON analysis now."""
 VALID_BANDS = {"weak", "mid", "strong"}
 VALID_CATEGORIES = {
     "buzzword", "no-metrics", "formatting", "length", "irrelevant", "typo", "other"
+}
+
+# Dynamic Badge Label Pools (Section 3.8)
+BADGE_LABEL_POOLS: dict[str, list[str]] = {
+    "no-metrics": [
+        "NUMBER KAHAN HAI", "PROOF DE DO", "DATA GHAYAB HAI",
+        "GINTI KAHAN HAI", "SABOOT CHAHIYE", "IMPACT DIKHAO", "KITNA KIYA BHAI"
+    ],
+    "buzzword": [
+        "BUZZWORD OVERDOSE", "GHISA-PITA HAI YE", "SUNA-SUNA LAGTA HAI",
+        "COPY-PASTE VIBES", "GENERIC ALERT", "YE SABKA RESUME HAI"
+    ],
+    "formatting": [
+        "FORMAT BIGDA HUA", "LOOK MEIN GADBAD", "SPACING ISSUE HAI", "ALIGNMENT OFF HAI"
+    ],
+    "length": [
+        "LAMBA BAHUT KAR DIYA", "ITNA LAMBA KYUN", "SHORT KARO ZARA"
+    ],
+    "irrelevant": [
+        "YE KYUN LIKHA BHAI", "ISKA YAHAN KAAM NAHI", "OUT OF PLACE HAI"
+    ],
+    "typo": [
+        "SPELLING MISS HAI", "GALTI PAKDI GAYI", "PROOFREAD NAHI KIYA KYA"
+    ],
+    "other": [
+        "KUCH GADBAD HAI", "YE CLEAR NAHI HAI"
+    ]
+}
+
+ENGLISH_BADGE_LABEL_POOLS: dict[str, list[str]] = {
+    "no-metrics": [
+        "WHERE IS PROOF", "NUMBERS MISSING", "ZERO DATA",
+        "QUANTIFY THIS", "SHOW METRICS", "WHERE IS IMPACT"
+    ],
+    "buzzword": [
+        "BUZZWORD OVERLOAD", "PURE JARGON", "COPY-PASTE VIBES",
+        "GENERIC ALERT", "EMPTY BUZZWORDS"
+    ],
+    "formatting": [
+        "FORMATTING CHAOS", "LOOKS MESSY", "SPACING ISSUE", "ALIGNMENT OFF"
+    ],
+    "length": [
+        "TRIM THE FAT", "TOO LONG", "CUT TO CHASE", "CONDENSE THIS"
+    ],
+    "irrelevant": [
+        "OUT OF PLACE", "WHY IS THIS HERE", "UNRELATED DETAIL"
+    ],
+    "typo": [
+        "SPELLCHECK FAILED", "TYPO DETECTED", "PROOFREAD ERROR"
+    ],
+    "other": [
+        "NEEDS CLARITY", "UNCLEAR STATEMENT"
+    ]
 }
 
 # Hinglish tone markers for quality guard (comprehensive Roman Hinglish pool)
@@ -463,6 +546,19 @@ def _generate_fallback_roast(
         used_roasts.add(chosen)
         return chosen
 
+    used_badges: set[str] = set()
+    badge_pool_map = BADGE_LABEL_POOLS if lang == "hi-IN" else ENGLISH_BADGE_LABEL_POOLS
+
+    def _select_badge(cat: str) -> str:
+        cat_pool = badge_pool_map.get(cat, badge_pool_map.get("other", ["FLAGGED"]))
+        for b in cat_pool:
+            if b not in used_badges:
+                used_badges.add(b)
+                return b
+        fallback = cat_pool[len(used_badges) % len(cat_pool)]
+        used_badges.add(fallback)
+        return fallback
+
     issues = []
     if lang == "hi-IN":
         buzzwords = [
@@ -501,6 +597,7 @@ def _generate_fallback_roast(
                     issues.append({
                         "quoted_text": line[:110],
                         "category": cat,
+                        "badge_label": _select_badge(cat),
                         "roast": roast_text,
                         "fix": fix_txt,
                     })
@@ -521,6 +618,7 @@ def _generate_fallback_roast(
                     issues.append({
                         "quoted_text": line[:110],
                         "category": "no-metrics",
+                        "badge_label": _select_badge("no-metrics"),
                         "roast": roast_text,
                         "fix": fix_advice,
                     })
@@ -539,6 +637,7 @@ def _generate_fallback_roast(
             issues.append({
                 "quoted_text": line[:100],
                 "category": "typo",
+                "badge_label": _select_badge("typo"),
                 "roast": roast_text,
                 "fix": fix_advice,
             })
@@ -556,6 +655,7 @@ def _generate_fallback_roast(
         issues.append({
             "quoted_text": sample_line[:100],
             "category": "buzzword",
+            "badge_label": _select_badge("buzzword"),
             "roast": roast_text,
             "fix": fix_advice,
         })
@@ -676,6 +776,14 @@ def _validate_schema(data: dict, resume_text: str | None = None, language: str =
         if _has_hinglish_tone(issue["roast"]):
             hinglish_roast_count += 1
 
+        # Dynamic badge label validation (Section 3.8)
+        badge = str(issue.get("badge_label", "")).strip().upper()
+        clean_badge = re.sub(r"[^A-Z0-9\s]", "", badge).strip()
+        if not clean_badge:
+            pool = BADGE_LABEL_POOLS.get(cat, BADGE_LABEL_POOLS["other"]) if lang == "hi-IN" else ENGLISH_BADGE_LABEL_POOLS.get(cat, ENGLISH_BADGE_LABEL_POOLS["other"])
+            clean_badge = pool[0]
+        issue["badge_label"] = clean_badge
+
         validated_issues.append(issue)
 
     if not validated_issues:
@@ -775,10 +883,11 @@ def _find_duplicate_roasts(issues: list[dict], threshold: float = 0.70) -> list[
 
 def _deduplicate_roasts(data: dict, language: str = HINGLISH_LANGUAGE) -> None:
     """
-    Lightweight server-side safety net (Section 3.7).
+    Lightweight server-side safety net (Section 3.7 & 3.8).
     Compares all roast strings pairwise using normalized string similarity (>85%).
     If duplicates remain after retry, substitutes the duplicate with varied phrasing
     from the category's expanded joke pool, ensuring no duplicate within the response.
+    Also deduplicates dynamic badge labels so no two issues share the exact same badge tag.
     """
     import difflib
 
@@ -788,8 +897,11 @@ def _deduplicate_roasts(data: dict, language: str = HINGLISH_LANGUAGE) -> None:
 
     lang = normalize_language(language)
     joke_bank = get_joke_banks(lang)
+    badge_pool_map = BADGE_LABEL_POOLS if lang == "hi-IN" else ENGLISH_BADGE_LABEL_POOLS
+
     seen_norms: list[tuple[str, int]] = []
 
+    # 1. Deduplicate roast text
     for idx, iss in enumerate(issues):
         roast = iss.get("roast", "")
         norm = re.sub(r"[^a-z0-9]", "", roast.lower())
@@ -824,6 +936,27 @@ def _deduplicate_roasts(data: dict, language: str = HINGLISH_LANGUAGE) -> None:
             norm = re.sub(r"[^a-z0-9]", "", alt.lower())
 
         seen_norms.append((norm, idx))
+
+    # 2. Deduplicate badge labels (Section 3.8)
+    seen_badges: set[str] = set()
+    for idx, iss in enumerate(issues):
+        cat = iss.get("category", "other")
+        badge = str(iss.get("badge_label", "")).strip().upper()
+        clean_b = re.sub(r"[^A-Z0-9\s]", "", badge).strip()
+        cat_pool = badge_pool_map.get(cat, badge_pool_map.get("other", ["FLAGGED"]))
+
+        if not clean_b or clean_b in seen_badges:
+            alt_badge = None
+            for cand in cat_pool:
+                if cand not in seen_badges:
+                    alt_badge = cand
+                    break
+            if not alt_badge:
+                alt_badge = cat_pool[idx % len(cat_pool)]
+            iss["badge_label"] = alt_badge
+            clean_b = alt_badge
+
+        seen_badges.add(clean_b)
 
 
 # ---------------------------------------------------------------------------

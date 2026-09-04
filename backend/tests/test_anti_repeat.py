@@ -10,7 +10,13 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services.anti_repeat_service import anti_repeat_memory, BASELINE_JOKE_BANKS
-from app.services.ai_analyzer import analyze_resume, _generate_fallback_roast
+from app.services.ai_analyzer import (
+    analyze_resume,
+    _generate_fallback_roast,
+    _validate_schema,
+    _deduplicate_roasts,
+    _has_hinglish_tone,
+)
 
 
 class TestAntiRepeatAndNewFeatures(unittest.TestCase):
@@ -78,6 +84,101 @@ class TestAntiRepeatAndNewFeatures(unittest.TestCase):
         audio_resp = self.client.get("/api/roast/demo/voice/audio")
         self.assertEqual(audio_resp.status_code, 200)
         self.assertIn("audio/mpeg", audio_resp.headers["content-type"])
+
+    def test_badge_label_sanitization_and_default(self):
+        """Dynamic badge_label is capitalized, punctuation stripped, and defaulted if empty."""
+        test_data = {
+            "overall_score": 35,
+            "band": "weak",
+            "one_line_verdict": "Bhai ye kya likha hai yaar 😭",
+            "issues": [
+                {
+                    "quoted_text": "Responsible for managing project workflows",
+                    "category": "no-metrics",
+                    "badge_label": "number kahan hai!!",
+                    "roast": "Bhai number toh do yaar 😩",
+                    "fix": "Specific number daalo.",
+                },
+                {
+                    "quoted_text": "Team player with synergistic focus",
+                    "category": "buzzword",
+                    "badge_label": "",  # missing/empty
+                    "roast": "Arre yaar generic buzzword band karo.",
+                    "fix": "Real action dikhao.",
+                },
+            ],
+            "strengths": ["Formatting clean hai 👍"],
+        }
+        _validate_schema(test_data, language="hi-IN")
+        self.assertEqual(test_data["issues"][0]["badge_label"], "NUMBER KAHAN HAI")
+        self.assertTrue(len(test_data["issues"][1]["badge_label"]) > 0)
+        self.assertTrue(test_data["issues"][1]["badge_label"].isupper())
+
+    def test_fallback_roast_has_badge_labels(self):
+        """_generate_fallback_roast populates dynamic badge_labels for all issues."""
+        sample_resume = """
+        Rohan Mehta
+        Responsible for UI development.
+        Worked closely with the team.
+        Hobbies: Watching movies.
+        DECLARATION: True to my knowledge.
+        """
+        fallback = _generate_fallback_roast(sample_resume, language="hi-IN")
+        self.assertIn("issues", fallback)
+        self.assertGreater(len(fallback["issues"]), 0)
+        for iss in fallback["issues"]:
+            self.assertIn("badge_label", iss)
+            self.assertTrue(iss["badge_label"].isupper())
+            self.assertNotIn("!", iss["badge_label"])
+            self.assertNotIn("?", iss["badge_label"])
+
+    def test_deduplicate_badge_labels_pairwise(self):
+        """_deduplicate_roasts ensures no two issues share duplicate badge_labels."""
+        data = {
+            "issues": [
+                {
+                    "category": "no-metrics",
+                    "badge_label": "NUMBER KAHAN HAI",
+                    "roast": "Kitna kiya bhai number bata na 😩",
+                },
+                {
+                    "category": "no-metrics",
+                    "badge_label": "NUMBER KAHAN HAI",  # Duplicate badge!
+                    "roast": "Number nahi hai isme chhupa kyun rahe ho? 👀",
+                },
+            ]
+        }
+        _deduplicate_roasts(data, language="hi-IN")
+        badges = [iss["badge_label"] for iss in data["issues"]]
+        self.assertNotEqual(badges[0], badges[1], "Duplicate badge_label must be resolved")
+
+    def test_tone_guard_hinglish_and_english(self):
+        """Hinglish tone guard requires Hinglish markers for hi-IN; English checks length."""
+        self.assertTrue(_has_hinglish_tone("Bhai ye kya likha hai yaar 😩"))
+        self.assertFalse(_has_hinglish_tone("This is an impeccably formatted formal professional document."))
+
+        # English data passing hi-IN validation should fail tone check
+        pure_english_data = {
+            "overall_score": 40,
+            "band": "weak",
+            "one_line_verdict": "This resume lacks proper quantifiable metrics.",
+            "issues": [
+                {
+                    "quoted_text": "Responsible for managing project workflows",
+                    "category": "no-metrics",
+                    "badge_label": "NO METRICS",
+                    "roast": "This bullet point does not contain any metrics.",
+                    "fix": "Include quantifiable results.",
+                }
+            ],
+            "strengths": ["Good formatting."],
+        }
+        with self.assertRaises(ValueError):
+            _validate_schema(pure_english_data, language="hi-IN")
+
+        # But it passes under 'en'
+        _validate_schema(pure_english_data, language="en")
+        self.assertEqual(pure_english_data["issues"][0]["badge_label"], "NO METRICS")
 
     def test_25_resumes_cross_session_volume_test(self):
         """

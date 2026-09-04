@@ -27,7 +27,7 @@ interface IssueCardProps {
 export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: IssueCardProps) {
   const [showFix, setShowFix] = useState(false)
   const categoryColor = getCategoryColor(issue.category)
-  const tagLabel = getHinglishTag(issue.category)
+  const tagLabel = issue.badge_label?.trim() || getHinglishTag(issue.category)
 
   // 1.2 WhatsApp "Typing..." Indicator State & Session Cache
   const cardRef = useRef<HTMLDivElement>(null)

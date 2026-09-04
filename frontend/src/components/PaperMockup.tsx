@@ -65,19 +65,19 @@ export default function PaperMockup({
     if (issues[0]) {
       finalBullet1Text = issues[0].quoted_text
       finalBullet1Annotated = issues[0].quoted_text
-      finalBullet1Tag = getHinglishTag(issues[0].category)
+      finalBullet1Tag = issues[0].badge_label?.trim() || getHinglishTag(issues[0].category)
       cat1 = issues[0].category
     }
     if (issues[1]) {
       finalBullet2Text = issues[1].quoted_text
       finalBullet2Annotated = issues[1].quoted_text
-      finalBullet2Tag = getHinglishTag(issues[1].category)
+      finalBullet2Tag = issues[1].badge_label?.trim() || getHinglishTag(issues[1].category)
       cat2 = issues[1].category
     }
     if (issues[2]) {
       finalBullet3Text = issues[2].quoted_text
       finalBullet3Annotated = issues[2].quoted_text
-      finalBullet3Tag = getHinglishTag(issues[2].category)
+      finalBullet3Tag = issues[2].badge_label?.trim() || getHinglishTag(issues[2].category)
       cat3 = issues[2].category
     }
   }
@@ -188,10 +188,10 @@ export default function PaperMockup({
   ]
 
   return (
-    <div className="relative w-full max-w-[620px] mx-auto select-none my-6">
+    <div className="relative w-full max-w-[620px] mx-auto select-none my-4 sm:my-6">
       {/* Paper Card */}
       <div
-        className={`relative bg-paper text-ink rounded-sm px-6 py-8 sm:px-10 sm:py-10 transition-all duration-300 ${
+        className={`paper-mockup-card relative bg-paper text-ink rounded-sm px-4 py-6 sm:px-10 sm:py-10 transition-all duration-300 ${
           animate && paperSettled ? 'animate-paper-settle' : ''
         }`}
         style={{

@@ -24,6 +24,11 @@
     border-color: var(--border-dark);
   }
 
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -37,6 +42,8 @@
     min-height: 100vh;
     background-color: var(--bg);
     color: var(--tan);
+    position: relative;
+    width: 100%;
   }
 
   ::selection {
@@ -250,6 +257,20 @@
   .desk-cursor input[type="text"],
   .desk-cursor textarea {
     cursor: text !important;
+  }
+}
+
+/* On touch/mobile devices, strictly enforce standard cursor: auto */
+@media (hover: none), (pointer: coarse), (max-width: 768px) {
+  html, body, .desk-cursor, * {
+    cursor: auto !important;
+  }
+}
+
+/* Mobile rotation damper for paper mockup: prevents tilted corner overflow on 320px–375px screens */
+@media (max-width: 639px) {
+  .paper-mockup-card {
+    transform: rotate(calc(var(--paper-rotate, -1.5deg) * 0.3)) !important;
   }
 }
 

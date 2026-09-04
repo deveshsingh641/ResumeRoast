@@ -569,26 +569,28 @@ export default function PricingPage() {
         {/* 1px Hairline Gap Comparison Table */}
         <div className="max-w-[800px] mx-auto text-left">
           <p className="section-label mb-3">PLAN COMPARISON</p>
-          <div className="gap-grid-1px grid-cols-3 border border-white/[0.08] rounded-sm overflow-hidden font-mono text-xs">
-            {/* Header row */}
-            <div className="p-4 text-tan-dim uppercase">Feature</div>
-            <div className="p-4 text-tan-dim uppercase text-center">Free</div>
-            <div className="p-4 text-stamp uppercase text-center font-semibold">Pro</div>
+          <div className="overflow-x-auto w-full max-w-full pb-2">
+            <div className="gap-grid-1px grid-cols-3 min-w-[480px] sm:min-w-full border border-white/[0.08] rounded-sm overflow-hidden font-mono text-xs">
+              {/* Header row */}
+              <div className="p-4 text-tan-dim uppercase">Feature</div>
+              <div className="p-4 text-tan-dim uppercase text-center">Free</div>
+              <div className="p-4 text-stamp uppercase text-center font-semibold">Pro</div>
 
-            {/* Comparison items */}
-            {comparisonRows.map((row, idx) => (
-              <React.Fragment key={`row-${idx}`}>
-                <div className="p-4 text-tan font-body text-xs">
-                  {row.feature}
-                </div>
-                <div className="p-4 text-tan-dim text-center">
-                  {row.free}
-                </div>
-                <div className="p-4 text-paper text-center font-medium">
-                  {row.pro}
-                </div>
-              </React.Fragment>
-            ))}
+              {/* Comparison items */}
+              {comparisonRows.map((row, idx) => (
+                <React.Fragment key={`row-${idx}`}>
+                  <div className="p-4 text-tan font-body text-xs">
+                    {row.feature}
+                  </div>
+                  <div className="p-4 text-tan-dim text-center">
+                    {row.free}
+                  </div>
+                  <div className="p-4 text-paper text-center font-medium">
+                    {row.pro}
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         </div>
       </div>

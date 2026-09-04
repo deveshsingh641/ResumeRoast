@@ -12,12 +12,12 @@ export default function LiveRoastCounter() {
   }, [])
 
   return (
-    <div className="inline-flex items-center gap-2 bg-[#1A1612] border border-amber-500/20 rounded-full px-3.5 py-1 text-xs select-none shadow-sm mb-6">
-      <span className="relative flex h-2 w-2">
+    <div className="inline-flex max-w-full items-center gap-2 bg-[#1A1612] border border-amber-500/20 rounded-full px-3 py-1 text-[11px] sm:text-xs select-none shadow-sm mb-4 sm:mb-6">
+      <span className="relative flex h-2 w-2 shrink-0">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
       </span>
-      <span className="font-mono text-tan-dim tracking-wide">
+      <span className="font-mono text-tan-dim tracking-wide truncate">
         <strong className="text-amber-400 font-bold">
           {count.toLocaleString()}
         </strong>{' '}

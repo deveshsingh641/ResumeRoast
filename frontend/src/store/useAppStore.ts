@@ -6,6 +6,7 @@ export type ScoreBand = 'weak' | 'mid' | 'strong'
 export interface Issue {
   quoted_text: string
   category: string
+  badge_label?: string
   roast: string
   fix: string
   start_offset: number | null

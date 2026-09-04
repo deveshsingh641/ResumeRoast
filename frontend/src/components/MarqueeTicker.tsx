@@ -30,21 +30,22 @@ export default function MarqueeTicker() {
 
   return (
     <div
-      className="w-full bg-[#1A1612] border-y border-white/[0.08] py-2 overflow-hidden select-none"
+      className="w-full max-w-full bg-[#1A1612] border-y border-white/[0.08] py-2 overflow-hidden select-none"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       role="region"
       aria-label="Live roast ticker"
     >
       <div
-        className="flex whitespace-nowrap gap-12 text-xs font-mono text-tan-dim"
+        className="flex whitespace-nowrap gap-6 sm:gap-12 text-[11px] sm:text-xs font-mono text-tan-dim"
         style={{
-          animation: isPaused ? 'none' : 'marquee 35s linear infinite',
+          animation: isPaused ? 'none' : 'marquee 45s linear infinite',
           display: 'inline-flex',
+          width: 'max-content',
         }}
       >
         {lines.concat(lines).map((line, idx) => (
-          <span key={idx} className="flex items-center gap-2 hover:text-tan transition-colors">
+          <span key={idx} className="flex items-center gap-2 hover:text-tan transition-colors shrink-0">
             {line}
           </span>
         ))}

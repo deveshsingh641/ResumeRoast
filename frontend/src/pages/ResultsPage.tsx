@@ -158,20 +158,30 @@ export default function ResultsPage() {
       <DeskClutter stickyText="friday se pehle fix kar le yaar!! 😭" stickyRotation={-5} />
 
       {/* Top Bar Header */}
-      <header className="border-b border-white/[0.08] py-4 px-6 mb-8 sm:mb-12 relative z-10">
-        <div className="max-w-[960px] mx-auto flex items-center justify-between">
-          <Link to="/" className="font-display text-lg tracking-tight text-paper select-none">
+      <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6 mb-6 sm:mb-12 relative z-10">
+        <div className="max-w-[960px] mx-auto flex items-center justify-between gap-2">
+          <Link to="/" className="font-display text-base sm:text-lg tracking-tight text-paper select-none shrink-0">
             RESUME<span className="text-stamp">ROAST</span>
           </Link>
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <SoundToggle compact={true} />
-            <Link to="/battle" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">
-              ⚔️ Battle
+            <Link to="/battle" className="font-mono text-[11px] sm:text-xs text-amber-400 hover:text-amber-300 transition-colors whitespace-nowrap">
+              ⚔️ <span className="hidden sm:inline">Battle</span>
             </Link>
-            <Link to="/roast" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              {isHinglish ? 'Dusra resume →' : 'Another resume →'}
+            <Link to="/roast" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+              {isHinglish ? (
+                <>
+                  <span className="hidden sm:inline">Dusra resume →</span>
+                  <span className="sm:hidden">New →</span>
+                </>
+              ) : (
+                <>
+                  <span className="hidden sm:inline">Another resume →</span>
+                  <span className="sm:hidden">New →</span>
+                </>
+              )}
             </Link>
-            <LanguageSwitcher />
+            <LanguageSwitcher compact={true} className="shrink-0" />
           </div>
         </div>
       </header>
@@ -191,13 +201,13 @@ export default function ResultsPage() {
         </aside>
       )}
 
-      <div className="max-w-[960px] mx-auto px-4 space-y-12 sm:space-y-16 text-center relative z-10">
+      <div className="max-w-[960px] mx-auto px-3 sm:px-4 space-y-10 sm:space-y-16 text-center relative z-10">
         {/* ── 1. Top Verdict Banner (A.6) ── */}
         <section aria-label="Roast Verdict">
-          <p className="section-label mb-3">
+          <p className="section-label mb-2 sm:mb-3 text-[11px] sm:text-xs">
             {isHinglish ? 'DESK KA OFFICIAL VERDICT' : 'DESK OFFICIAL VERDICT'}
           </p>
-          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-paper tracking-tight leading-tight max-w-[780px] mx-auto mb-4">
+          <h1 className="font-display text-[clamp(1.5rem,4.5vw+0.25rem,2.75rem)] text-paper tracking-tight leading-tight max-w-[780px] mx-auto mb-4">
             "{result.one_line_verdict}"
           </h1>
           <p className="font-mono text-xs text-tan-dim">
@@ -252,7 +262,7 @@ export default function ResultsPage() {
           </div>
 
           {/* Paper and Stamp */}
-          <div className="relative inline-block w-full max-w-[660px]">
+          <div className="relative inline-block w-full max-w-[640px] px-1 sm:px-0">
             <PaperMockup
               candidateName="SUBMITTED RESUME"
               candidateTitle="EXTRACTED CANDIDATE PROFILE"
@@ -264,15 +274,27 @@ export default function ResultsPage() {
               xRayMode={xRayMode}
             />
             {/* Stamp overlay positioned on paper with synced appearance */}
-            <div className="absolute -top-6 right-2 sm:right-6 z-20">
-              <ScoreStamp
-                score={result.overall_score}
-                band={result.band}
-                animate={true}
-                visible={stampVisible}
-                size="lg"
-                rotation={-12}
-              />
+            <div className="absolute -top-4 right-1 sm:-top-6 sm:right-6 z-20 pointer-events-none">
+              <div className="block sm:hidden">
+                <ScoreStamp
+                  score={result.overall_score}
+                  band={result.band}
+                  animate={true}
+                  visible={stampVisible}
+                  size="sm"
+                  rotation={-10}
+                />
+              </div>
+              <div className="hidden sm:block">
+                <ScoreStamp
+                  score={result.overall_score}
+                  band={result.band}
+                  animate={true}
+                  visible={stampVisible}
+                  size="lg"
+                  rotation={-12}
+                />
+              </div>
             </div>
           </div>
         </section>

@@ -125,19 +125,21 @@ export default function WallPage() {
       <DeskClutter stickyText={isHinglish ? 'hall of anonymous damage 🔥' : 'hall of anonymous damage 🔥'} stickyRotation={-3} />
 
       {/* Header */}
-      <header className="border-b border-white/[0.08] py-4 px-6 mb-8 relative z-10">
-        <div className="max-w-[1100px] mx-auto flex items-center justify-between">
-          <Link to="/" className="font-display text-lg tracking-tight text-paper select-none">
-            RESUME<span className="text-stamp">ROAST</span> <span className="text-amber-400 font-mono text-xs ml-1">// WALL</span>
+      <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6 mb-6 sm:mb-8 relative z-10">
+        <div className="max-w-[1100px] mx-auto flex items-center justify-between gap-2">
+          <Link to="/" className="font-display text-base sm:text-lg tracking-tight text-paper select-none shrink-0">
+            RESUME<span className="text-stamp">ROAST</span> <span className="text-amber-400 font-mono text-[10px] sm:text-xs ml-0.5 sm:ml-1">// WALL</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <Link to="/battle" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              {isHinglish ? '⚔️ Battle Mode →' : '⚔️ Battle Mode →'}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link to="/battle" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+              <span className="hidden sm:inline">⚔️ Battle Mode →</span>
+              <span className="sm:hidden">⚔️ Battle</span>
             </Link>
-            <Link to="/roast" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-              {isHinglish ? 'Grade Resume →' : 'Grade Resume →'}
+            <Link to="/roast" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+              <span className="hidden sm:inline">Grade Resume →</span>
+              <span className="sm:hidden">Grade</span>
             </Link>
-            <LanguageSwitcher />
+            <LanguageSwitcher compact={true} className="shrink-0" />
           </div>
         </div>
       </header>
@@ -298,9 +300,10 @@ export default function WallPage() {
               return (
                 <div
                   key={entry.id}
-                  className="bg-paper text-ink rounded-sm p-5 flex flex-col justify-between transition-all relative shadow-paper border border-black/10 group hover:-translate-y-1"
+                  className="paper-mockup-card bg-paper text-ink rounded-sm p-5 flex flex-col justify-between transition-all relative shadow-paper border border-black/10 group hover:-translate-y-1"
                   style={{
                     transform: `rotate(${cardRotation}deg)`,
+                    ['--paper-rotate' as string]: `${cardRotation}deg`,
                   }}
                 >
                   {/* Top: ScoreStamp & Type */}

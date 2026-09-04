@@ -23,17 +23,17 @@ function StatsRow() {
   ]
 
   return (
-    <div className="w-full max-w-[960px] mx-auto mt-16 px-4">
+    <div className="w-full max-w-[960px] mx-auto mt-8 sm:mt-16 px-2 sm:px-4">
       <div className="gap-grid-1px grid-cols-2 md:grid-cols-4 rounded-sm overflow-hidden border border-white/[0.08]">
         {stats.map((stat, idx) => (
           <div
             key={idx}
-            className="py-6 px-3 sm:px-4 flex flex-col items-center justify-center text-center transition-colors duration-150 hover:bg-white/[0.02]"
+            className="py-4 sm:py-6 px-2 sm:px-4 flex flex-col items-center justify-center text-center transition-colors duration-150 hover:bg-white/[0.02]"
           >
-            <div className="font-display text-[26px] sm:text-[30px] md:text-[28px] lg:text-[34px] text-paper tracking-tight leading-none mb-2.5 whitespace-nowrap select-none">
+            <div className="font-display text-[22px] sm:text-[28px] md:text-[32px] text-paper tracking-tight leading-none mb-2 whitespace-nowrap select-none">
               {stat.value}
             </div>
-            <div className="font-mono text-[11px] sm:text-xs text-tan-dim lowercase tracking-wide leading-relaxed max-w-[160px] mx-auto select-none">
+            <div className="font-mono text-[10px] sm:text-xs text-tan-dim lowercase tracking-wide leading-relaxed max-w-[150px] mx-auto select-none">
               {stat.label}
             </div>
           </div>
@@ -450,30 +450,30 @@ export default function LandingPage() {
       <PlacementSeasonBanner />
 
       {/* Top Bar Header */}
-      <header className="border-b border-white/[0.08] py-4 px-6">
-        <div className="max-w-[960px] mx-auto flex items-center justify-between">
-          <Link to="/" className="font-display text-lg tracking-tight text-paper select-none">
+      <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6">
+        <div className="max-w-[960px] mx-auto flex items-center justify-between gap-2">
+          <Link to="/" className="font-display text-base sm:text-lg tracking-tight text-paper select-none shrink-0">
             RESUME<span className="text-stamp">ROAST</span>
           </Link>
-          <div className="flex items-center gap-3 sm:gap-6">
-            <nav className="flex items-center gap-3 sm:gap-5" aria-label="Main Navigation">
-              <Link to="/battle" className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors">
-                ⚔️ Battle
+          <div className="flex items-center gap-2 sm:gap-6">
+            <nav className="flex items-center gap-2 sm:gap-5" aria-label="Main Navigation">
+              <Link to="/battle" className="font-mono text-[11px] sm:text-xs text-amber-400 hover:text-amber-300 transition-colors whitespace-nowrap">
+                ⚔️ <span className="hidden sm:inline">Battle</span>
               </Link>
-              <Link to="/wall" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-                🔥 Wall
+              <Link to="/wall" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+                🔥 <span className="hidden sm:inline">Wall</span>
               </Link>
-              <a href="#sample" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden sm:inline">
+              <a href="#sample" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden md:inline">
                 {isHinglish ? 'Sample' : 'Sample'}
               </a>
-              <a href="#pricing" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden sm:inline">
+              <a href="#pricing" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden md:inline">
                 {isHinglish ? 'Pricing' : 'Pricing'}
               </a>
-              <Link to="/roast" className="btn-ghost btn-ghost-sm">
-                {isHinglish ? 'Roast karwao' : 'Get Roasted'}
+              <Link to="/roast" className="btn-ghost btn-ghost-sm !py-1 !px-2.5 sm:!px-4 text-[11px] sm:text-xs shrink-0">
+                {isHinglish ? 'Roast' : 'Roast'}
               </Link>
             </nav>
-            <LanguageSwitcher />
+            <LanguageSwitcher compact={true} className="shrink-0" />
           </div>
         </div>
       </header>
@@ -482,8 +482,8 @@ export default function LandingPage() {
       <MarqueeTicker />
 
       {/* ── Hero Section (Section A.2) ── */}
-      <section className="pt-16 pb-16 px-4 text-center relative overflow-hidden">
-        {/* Tactile Desk Clutter (Section A.5) */}
+      <section className="pt-8 pb-10 sm:pt-16 sm:pb-16 px-3 sm:px-4 text-center relative overflow-hidden">
+        {/* Tactile Desk Clutter (Section A.5 - Desktop only) */}
         <DeskClutter
           stickyText={isHinglish ? 'friday se pehle fix kar le yaar!! 😭' : 'fix this before Monday please!! 😭'}
           stickyRotation={4}
@@ -494,20 +494,20 @@ export default function LandingPage() {
           <LiveRoastCounter />
 
           {/* Eyebrow Line */}
-          <p className="section-label mb-4">
+          <p className="section-label mb-3 sm:mb-4 text-[11px] sm:text-xs">
             {isHinglish ? 'DESK PE POORA SACH // 100% RAW AI ROAST' : 'THE UNFILTERED TRUTH // 100% RAW AI ROAST'}
           </p>
 
           {/* Headline with Rotated Red Pen Strikethrough (A.2 Exact Spec) */}
           {isHinglish ? (
-            <h1 className="font-display text-4xl sm:text-6xl md:text-7xl text-paper tracking-tight leading-[0.98] mb-6">
+            <h1 className="font-display text-[clamp(1.75rem,5.2vw+0.25rem,4.25rem)] text-paper tracking-tight leading-[1.02] mb-4 sm:mb-6">
               TERA RESUME{' '}
               <span className="red-pen-strike text-tan-dim">IMPRESSIVE</span> HAI...
               <br />
               <span className="text-stamp">BAS FLUFF HAI BHAI.</span>
             </h1>
           ) : (
-            <h1 className="font-display text-4xl sm:text-6xl md:text-7xl text-paper tracking-tight leading-[0.98] mb-6">
+            <h1 className="font-display text-[clamp(1.75rem,5.2vw+0.25rem,4.25rem)] text-paper tracking-tight leading-[1.02] mb-4 sm:mb-6">
               YOUR RESUME LOOKS{' '}
               <span className="red-pen-strike text-tan-dim">IMPRESSIVE</span>...
               <br />
@@ -516,24 +516,24 @@ export default function LandingPage() {
           )}
 
           {/* Subcopy (A.2 Exact Spec) */}
-          <p className="font-body text-base sm:text-lg text-tan max-w-[660px] mx-auto mb-8 leading-relaxed">
+          <p className="font-body text-sm sm:text-base md:text-lg text-tan max-w-[660px] mx-auto mb-6 sm:mb-8 leading-relaxed px-1">
             {isHinglish
               ? 'Red pen se poori marking hogi, ek pakka verdict stamp milega, aur exact line likh ke bhi denge ki fix kaise karna hai.'
               : 'Brutal red pen annotations, a definitive score stamp, and exact rewrite replacements with metrics and zero fluff.'}
           </p>
 
           {/* Primary + Ghost CTA Pair (A.2 Exact Spec) */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link to="/roast" id="hero-cta" className="btn-primary">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-14 w-full px-2">
+            <Link to="/roast" id="hero-cta" className="btn-primary w-full sm:w-auto text-center justify-center">
               {isHinglish ? 'Resume daal de bhai' : 'Roast My Resume'}
             </Link>
-            <a href="#sample" className="btn-ghost">
+            <a href="#sample" className="btn-ghost w-full sm:w-auto text-center justify-center">
               {isHinglish ? 'Pehle sample dekh le' : 'View Sample Roast'}
             </a>
           </div>
 
           {/* Hero Visual: PaperMockup + ScoreStamp */}
-          <div className="relative inline-block w-full max-w-[660px]">
+          <div className="relative inline-block w-full max-w-[640px] px-1 sm:px-0">
             <PaperMockup
               candidateName={heroSample.resumeInfo.candidateName}
               candidateTitle={heroSample.resumeInfo.candidateTitle}
@@ -552,14 +552,25 @@ export default function LandingPage() {
             />
 
             {/* Score stamp placed on top-right of paper */}
-            <div className="absolute -top-6 right-2 sm:right-6 z-20">
-              <ScoreStamp
-                score={heroSample.roastData.overall_score}
-                band={heroSample.roastData.band}
-                animate={true}
-                size="md"
-                rotation={-12}
-              />
+            <div className="absolute -top-4 right-1 sm:-top-6 sm:right-6 z-20 pointer-events-none">
+              <div className="block sm:hidden">
+                <ScoreStamp
+                  score={heroSample.roastData.overall_score}
+                  band={heroSample.roastData.band}
+                  animate={true}
+                  size="sm"
+                  rotation={-10}
+                />
+              </div>
+              <div className="hidden sm:block">
+                <ScoreStamp
+                  score={heroSample.roastData.overall_score}
+                  band={heroSample.roastData.band}
+                  animate={true}
+                  size="md"
+                  rotation={-12}
+                />
+              </div>
             </div>
           </div>
         </div>
