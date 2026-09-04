@@ -179,6 +179,9 @@ def _device_fingerprint(request: Request) -> str:
     Generate a semi-stable anonymous fingerprint from IP + User-Agent.
     Gracefully falls back to client host if forwarded headers are absent.
     """
+    custom_fp = request.headers.get("X-Device-Fingerprint")
+    if custom_fp:
+        return custom_fp
     forwarded = request.headers.get("X-Forwarded-For")
     ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "127.0.0.1")
     ua = request.headers.get("User-Agent", "standard-browser")
@@ -303,6 +306,7 @@ async def create_roast(
         issues=analysis["issues"],
         strengths=analysis["strengths"],
         device_fingerprint=fingerprint,
+        resume_text=resume_text,
     )
 
     # Register in dedup cache

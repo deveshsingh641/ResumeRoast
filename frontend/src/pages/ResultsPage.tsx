@@ -19,6 +19,7 @@ import ConfettiScraps from '@/components/ConfettiScraps'
 import SoundToggle from '@/components/SoundToggle'
 import RoastReactions from '@/components/RoastReactions'
 import PaperSkeleton from '@/components/PaperSkeleton'
+import StoryCardModal from '@/components/StoryCardModal'
 import { useCinematicReveal } from '@/hooks/useCinematicReveal'
 import { ExtendedRoastResult, getSampleRoastData } from '@/data/sampleRoast'
 
@@ -34,6 +35,8 @@ export default function ResultsPage() {
   const [error, setError] = useState<string | null>(null)
   const [downloadingCert, setDownloadingCert] = useState(false)
   const [xRayMode, setXRayMode] = useState(false)
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
+  const [fixesCopied, setFixesCopied] = useState(false)
 
   // 1.1 Cinematic Reveal Sequence Orchestrator
   const {
@@ -64,6 +67,32 @@ export default function ResultsPage() {
       window.open(`/api/roast/${result.id}/certificate/download`, '_blank')
     } finally {
       setTimeout(() => setDownloadingCert(false), 2500)
+    }
+  }
+
+  const handleCopyAllFixes = async () => {
+    if (!result || !result.issues || result.issues.length === 0) return
+    const lines = [
+      `RESUME ROAST - RECOMMENDED FIXES (Score: ${result.overall_score}/100)`,
+      `Verdict: "${result.one_line_verdict}"`,
+      '--------------------------------------------------',
+      ...result.issues.map((iss, i) => {
+        return (
+          `[Issue #${i + 1}] Category: ${iss.category.toUpperCase()}\n` +
+          `• Quoted Flaw: "${iss.quoted_text}"\n` +
+          `• Critique: ${iss.roast}\n` +
+          `• Actionable AI Fix: ${iss.fix}\n`
+        )
+      }),
+      '--------------------------------------------------',
+      'Roast and fix your resume at https://resumeroast.app'
+    ]
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'))
+      setFixesCopied(true)
+      setTimeout(() => setFixesCopied(false), 3000)
+    } catch {
+      // fallback
     }
   }
 
@@ -361,7 +390,7 @@ export default function ResultsPage() {
 
         {/* ── 4. Detailed Flagged Issues (Section A.6 with WhatsApp typing indicator) ── */}
         <section aria-label="Flagged Issues Breakdown" className="space-y-6">
-          <div className="max-w-[640px] mx-auto text-left flex items-baseline justify-between border-b border-white/[0.08] pb-3">
+          <div className="max-w-[640px] mx-auto text-left flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
             <div>
               <p className="section-label mb-1">
                 {isHinglish ? 'LINE-BY-LINE PAKAD MEIN AAYA' : 'LINE-BY-LINE CRITIQUE'}
@@ -372,13 +401,22 @@ export default function ResultsPage() {
                   : `Critical flaws flagged (${result.total_issues})`}
               </h2>
             </div>
-            {result.is_truncated && (
-              <span className="font-mono text-xs text-ember">
-                {isHinglish
-                  ? `${result.issues.length} dikha rahe hain, ${result.total_issues} mein se`
-                  : `Showing ${result.issues.length} of ${result.total_issues}`}
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {result.is_truncated && (
+                <span className="font-mono text-xs text-ember">
+                  {isHinglish
+                    ? `${result.issues.length} dikha rahe hain`
+                    : `Showing ${result.issues.length}`}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleCopyAllFixes}
+                className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1.5 text-amber-400 border-amber-500/40 hover:bg-amber-500/10 font-mono"
+              >
+                <span>{fixesCopied ? '✓ Copied All Fixes!' : '📋 Copy All Fixes'}</span>
+              </button>
+            </div>
           </div>
 
           <IssueList
@@ -469,9 +507,33 @@ export default function ResultsPage() {
             <p className="section-label mb-1">
               {isHinglish ? 'DAMAGE SHARE KARO' : 'SHARE THE DAMAGE'}
             </p>
-            <h2 className="font-display text-xl text-paper">
-              {isHinglish ? 'Shareable Grade Card' : 'Shareable Grade Card'}
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-display text-xl text-paper">
+                {isHinglish ? 'Shareable Grade Card' : 'Shareable Grade Card'}
+              </h2>
+              {/* Quick 1-Click Viral Share Suite */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const shareText = `My resume scored ${result.overall_score}/100 on Resume Roast 💀🔥!\n\nVerdict: "${result.one_line_verdict}"\n\nFind out how brutal yours is: https://resumeroast.app`
+                    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank')
+                  }}
+                  className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1.5 hover:!border-sky-500 hover:text-sky-400 font-mono"
+                  title="Share roast on X"
+                >
+                  <span>𝕏 Share on X</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsStoryModalOpen(true)}
+                  className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1.5 text-purple-300 border-purple-500/40 hover:bg-purple-500/10 font-mono"
+                  title="Open 9:16 Story Card for Instagram & WhatsApp"
+                >
+                  <span>📱 9:16 Story Card</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <ShareCardGenerator result={result} />
@@ -533,6 +595,13 @@ export default function ResultsPage() {
           </Link>
         </div>
       </div>
+
+      {/* ── 9:16 Instagram & WhatsApp Story Card Modal ── */}
+      <StoryCardModal
+        isOpen={isStoryModalOpen}
+        onClose={() => setIsStoryModalOpen(false)}
+        result={result}
+      />
     </main>
   )
 }

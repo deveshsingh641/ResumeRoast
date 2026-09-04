@@ -161,6 +161,11 @@ class TestFullFeatureAudit(unittest.TestCase):
     # FEATURE 1: ROAST ANALYSIS (Diverse inputs, grounding, errors, concurrency)
     # =========================================================================
     def test_feature_1_roast_analysis_end_to_end_and_errors(self):
+        # Ensure pro status for test users to avoid daily limit during audit
+        for i in range(len(self.prepared)):
+            database.update_subscription(f"pro_audit_{i}@domain.com", "pro")
+        database.update_subscription("test_err@pro.com", "pro")
+
         # 1.1 Test diverse resumes
         results = []
         for i, p in enumerate(self.prepared):
@@ -168,7 +173,11 @@ class TestFullFeatureAudit(unittest.TestCase):
             resp = self.client.post(
                 "/api/roast",
                 files={"file": (p["filename"], p["bytes"], mime)},
-                headers={"X-User-Email": f"pro_audit_{i}@domain.com", "X-Forwarded-For": f"192.168.5.{i+1}"},
+                headers={
+                    "X-User-Email": f"pro_audit_{i}@domain.com",
+                    "X-Device-Fingerprint": f"device_audit_{i}",
+                    "X-Forwarded-For": f"192.168.5.{i+1}",
+                },
             )
             self.assertEqual(resp.status_code, 200, f"Upload failed for {p['role']}: {resp.text}")
             data = resp.json()
@@ -213,18 +222,21 @@ class TestFullFeatureAudit(unittest.TestCase):
         self.assertEqual(fake_resp.status_code, 422)
 
         # Free tier daily limit (429)
+        test_ip = f"10.99.{uuid4().hex[:4]}.1"
+        test_fp = f"limit_fp_{uuid4().hex[:8]}"
         p1 = self.prepared[0]
         # First free upload
-        self.client.post(
+        r1 = self.client.post(
             "/api/roast",
             files={"file": (p1["filename"], p1["bytes"], "application/pdf")},
-            headers={"X-Forwarded-For": "10.99.88.1"},
+            headers={"X-Forwarded-For": test_ip, "X-Device-Fingerprint": test_fp},
         )
+        self.assertEqual(r1.status_code, 200)
         # Second free upload should 429
         second_free = self.client.post(
             "/api/roast",
             files={"file": (self.prepared[1]["filename"], self.prepared[1]["bytes"], "application/pdf")},
-            headers={"X-Forwarded-For": "10.99.88.1"},
+            headers={"X-Forwarded-For": test_ip, "X-Device-Fingerprint": test_fp},
         )
         self.assertEqual(second_free.status_code, 429)
 
@@ -232,13 +244,18 @@ class TestFullFeatureAudit(unittest.TestCase):
     # FEATURE 2: VOICE NOTE (Script, audio, caching isolation, language switch)
     # =========================================================================
     def test_feature_2_voice_note_multilingual_and_isolation(self):
+        database.update_subscription("voice_tester@pro.com", "pro")
         # Create a roast first
         p = self.prepared[0]
         upload_resp = self.client.post(
             "/api/roast",
             files={"file": (p["filename"], p["bytes"], "application/pdf")},
-            headers={"X-User-Email": "voice_tester@pro.com"},
+            headers={
+                "X-User-Email": "voice_tester@pro.com",
+                "X-Device-Fingerprint": f"voice_fp_{uuid4().hex[:8]}",
+            },
         )
+        self.assertEqual(upload_resp.status_code, 200, f"Roast upload failed: {upload_resp.text}")
         roast_id = upload_resp.json()["id"]
 
         # Request English voice note

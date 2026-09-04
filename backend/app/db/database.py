@@ -8,8 +8,9 @@ import hashlib
 import json
 import os
 import time
+import uuid
 from datetime import date, datetime, timedelta, timezone
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 from uuid import uuid4
 
 import psycopg2
@@ -17,6 +18,16 @@ import psycopg2.extras
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def _is_valid_uuid(val: Any) -> bool:
+    if not val:
+        return False
+    try:
+        uuid.UUID(str(val))
+        return True
+    except (ValueError, AttributeError):
+        return False
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 ANONYMOUS_ROAST_EXPIRY_DAYS = int(os.getenv("ANONYMOUS_ROAST_EXPIRY_DAYS", "7"))
@@ -57,6 +68,7 @@ CREATE TABLE IF NOT EXISTS roasts (
     strengths JSONB NOT NULL DEFAULT '[]',
     voice_script TEXT,
     voice_audio_path TEXT,
+    resume_text TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
     expires_at TIMESTAMPTZ
 );
@@ -137,6 +149,7 @@ def init_db() -> None:
             with conn.cursor() as cur:
                 cur.execute(SCHEMA_SQL)
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT;")
+                cur.execute("ALTER TABLE roasts ADD COLUMN IF NOT EXISTS resume_text TEXT;")
             conn.commit()
     except Exception as e:
         print(f"[WARN] DB init error: {e}")
@@ -171,6 +184,7 @@ def save_roast(
     strengths: list,
     user_id: Optional[str] = None,
     device_fingerprint: Optional[str] = None,
+    resume_text: Optional[str] = None,
 ) -> str:
     """Persist a roast result and return its UUID string."""
     roast_id = str(uuid4())
@@ -190,6 +204,7 @@ def save_roast(
             "one_line_verdict": one_line_verdict,
             "issues": issues,
             "strengths": strengths,
+            "resume_text": resume_text,
             "created_at": now_utc.isoformat(),
             "expires_at": expires_at,
         }
@@ -201,8 +216,8 @@ def save_roast(
                 """
                 INSERT INTO roasts
                   (id, user_id, device_fingerprint, overall_score, band,
-                   one_line_verdict, issues, strengths, expires_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   one_line_verdict, issues, strengths, expires_at, resume_text)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     roast_id,
@@ -214,6 +229,7 @@ def save_roast(
                     json.dumps(issues),
                     json.dumps(strengths),
                     expires_at,
+                    resume_text,
                 ),
             )
         conn.commit()
@@ -233,18 +249,36 @@ def get_roast(roast_id: str) -> Optional[dict]:
             return None
         return data
 
-    with _get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT * FROM roasts
-                WHERE id = %s
-                  AND (expires_at IS NULL OR expires_at > now())
-                """,
-                (roast_id,),
-            )
-            row = cur.fetchone()
-    return dict(row) if row else None
+    if not _is_valid_uuid(roast_id):
+        return None
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT * FROM roasts
+                    WHERE id = %s
+                      AND (expires_at IS NULL OR expires_at > now())
+                    """,
+                    (roast_id,),
+                )
+                row = cur.fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        if isinstance(d.get("id"), uuid.UUID):
+            d["id"] = str(d["id"])
+        if isinstance(d.get("user_id"), uuid.UUID):
+            d["user_id"] = str(d["user_id"])
+        if isinstance(d.get("created_at"), (datetime, date)):
+            d["created_at"] = d["created_at"].isoformat()
+        if isinstance(d.get("expires_at"), (datetime, date)):
+            d["expires_at"] = d["expires_at"].isoformat()
+        return d
+    except Exception as e:
+        print(f"[WARN] Error fetching roast {roast_id}: {e}")
+        return None
 
 
 def cleanup_expired_roasts() -> int:
@@ -342,7 +376,12 @@ def create_or_get_user(email: str) -> dict:
             cur.execute("SELECT * FROM users WHERE email = %s", (email,))
             row = cur.fetchone()
             if row:
-                return dict(row)
+                d = dict(row)
+                if isinstance(d.get("id"), uuid.UUID):
+                    d["id"] = str(d["id"])
+                if isinstance(d.get("created_at"), (datetime, date)):
+                    d["created_at"] = d["created_at"].isoformat()
+                return d
             user_id = str(uuid4())
             cur.execute(
                 """
@@ -354,11 +393,17 @@ def create_or_get_user(email: str) -> dict:
             )
             created = cur.fetchone()
         conn.commit()
-    return dict(created)
+    d = dict(created)
+    if isinstance(d.get("id"), uuid.UUID):
+        d["id"] = str(d["id"])
+    if isinstance(d.get("created_at"), (datetime, date)):
+        d["created_at"] = d["created_at"].isoformat()
+    return d
 
 
 def update_subscription(email: str, status: str, customer_id: Optional[str] = None) -> None:
     """Update subscription status for user."""
+    create_or_get_user(email)
     if not DATABASE_URL:
         user = create_or_get_user(email)
         user["subscription_status"] = status
@@ -395,9 +440,11 @@ def get_user_subscription(email: str) -> str:
 
 def update_user_language(email: str, language: str) -> None:
     """Update preferred language for user."""
+    create_or_get_user(email)
     if not DATABASE_URL:
-        user = create_or_get_user(email)
-        user["preferred_language"] = language
+        user = _users_memory.get(email)
+        if user:
+            user["preferred_language"] = language
         return
 
     with _get_conn() as conn:
@@ -549,18 +596,34 @@ def get_battle(battle_id: str) -> Optional[dict]:
             return None
         return b
 
-    with _get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT * FROM battles
-                WHERE id = %s
-                  AND (expires_at IS NULL OR expires_at > now())
-                """,
-                (battle_id,),
-            )
-            row = cur.fetchone()
-    return dict(row) if row else None
+    if not _is_valid_uuid(battle_id):
+        return None
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT * FROM battles
+                    WHERE id = %s
+                      AND (expires_at IS NULL OR expires_at > now())
+                    """,
+                    (battle_id,),
+                )
+                row = cur.fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        if isinstance(d.get("id"), uuid.UUID):
+            d["id"] = str(d["id"])
+        if isinstance(d.get("created_at"), (datetime, date)):
+            d["created_at"] = d["created_at"].isoformat()
+        if isinstance(d.get("expires_at"), (datetime, date)):
+            d["expires_at"] = d["expires_at"].isoformat()
+        return d
+    except Exception as e:
+        print(f"[WARN] Error fetching battle {battle_id}: {e}")
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -580,10 +643,11 @@ def save_wall_entry(
     """Save an anonymized public wall entry."""
     entry_id = str(uuid4())
     now_utc = datetime.now(timezone.utc).isoformat()
+    valid_roast_id = roast_id if _is_valid_uuid(roast_id) else None
 
     entry = {
         "id": entry_id,
-        "roast_id": roast_id,
+        "roast_id": valid_roast_id,
         "type": entry_type,
         "score": score,
         "band": band,
@@ -609,7 +673,7 @@ def save_wall_entry(
                 """,
                 (
                     entry_id,
-                    roast_id,
+                    valid_roast_id,
                     entry_type,
                     score,
                     band,
@@ -679,6 +743,12 @@ def get_wall_entries(
     items = []
     for r in rows:
         d = dict(r)
+        if isinstance(d.get("id"), uuid.UUID):
+            d["id"] = str(d["id"])
+        if isinstance(d.get("roast_id"), uuid.UUID):
+            d["roast_id"] = str(d["roast_id"])
+        if isinstance(d.get("created_at"), (datetime, date)):
+            d["created_at"] = d["created_at"].isoformat()
         if isinstance(d.get("top_roast_lines"), str):
             try:
                 d["top_roast_lines"] = json.loads(d["top_roast_lines"])
@@ -706,6 +776,9 @@ def flag_wall_entry(entry_id: str) -> dict:
             entry["hidden"] = True
         return {"found": True, "flag_count": entry["flag_count"], "hidden": entry["hidden"]}
 
+    if not _is_valid_uuid(entry_id):
+        return {"found": False, "hidden": False}
+
     with _get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -731,6 +804,9 @@ def hide_wall_entry(entry_id: str, hidden: bool = True) -> bool:
         if entry_id in _wall_entries_memory:
             _wall_entries_memory[entry_id]["hidden"] = hidden
             return True
+        return False
+
+    if not _is_valid_uuid(entry_id):
         return False
 
     with _get_conn() as conn:
