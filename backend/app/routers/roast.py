@@ -495,6 +495,7 @@ async def add_reaction(roast_id: str, payload: ReactionPayload, request: Request
 
 class ComebackRequest(BaseModel):
     message: str
+    history: list[dict] = []
 
 
 @router.post("/roast/{roast_id}/comeback")
@@ -512,7 +513,12 @@ async def roast_comeback(roast_id: str, payload: ComebackRequest, request: Reque
         roast = SAMPLE_ROAST_RESPONSE if lang == "hi-IN" else ENGLISH_SAMPLE_ROAST_RESPONSE
 
     lang = language_from_request(request)
-    reply = ai_analyzer.generate_roast_comeback(roast=roast, user_msg=user_msg, lang=lang)
+    reply = ai_analyzer.generate_roast_comeback(
+        roast=roast,
+        user_msg=user_msg,
+        lang=lang,
+        history=payload.history,
+    )
     return JSONResponse(content={"ok": True, "reply": reply})
 
 

@@ -40,10 +40,10 @@ export default function RoastBackChat({ roastId, overallScore, verdict }: RoastB
   }, [messages, isOpen])
 
   const quickPills = [
+    'Ab aur kya badlu isme?',
     'Maine sach mein 40% optimize kiya tha!',
+    'Mai aur score badhane ki koshish karunga',
     'Ye buzzword nahi industry standard hai!',
-    'Mera project production mein live hai!',
-    'Recruiter ko samajh nahi aayega kya?',
   ]
 
   const handleSend = async (textToSend?: string) => {
@@ -62,7 +62,11 @@ export default function RoastBackChat({ roastId, overallScore, verdict }: RoastB
     setLoading(true)
 
     try {
-      const { data } = await axios.post(`/api/roast/${roastId}/comeback`, { message: msg })
+      const historyPayload = messages.slice(-8).map((m) => ({ sender: m.sender, text: m.text }))
+      const { data } = await axios.post(`/api/roast/${roastId}/comeback`, {
+        message: msg,
+        history: historyPayload,
+      })
       const aiReply: Message = {
         id: `ai-${Date.now()}`,
         sender: 'ai',

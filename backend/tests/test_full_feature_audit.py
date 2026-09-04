@@ -504,6 +504,23 @@ class TestFullFeatureAudit(unittest.TestCase):
         self.assertIn("reply", cb_resp.json())
         self.assertGreater(len(cb_resp.json()["reply"]), 5)
 
+        # 10.1.b Multi-turn diversity: sequential questions must NEVER return identical hardcoded replies
+        history = []
+        replies = set()
+        for q in ["ab aur kya badlu isme", "thik hai", "mai aur score badhane ki koshish krunga"]:
+            r = self.client.post(
+                "/api/roast/demo/comeback",
+                json={"message": q, "history": history},
+                headers={"X-Language": "hi-IN"},
+            )
+            self.assertEqual(r.status_code, 200)
+            rep = r.json()["reply"]
+            self.assertNotIn(rep, replies, f"Duplicate reply received for '{q}'")
+            replies.add(rep)
+            history.append({"sender": "user", "text": q})
+            history.append({"sender": "ai", "text": rep})
+        self.assertEqual(len(replies), 3)
+
         # 10.2 Empty message validation (422)
         empty_cb = self.client.post("/api/roast/demo/comeback", json={"message": "   "})
         self.assertEqual(empty_cb.status_code, 422)

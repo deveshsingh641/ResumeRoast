@@ -5,12 +5,15 @@ Takes structured JSON outputs from two resumes and produces savage comparative c
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import Any
 
 from dotenv import load_dotenv
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from app.i18n.mapping import DEFAULT_LANGUAGE, normalize_language
 from app.prompts import get_battle_system_prompt
@@ -93,23 +96,27 @@ Declare the winner and generate the savage comparative JSON verdict now.
 
     # 1. Gemini
     if gemini_key:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-            payload = {
-                "contents": [
-                    {"parts": [{"text": f"{battle_system_prompt}\n\n{prompt_content}"}]}
-                ],
-                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.7},
-            }
-            with httpx.Client(timeout=30.0) as client:
-                res = client.post(url, json=payload)
-                res.raise_for_status()
-                raw_text = res.json()["candidates"][0]["content"]["parts"][0]["text"]
-                data = _extract_json(raw_text)
-                if "winner" in data and "verdict" in data:
-                    return data
-        except Exception as e:
-            print(f"[WARN] Gemini battle error: {e}")
+        candidate_models = [os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), "gemini-flash-latest"]
+        for model in candidate_models:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                payload = {
+                    "contents": [
+                        {"parts": [{"text": f"{battle_system_prompt}\n\n{prompt_content}"}]}
+                    ],
+                    "generationConfig": {"responseMimeType": "application/json", "temperature": 0.7},
+                }
+                with httpx.Client(timeout=30.0) as client:
+                    res = client.post(url, json=payload)
+                    if res.status_code == 404:
+                        continue
+                    res.raise_for_status()
+                    raw_text = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                    data = _extract_json(raw_text)
+                    if "winner" in data and "verdict" in data:
+                        return data
+            except Exception as e:
+                logger.debug(f"Gemini battle error on model {model}: {e}")
 
     # 2. Groq
     if groq_key:

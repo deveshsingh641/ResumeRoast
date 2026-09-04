@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import time
@@ -14,6 +15,8 @@ from typing import Any
 
 from dotenv import load_dotenv
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from app.services.extractor import map_quoted_text_to_offsets
 from app.services.anti_repeat_service import anti_repeat_memory, BASELINE_JOKE_BANKS
@@ -377,7 +380,6 @@ HINGLISH_MARKERS = {
 # ---------------------------------------------------------------------------
 
 def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "", language: str = DEFAULT_LANGUAGE) -> dict:
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
     sys_prompt = get_system_prompt(language)
     user_template = get_user_prompt_template(language)
     formatted_user_prompt = user_template.format(
@@ -400,12 +402,24 @@ def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "", 
         },
     }
 
+    candidate_models = [os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), "gemini-flash-latest"]
+    last_err = None
     with httpx.Client(timeout=45.0) as client:
-        response = client.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
-        raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
-        return _extract_json(raw_text)
+        for model in candidate_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            try:
+                response = client.post(url, json=payload)
+                if response.status_code == 404:
+                    continue
+                response.raise_for_status()
+                data = response.json()
+                raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
+                return _extract_json(raw_text)
+            except Exception as e:
+                last_err = e
+        if last_err:
+            raise last_err
+    return {}
 
 
 # ---------------------------------------------------------------------------
@@ -1383,50 +1397,225 @@ def analyze_resume(resume_text: str, language: str = DEFAULT_LANGUAGE) -> dict[s
     return data
 
 
-def generate_roast_comeback(roast: dict, user_msg: str, lang: str = "hi-IN") -> str:
+def generate_roast_comeback(
+    roast: dict,
+    user_msg: str,
+    lang: str = "hi-IN",
+    history: list[dict] | None = None,
+) -> str:
     """
-    Generate a witty, savage in-character comeback when the candidate argues back.
+    Generate a witty, context-grounded comeback or coaching retort when the candidate argues back.
+    Uses Gemini when available, backed by an intelligent dynamic intent-driven conversational engine.
+    Guarantees that consecutive responses never repeat and directly answers what the user actually asked.
     """
     verdict = roast.get("one_line_verdict", "")
     score = roast.get("overall_score", 30)
+    issues = roast.get("issues", [])
+    history = history or []
 
-    # Check for Gemini API Key
+    # Extract past AI responses to prevent duplicate replies in the same session
+    past_ai_texts = {h.get("text", "").strip() for h in history if h.get("sender") == "ai"}
+    past_user_msgs = [h.get("text", "").strip().lower() for h in history if h.get("sender") == "user"]
+    turn_number = len(past_user_msgs)
+
+    # 1. Attempt LLM generation via Gemini
     gemini_key = os.getenv("GEMINI_API_KEY", "")
     if gemini_key:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-            sys_prompt = (
-                "You are an elite, brutally honest comedic tech recruiter and resume roaster. "
-                f"You previously roasted this candidate's resume with a score of {score}/100 and verdict: '{verdict}'. "
-                f"The candidate is arguing back with: '{user_msg}'. "
-                f"Write a sharp, hilarious, savage 1-2 sentence comeback defending your roast. "
-                f"Language: {'Hinglish (mix of Hindi & English with emojis)' if lang == 'hi-IN' else 'English with emojis'}. "
-                "Keep it punchy, funny, and under 40 words."
-            )
-            resp = httpx.post(url, json={"contents": [{"parts": [{"text": sys_prompt}]}]}, timeout=5.0)
-            if resp.status_code == 200:
-                out = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-                if out:
-                    return out
-        except Exception as e:
-            print(f"[WARN] Gemini comeback error: {e}")
+        candidate_models = [os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), "gemini-flash-latest"]
+        for model in candidate_models:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                context_issues = ""
+                if issues:
+                    top_iss = issues[:3]
+                    context_issues = "Specific resume flaws found: " + "; ".join(
+                        f"Quote: '{iss.get('quoted_text', '')}' -> Rewrite: '{iss.get('fix', '')}'" for iss in top_iss
+                    )
 
-    # Fallback smart comebacks tailored to user message keywords
-    msg_l = user_msg.lower()
-    if lang == "hi-IN":
-        if any(w in msg_l for w in ["percent", "%", "metric", "number", "data", "optimize"]):
-            return "Bhai agar itne numbers sach the, toh resume mein dalte na! Wahan toh sirf 'responsible for' likh ke hawa bana rakhi hai 😂📉"
-        elif any(w in msg_l for w in ["experience", "saal", "senior", "lead", "project"]):
-            return f"Experience ka ghamand mat dikha bhai, ATS ko saal nahi, measurable outcomes samajh aate hain! Score {score}/100 aise hi thodi aaya 💀"
-        elif any(w in msg_l for w in ["fake", "galat", "wrong", "lie", "sach"]):
-            return "Hum jhooth bol rahe hain ya tera bullet point? Recruiter ko 6 second lagte hain reject dabane mein, debate karne ka time nahi hota 🛑"
+                sys_prompt = (
+                    "You are a brutally honest, hilarious yet sharp tech recruiter and resume roaster in a live chat with a candidate. "
+                    f"Candidate's score: {score}/100. Verdict: '{verdict}'. {context_issues}\n"
+                    f"Candidate just said: '{user_msg}'.\n"
+                    "Reply directly TO the candidate with a witty, savage critique or concrete advice. "
+                    "Language: " + ("Conversational Hinglish with emojis" if lang == "hi-IN" else "Sharp English with emojis") + ". "
+                    "Keep it strictly under 30 words. Complete sentence only, never trail off."
+                )
+                payload = {
+                    "contents": [{"parts": [{"text": sys_prompt}]}],
+                    "generationConfig": {"temperature": 0.8, "maxOutputTokens": 120},
+                }
+                with httpx.Client(timeout=3.5) as client:
+                    resp = client.post(url, json=payload)
+                    if resp.status_code == 200:
+                        out = resp.json().get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+                        out = out.strip('"`* \n')
+                        if out and len(out) >= 20 and out not in past_ai_texts:
+                            return out
+            except Exception as e:
+                logger.debug(f"Gemini comeback model {model} skipped: {e}")
+
+    # 2. Intelligent, Intent-Driven Conversational Fallback Engine
+    msg_l = user_msg.lower().strip()
+
+    # Intent A: What to change / Improvement advice / "Kya badlu isme"
+    if any(w in msg_l for w in ["badlu", "change", "sudhar", "improve", "kya karu", "tips", "suggestion", "kaha galti", "aur kya", "batao", "kaise", "what to fix", "what to change", "advice", "help", "next"]):
+        advice_count = sum(1 for m in past_user_msgs if any(w in m for w in ["badlu", "change", "improve", "kya karu", "aur kya", "fix"]))
+        if issues:
+            idx = advice_count % len(issues)
+            iss = issues[idx]
+            flaw = iss.get("quoted_text", "").strip() or "vague bullet point"
+            fix = iss.get("fix", "").strip() or "Action verb + quantifiable impact"
+            if lang == "hi-IN":
+                variants = [
+                    f"Sabse pehle ye line dekh: '{flaw}'. Isko hata kar likh: '{fix}'. Recruiter ko measurable output chahiye, hawa-baazi nahi! 📝",
+                    f"Dusri sabse badi galti: '{flaw}'. Iski jagah seedha ye daalo: '{fix}'. Isse ATS score turant jump marega! 🚀",
+                    f"Ek aur blunder mila: '{flaw}'. Isko rewrite karo: '{fix}'. Numbers ke bina resume sirf biodata lagta hai! 🔥",
+                    f"Bhai upar 'Download Fixed ATS (.md)' button diya hai na! Usme saare {len(issues)} flaws ka readymade solution hai, wahan se copy kar lo 📥",
+                ]
+                for v in variants:
+                    if v not in past_ai_texts:
+                        return v
+                return variants[idx % len(variants)]
+            else:
+                variants = [
+                    f"Top priority fix: replace '{flaw}' with: '{fix}'. That converts passive duties into quantifiable business impact! 📝",
+                    f"Next critical fix: eliminate '{flaw}' and use: '{fix}'. ATS scans for tangible results! 🚀",
+                    f"Hit the 'Download Fixed ATS (.md)' button above — all {len(issues)} flaws have full drop-in rewrites ready! 📥",
+                ]
+                for v in variants:
+                    if v not in past_ai_texts:
+                        return v
+                return variants[idx % len(variants)]
         else:
-            return f"Defense accha hai bhai, kaash itna effort resume ke bullet points rewrite karne mein lagaya hota! Score fir bhi {score}/100 hi rahega 😈🔥"
-    else:
-        if any(w in msg_l for w in ["percent", "%", "metric", "number", "scale"]):
-            return "If those numbers were real, why did they go missing on your resume? You wrote 'helped with' and called it an accomplishment 😂📉"
-        elif any(w in msg_l for w in ["experience", "years", "senior", "lead"]):
+            if lang == "hi-IN":
+                return "Sabse pehle har bullet point ko STAR format (Situation, Task, Action, Result) mein dhalo aur % metrics add karo! 📊"
+            else:
+                return "Start by rewriting every bullet point with the STAR method and adding quantifiable % metrics! 📊"
+
+    # Intent B: Agreement / "Thik hai" / "Ok" / "Got it"
+    if any(w in msg_l for w in ["thik hai", "theek hai", "theek", "thik", "ok", "okay", "sahi hai", "samajh gaya", "done", "got it", "achha", "accha", "fine", "alright", "agree", "man gaya", "cool", "understood"]):
+        if lang == "hi-IN":
+            ok_responses = [
+                "Chalo acknowledge toh kiya! Ab bas upar 'Download Fixed ATS (.md)' dabao aur apply karna shuru karo, time waste mat karo 🏃‍♂️💨",
+                "Maan gaya na? Galti accept karna pehla step hai. Dusra step hai un vague bullet points ko delete karna ✂️",
+                "Thik hai bolne se recruiter shortlist nahi karega bhai! Jaldi se rewrites copy karo aur resume update karo 📄⚡",
+                "Good! At least denial mode se bahar aaye. Ab action lo aur agle upload mein 85+ score lake dikhao 🎯",
+                "Chalo samjhdaar nikle! Ab jakar apne projects mein metrics daal do, tabhi interview call aayegi 💼",
+            ]
+            for r in ok_responses:
+                if r not in past_ai_texts:
+                    return r
+            return ok_responses[turn_number % len(ok_responses)]
+        else:
+            ok_responses = [
+                "Acknowledging it is step one! Now click 'Download Fixed ATS (.md)' and actually update your resume 🏃‍♂️💨",
+                "Glad we agree. Don't just nod along — replace those passive bullet points before applying anywhere else ✂️",
+                "Good to hear! Now take action so your next roast hits 85+ instead of getting filtered out by ATS 🎯",
+            ]
+            for r in ok_responses:
+                if r not in past_ai_texts:
+                    return r
+            return ok_responses[turn_number % len(ok_responses)]
+
+    # Intent C: Ambition / "Score badhaunga" / "Koshish karunga" / "Next time"
+    if any(w in msg_l for w in ["koshish", "try", "badhaunga", "increase", "improve karunga", "next time", "phir se", "dobara", "agle baar", "future", "mehnat", "will try", "next upload"]):
+        if lang == "hi-IN":
+            ambition_responses = [
+                "Koshish karne walon ki haar tab hoti hai jab wo numbers miss karte hain! Agle attempt mein exact metrics daal, 85+ score pakka hai 🎯",
+                "Josh pura hai, ab thoda dimag bhi lagao! Action verbs use karo aur 2nd upload mein 80+ touch karke dikhao tab maanu 🔥",
+                "Ye hui na baat! Par yaad rakhna: recruiter excuses nahi, business impact dekhta hai. Pehle 3 issues fix karo fir re-upload karna 🚀",
+                f"Koshish zaroor karo bhai, par bina quantifiable data ke score {score} se 80 bhi nahi hoga! Challenge accepted? 😉",
+            ]
+            for r in ambition_responses:
+                if r not in past_ai_texts:
+                    return r
+            return ambition_responses[turn_number % len(ambition_responses)]
+        else:
+            ambition_responses = [
+                "That's the spirit! But effort without quantified metrics won't move the needle. Show me 85+ on your next upload! 🎯",
+                "Challenge accepted! Replace those vague duties with business impact and prove me wrong on round 2 🔥",
+            ]
+            for r in ambition_responses:
+                if r not in past_ai_texts:
+                    return r
+            return ambition_responses[turn_number % len(ambition_responses)]
+
+    # Intent D: Numbers / Optimization / Metrics argument
+    if any(w in msg_l for w in ["percent", "%", "metric", "number", "data", "optimize", "latency", "scale", "performance", "queries", "traffic"]):
+        if lang == "hi-IN":
+            num_responses = [
+                "Bhai agar itne solid metrics the, toh resume mein dalte na! Wahan toh sirf 'helped with' likh ke hawa bana rakhi hai 😂📉",
+                "Optimise toh tune kiya hoga, par bullet point mein business outcome kidhar hai? ATS numbers dhundhta hai, claims nahi 🛑",
+                "Agar latency drop hui thi toh infrastructure cost kitni bachi? Adhi kahani mat sunao recruiter ko 💀",
+            ]
+            for r in num_responses:
+                if r not in past_ai_texts:
+                    return r
+            return num_responses[turn_number % len(num_responses)]
+        else:
+            return "If those numbers were real, why are they absent from your resume? You wrote 'assisted with' instead of owning the impact 😂📉"
+
+    # Intent E: Experience / Seniority / "Years"
+    if any(w in msg_l for w in ["experience", "saal", "senior", "lead", "fresher", "college", "year", "years", "junior", "intern"]):
+        if lang == "hi-IN":
+            exp_responses = [
+                f"{score}/100 dekh kar experience ka card mat khelo bhai! ATS ko saal nahi, measurable outcomes samajh aate hain 💀",
+                "5 saal ho ya 10 saal, agar bullet point 'participated in meetings' bolega toh recruiter junior hi samjhega 📉",
+                "Seniority role title se nahi, deliverables se dikhti hai. Resume ke pehle do points mein apna biggest win highlight karo 💼",
+            ]
+            for r in exp_responses:
+                if r not in past_ai_texts:
+                    return r
+            return exp_responses[turn_number % len(exp_responses)]
+        else:
             return f"Years of experience mean nothing if you can't quantify impact. ATS filters keywords, not excuses! Score {score}/100 stands 💀"
+
+    # Intent F: Disbelief / Calling Roast Fake / Wrong
+    if any(w in msg_l for w in ["fake", "galat", "wrong", "lie", "jhooth", "bakwas", "bekar", "pagal", "chup", "shut up"]):
+        if lang == "hi-IN":
+            fake_responses = [
+                "Hum jhooth bol rahe hain ya tera bullet point? Recruiter ko 6 second lagte hain reject dabane mein, debate ka time nahi milta wahan 🛑",
+                "Gussa aana natural hai bhai, sach kadwa hota hai! Par yahan ladne se achha hai flaws rewrite kar lo ☕",
+                "Reality check ko 'galat' bolne se rejection email offer letter mein nahi badal jayega 😉",
+            ]
+            for r in fake_responses:
+                if r not in past_ai_texts:
+                    return r
+            return fake_responses[turn_number % len(fake_responses)]
         else:
-            return "Great comeback! If only half that energy went into writing actionable bullet points instead of generic corporate jargon 😈🔥"
+            return "Denial won't turn a rejection email into an interview. The flaws are grounded right in what you wrote! 🛑"
+
+    # Intent G: Greetings / Short Casual
+    if any(w in msg_l for w in ["hi", "hello", "hey", "namaste", "suno", "kaise ho", "yo", "sup", "bhai"]) and len(msg_l.split()) <= 3:
+        if lang == "hi-IN":
+            return f"Haan bhai bolo! Score {score}/100 dekh kar dil toota ya reality check mila? Batao kahan se shuru karein 😈"
+        else:
+            return f"Welcome! Roasted you at {score}/100 — what part of your resume are we defending today? 😈"
+
+    # Intent H: General Dynamic Pool (Guaranteed Non-Repeating)
+    if lang == "hi-IN":
+        gen_responses = [
+            f"Itna confidence agar resume ke summary section mein dikhaya hota toh score {score} nahi, 85+ hota! 😉",
+            f"Tere is defense ko hum 10/10 dete hain, par resume ka score abhi bhi {score}/100 hi rahega jab tak rewrites apply nahi karoge! 😈",
+            "Bhai point tera valid ho sakta hai, lekin ATS scanner ko logic nahi, exact action verbs aur numbers samajh aate hain 📉",
+            "Kaash recruiter ko bhi phone karke ye sab samjha paate! Isliye bol rahe hain, sab kuch resume par quantifiable likho 📄",
+            f"Score {score}/100 badhana hai toh yahan debate chhod ke upar 'Download Fixed ATS (.md)' check karo, wahan solution ready hai! 💡",
+            "Defense accha hai bhai, par recruiter 6 seconds mein reject kar deta hai. Action verbs add karo aur dubara aao 🔥",
+            "Dil par mat le bhai, ye roast tere bhale ke liye tha! Galtiyan sudhar aur mast package nikal 💼🚀",
+        ]
+        for r in gen_responses:
+            if r not in past_ai_texts:
+                return r
+        return gen_responses[(turn_number + hash(user_msg)) % len(gen_responses)]
+    else:
+        gen_responses = [
+            f"Great comeback! If only half that energy went into writing actionable bullet points instead of generic corporate jargon 😈🔥",
+            f"Your defense is entertaining, but ATS doesn't interview your personality. Score {score}/100 stands until you rewrite! 📉",
+            "Save the debate for the actual interview! Use the 'Download Fixed ATS (.md)' button above to fix the flagged lines 💡",
+            f"Confidence is 10/10, but resume execution is {score}/100. Add quantified outcomes and try again! 🎯",
+        ]
+        for r in gen_responses:
+            if r not in past_ai_texts:
+                return r
+        return gen_responses[(turn_number + hash(user_msg)) % len(gen_responses)]
 
