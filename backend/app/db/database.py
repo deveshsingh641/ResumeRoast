@@ -344,7 +344,8 @@ def increment_usage(key: str) -> int:
                 """,
                 (key, today_utc),
             )
-            new_count = cur.fetchone()["count"]
+            row = cur.fetchone()
+            new_count = (row["count"] if isinstance(row, dict) and "count" in row else (row[0] if row else 1)) or 1
         conn.commit()
     return new_count
 
@@ -738,7 +739,8 @@ def get_wall_entries(
                 "SELECT COUNT(*) as count FROM wall_entries WHERE type = %s AND hidden = FALSE",
                 (entry_type,),
             )
-            total = cur.fetchone()["count"]
+            t_row = cur.fetchone()
+            total = (t_row["count"] if isinstance(t_row, dict) and "count" in t_row else (t_row[0] if t_row else 0)) or 0
 
     items = []
     for r in rows:

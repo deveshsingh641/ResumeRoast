@@ -9,20 +9,26 @@ import ProcessingState from './ProcessingState'
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx']
 
-function validateFile(file: File): string | null {
+function validateFile(file: File, isHinglish = false): string | null {
   if (!file) {
-    return 'Please select a file to upload.'
+    return isHinglish ? 'Kripya upload karne ke liye file chunein.' : 'Please select a file to upload.'
   }
   if (file.size === 0) {
-    return 'That file is empty (0 bytes). Please upload a complete resume document.'
+    return isHinglish
+      ? 'Ye file empty hai (0 bytes). Kripya poora resume document upload karein.'
+      : 'That file is empty (0 bytes). Please upload a complete resume document.'
   }
   const ext = '.' + file.name.split('.').pop()?.toLowerCase()
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
-    return "Only PDF or DOCX, up to 5MB — that file's format isn't supported."
+    return isHinglish
+      ? 'Sirf PDF ya DOCX (5MB tak) supported hai — is file format ko parse nahi kiya ja sakta.'
+      : "Only PDF or DOCX, up to 5MB — that file's format isn't supported."
   }
   if (file.size > MAX_SIZE) {
     const sizeMb = (file.size / 1024 / 1024).toFixed(1)
-    return `Only PDF or DOCX, up to 5MB — that file's a bit big (${sizeMb}MB).`
+    return isHinglish
+      ? `Sirf PDF ya DOCX (5MB tak) allowed hai — ye file kaafi badi hai (${sizeMb}MB).`
+      : `Only PDF or DOCX, up to 5MB — that file's a bit big (${sizeMb}MB).`
   }
   return null
 }
@@ -43,7 +49,7 @@ export default function ResumeUploader() {
     async (file: File) => {
       if (isProcessing) return // Prevent double-submit
 
-      const valError = validateFile(file)
+      const valError = validateFile(file, isHinglish)
       if (valError) {
         setErrorMessage(valError)
         return
@@ -78,11 +84,17 @@ export default function ResumeUploader() {
         } else if (typeof detail === 'string') {
           msg = detail
         } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
-          msg = "The grading process timed out. Try again — it usually finishes in ~15 seconds."
+          msg = isHinglish
+            ? 'Grading process time out ho gaya. Dobara try karein — aam taur par ~15 seconds lagte hain.'
+            : 'The grading process timed out. Try again — it usually finishes in ~15 seconds.'
         } else if (!err?.response) {
-          msg = 'Unable to reach the grading server. Please check your internet connection and try again.'
+          msg = isHinglish
+            ? 'Grading server se connect nahi ho pa rahe hain. Internet check karein aur dobara try karein.'
+            : 'Unable to reach the grading server. Please check your internet connection and try again.'
         } else {
-          msg = 'Failed to analyze resume. Please try exporting fresh as a PDF or standard DOCX.'
+          msg = isHinglish
+            ? 'Resume analyze karne mein dikkat aayi. Kripya fresh text PDF ya standard DOCX export karke upload karein.'
+            : 'Failed to analyze resume. Please try exporting fresh as a PDF or standard DOCX.'
         }
 
         setUploadError(msg)

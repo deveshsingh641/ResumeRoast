@@ -31,7 +31,7 @@ export default function BattlePage() {
         const { data } = await axios.get(`/api/battle/${id}`)
         setBattleData(data)
       } catch (err: any) {
-        setError(isHinglish ? 'This battle could not be found or has expired.' : 'This battle could not be found or has expired.')
+        setError(isHinglish ? 'Yeh battle nahi mili ya expire ho chuki hai.' : 'This battle could not be found or has expired.')
       } finally {
         setLoading(false)
       }
@@ -41,17 +41,17 @@ export default function BattlePage() {
 
   const handleStartBattle = async () => {
     if (!file1 || !file2) {
-      setError(isHinglish ? 'Please select both resumes before starting the battle.' : 'Please select both resumes before starting the battle.')
+      setError(isHinglish ? 'Dangal shuru karne se pehle dono resumes select karo.' : 'Please select both resumes before starting the battle.')
       return
     }
 
     if (file1.size === 0 || file2.size === 0) {
-      setError(isHinglish ? 'One of your files is empty (0 bytes). Please upload complete resume documents.' : 'One of your files is empty (0 bytes). Please upload complete resume documents.')
+      setError(isHinglish ? 'Ek file khali (0 bytes) hai. Kripya valid resume upload karein.' : 'One of your files is empty (0 bytes). Please upload complete resume documents.')
       return
     }
 
     if (file1.size > 5 * 1024 * 1024 || file2.size > 5 * 1024 * 1024) {
-      setError(isHinglish ? 'Maximum supported size is 5MB per resume file.' : 'Maximum supported size is 5MB per resume file.')
+      setError(isHinglish ? 'Har resume file ka maximum size 5MB tak hi allowed hai.' : 'Maximum supported size is 5MB per resume file.')
       return
     }
 
@@ -69,7 +69,7 @@ export default function BattlePage() {
       window.history.pushState({}, '', `/battle/${data.id}`)
     } catch (err: any) {
       const detail = err?.response?.data?.detail
-      let msg = isHinglish ? 'Failed to start battle. Please check your files.' : 'Failed to start battle. Please check your files.'
+      let msg = isHinglish ? 'Battle shuru karne mein dikkat aayi. Files check karein.' : 'Failed to start battle. Please check your files.'
       if (typeof detail === 'object' && detail?.message) {
         msg = detail.message
       } else if (typeof detail === 'string') {
@@ -86,7 +86,7 @@ export default function BattlePage() {
   return (
     <main className="min-h-screen pb-24 desk-cursor relative overflow-hidden">
       {/* Tactile Desk Clutter */}
-      <DeskClutter stickyText={isHinglish ? 'winner gets the referral 🥊' : 'winner gets the referral 🥊'} stickyRotation={3} />
+      <DeskClutter stickyText={isHinglish ? 'jo jeetega referral uska 🥊' : 'winner gets the referral 🥊'} stickyRotation={3} />
 
       {/* Header */}
       <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6 mb-6 sm:mb-8 relative z-10">
@@ -132,7 +132,7 @@ export default function BattlePage() {
               <div className="border border-dashed border-white/20 hover:border-amber-400/50 rounded-lg p-6 bg-white/[0.02] text-left transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-mono text-xs text-amber-400 font-bold uppercase tracking-wider">
-                    🥊 FIGHTER 1 (TERA RESUME)
+                    🥊 {isHinglish ? 'FIGHTER 1 (TERA RESUME)' : 'FIGHTER 1 (YOUR RESUME)'}
                   </span>
                   {file1 && <span className="font-mono text-xs text-emerald-400">✓ Ready</span>}
                 </div>
@@ -151,9 +151,11 @@ export default function BattlePage() {
                 >
                   <p className="text-2xl mb-2">📄</p>
                   <p className="font-mono text-xs text-paper font-bold truncate">
-                    {file1 ? file1.name : 'Pehla Resume Chuno (PDF/DOCX)'}
+                    {file1 ? file1.name : (isHinglish ? 'Pehla Resume Chuno (PDF/DOCX)' : 'Choose First Resume (PDF/DOCX)')}
                   </p>
-                  <p className="font-mono text-[10px] text-tan-dim mt-1">File choose karne ke liye click karo</p>
+                  <p className="font-mono text-[10px] text-tan-dim mt-1">
+                    {isHinglish ? 'File choose karne ke liye click karo' : 'Click to select file'}
+                  </p>
                 </label>
               </div>
 
@@ -161,7 +163,7 @@ export default function BattlePage() {
               <div className="border border-dashed border-white/20 hover:border-ember/50 rounded-lg p-6 bg-white/[0.02] text-left transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-mono text-xs text-ember font-bold uppercase tracking-wider">
-                    🥊 FIGHTER 2 (DOST YA RIVAL KA RESUME)
+                    🥊 {isHinglish ? 'FIGHTER 2 (DOST YA RIVAL KA RESUME)' : 'FIGHTER 2 (RIVAL RESUME)'}
                   </span>
                   {file2 && <span className="font-mono text-xs text-emerald-400">✓ Ready</span>}
                 </div>
@@ -180,9 +182,11 @@ export default function BattlePage() {
                 >
                   <p className="text-2xl mb-2">📄</p>
                   <p className="font-mono text-xs text-paper font-bold truncate">
-                    {file2 ? file2.name : 'Doosra Resume Chuno (PDF/DOCX)'}
+                    {file2 ? file2.name : (isHinglish ? 'Doosra Resume Chuno (PDF/DOCX)' : 'Choose Second Resume (PDF/DOCX)')}
                   </p>
-                  <p className="font-mono text-[10px] text-tan-dim mt-1">File choose karne ke liye click karo</p>
+                  <p className="font-mono text-[10px] text-tan-dim mt-1">
+                    {isHinglish ? 'File choose karne ke liye click karo' : 'Click to select file'}
+                  </p>
                 </label>
               </div>
             </div>
@@ -199,7 +203,9 @@ export default function BattlePage() {
               disabled={loading || !file1 || !file2}
               className="btn-primary w-full sm:w-auto sm:px-12 py-3 text-sm justify-center shadow-lg"
             >
-              {loading ? 'Dono fighters ko inspect kar rahe hain… 🥊' : '⚔️ DANGAL SHURU KARO'}
+              {loading
+                ? (isHinglish ? 'Dono fighters ko inspect kar rahe hain… 🥊' : 'Inspecting both fighters… 🥊')
+                : (isHinglish ? '⚔️ DANGAL SHURU KARO' : '⚔️ START BATTLE')}
             </button>
           </div>
         )}
@@ -308,7 +314,9 @@ export default function BattlePage() {
 
             {/* Battle Share Card Generator */}
             <div className="pt-6">
-              <p className="section-label mb-2">SHARE THE VS DAMAGE</p>
+              <p className="section-label mb-2">
+                {isHinglish ? 'VS DAMAGE SHARE KARO' : 'SHARE THE VS DAMAGE'}
+              </p>
               <BattleShareCard battle={battleData} />
             </div>
 
@@ -324,7 +332,7 @@ export default function BattlePage() {
                 }}
                 className="btn-ghost"
               >
-                Start another battle 🥊
+                {isHinglish ? 'Naya dangal shuru karo 🥊' : 'Start another battle 🥊'}
               </button>
             </div>
           </div>

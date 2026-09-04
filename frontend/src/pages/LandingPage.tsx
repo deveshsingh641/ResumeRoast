@@ -87,9 +87,11 @@ function FeatureSection() {
     <section className="py-24 px-4 border-t border-white/[0.08]" aria-label="How it works">
       <div className="max-w-[960px] mx-auto">
         <div className="text-center mb-16">
-          <p className="section-label mb-2">PROCESS DEKH LE</p>
+          <p className="section-label mb-2">
+            {isHinglish ? 'PROCESS DEKH LE' : 'HOW IT WORKS'}
+          </p>
           <h2 className="font-display text-2xl sm:text-3xl text-paper">
-            Teen steps. Zero sugarcoating.
+            {isHinglish ? 'Teen steps. Zero sugarcoating.' : 'Three steps. Zero sugarcoating.'}
           </h2>
         </div>
 
@@ -149,7 +151,7 @@ function SampleSection() {
               aria-label="Show next sample resume"
               className="inline-flex items-center gap-1 font-mono text-[10px] text-tan-dim hover:text-ember px-2 py-0.5 border border-white/10 rounded-[2px] transition-colors duration-150"
             >
-              <span>↻</span> {isHinglish ? 'Shuffle' : 'Shuffle'} ({(activeIdx % sampleList.length) + 1}/{sampleList.length})
+              <span>↻</span> {isHinglish ? 'Badlo' : 'Shuffle'} ({(activeIdx % sampleList.length) + 1}/{sampleList.length})
             </button>
           </div>
           <h2 className="font-display text-2xl sm:text-3xl text-paper">
@@ -594,7 +596,9 @@ export default function LandingPage() {
       {/* ── Bottom CTA ── */}
       <section className="py-24 px-4 border-t border-white/[0.08] text-center">
         <div className="max-w-[640px] mx-auto">
-          <p className="section-label mb-3">INSTANT ROAST</p>
+          <p className="section-label mb-3">
+            {isHinglish ? 'ABHI ROAST KARO' : 'INSTANT ROAST'}
+          </p>
           <h2 className="font-display text-3xl sm:text-4xl text-paper mb-4 leading-tight">
             {isHinglish ? 'Apna resume desk pe rakh do.' : 'Drop your resume on the desk.'}
           </h2>

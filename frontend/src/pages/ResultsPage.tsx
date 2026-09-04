@@ -112,7 +112,10 @@ export default function ResultsPage() {
         ``,
         `## 🛠️ REVISED BULLET POINTS & ACTIONABLE IMPACT`,
         ...(result.issues || []).map((iss, i) => {
-          return `### ${i + 1}. [${iss.category.toUpperCase()}] Recommended Rewrite:\n- **Clean Drop-In:** ${iss.fix}\n  *(Replaced flaw: "${iss.quoted_text}")*\n`
+          const cat = (iss.category || 'flaw').toUpperCase()
+          const cleanFix = iss.fix || 'Actionable rewrite recommended'
+          const cleanQuote = iss.quoted_text || 'Flagged flaw'
+          return `### ${i + 1}. [${cat}] Recommended Rewrite:\n- **Clean Drop-In:** ${cleanFix}\n  *(Replaced flaw: "${cleanQuote}")*\n`
         }),
         ``,
         `---`,

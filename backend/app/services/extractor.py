@@ -144,7 +144,7 @@ def extract_text_from_docx(file_bytes: bytes) -> tuple[str, bool]:
     # Also extract from tables if paragraphs were sparse
     for table in doc.tables:
         for row in table.rows:
-            row_texts = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+            row_texts = list(dict.fromkeys(cell.text.strip() for cell in row.cells if cell.text.strip()))
             if row_texts:
                 lines.append(" | ".join(row_texts))
 

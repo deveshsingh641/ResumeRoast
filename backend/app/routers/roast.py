@@ -251,19 +251,28 @@ async def create_roast(
         existing_roast = database.get_roast(existing_roast_id)
         if existing_roast:
             import json as _json
-            issues = existing_roast["issues"]
+            issues = existing_roast.get("issues") or []
             if isinstance(issues, str):
-                issues = _json.loads(issues)
-            strengths = existing_roast["strengths"]
+                try:
+                    issues = _json.loads(issues)
+                except Exception:
+                    issues = []
+            strengths = existing_roast.get("strengths") or []
             if isinstance(strengths, str):
-                strengths = _json.loads(strengths)
+                try:
+                    strengths = _json.loads(strengths)
+                except Exception:
+                    strengths = []
+
+            issues = issues or []
+            strengths = strengths or []
 
             return JSONResponse(
                 content={
                     "id": existing_roast_id,
-                    "overall_score": existing_roast["overall_score"],
-                    "band": existing_roast["band"],
-                    "one_line_verdict": existing_roast["one_line_verdict"],
+                    "overall_score": existing_roast.get("overall_score", 30),
+                    "band": existing_roast.get("band", "mid"),
+                    "one_line_verdict": existing_roast.get("one_line_verdict", ""),
                     "issues": issues[:3] if is_free_tier else issues,
                     "total_issues": len(issues),
                     "strengths": strengths,
@@ -376,6 +385,9 @@ async def get_roast(roast_id: str, request: Request, email: Optional[str] = None
             strengths = _json.loads(strengths)
         except Exception:
             strengths = []
+
+    issues = issues or []
+    strengths = strengths or []
 
     is_truncated = (len(issues) > 3) and (not is_pro)
     visible_issues = issues if is_pro else issues[:3]

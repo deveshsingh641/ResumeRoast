@@ -122,7 +122,7 @@ export default function WallPage() {
   return (
     <main className="min-h-screen pb-24 desk-cursor relative overflow-hidden">
       {/* Tactile Desk Clutter */}
-      <DeskClutter stickyText={isHinglish ? 'hall of anonymous damage 🔥' : 'hall of anonymous damage 🔥'} stickyRotation={-3} />
+      <DeskClutter stickyText={isHinglish ? 'anonymized roasts ka dher 🔥' : 'hall of anonymous damage 🔥'} stickyRotation={-3} />
 
       {/* Header */}
       <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6 mb-6 sm:mb-8 relative z-10">
@@ -148,14 +148,14 @@ export default function WallPage() {
         {/* Title */}
         <div className="text-center">
           <p className="section-label mb-2">
-            {isHinglish ? 'PUBLIC ANONYMOUS HALL OF DAMAGE' : 'PUBLIC ANONYMOUS HALL OF DAMAGE'}
+            {isHinglish ? 'ASLI CANDIDATES KA ANONYMOUS DAMAGE' : 'PUBLIC ANONYMOUS HALL OF DAMAGE'}
           </p>
           <h1 className="font-display text-3xl sm:text-5xl text-paper tracking-tight">
             Wall of <span className={activeTab === 'shame' ? 'text-stamp' : 'text-amber-400'}>{activeTab === 'shame' ? 'Shame' : 'Fame'}</span>
           </h1>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-[580px] mx-auto">
             {isHinglish
-              ? 'Real anonymized resumes submitted by brave candidates. All personal data, emails, and company names have been pre-sanitized.'
+              ? 'Brave candidates ke asli anonymized resumes. Saare personal names aur emails pehle hi sanitize kar diye gaye hain.'
               : 'Real anonymized resumes submitted by brave candidates. All personal data, emails, and company names have been pre-sanitized.'}
           </p>
         </div>
@@ -190,7 +190,7 @@ export default function WallPage() {
 
           {/* Sort */}
           <div className="flex items-center gap-2 font-mono text-xs text-tan-dim">
-            <span>Sort by:</span>
+            <span>{isHinglish ? 'Kram:' : 'Sort by:'}</span>
             <button
               type="button"
               onClick={() => setSortBy('recent')}
@@ -198,7 +198,7 @@ export default function WallPage() {
                 sortBy === 'recent' ? 'text-amber-400 bg-white/[0.06]' : 'hover:text-tan'
               }`}
             >
-              Most Recent
+              {isHinglish ? 'Sabse Naya' : 'Most Recent'}
             </button>
             <span>/</span>
             <button
@@ -208,7 +208,9 @@ export default function WallPage() {
                 sortBy === 'score' ? 'text-amber-400 bg-white/[0.06]' : 'hover:text-tan'
               }`}
             >
-              {activeTab === 'shame' ? 'Highest Damage' : 'Top Score'}
+              {activeTab === 'shame' 
+                ? (isHinglish ? 'Bhaari Nuksaan' : 'Highest Damage') 
+                : (isHinglish ? 'Top Score' : 'Top Score')}
             </button>
           </div>
         </div>
@@ -217,14 +219,18 @@ export default function WallPage() {
         <div className="max-w-[960px] mx-auto bg-gradient-to-r from-[#17140F] via-white/[0.03] to-[#17140F] border border-white/[0.08] rounded-sm p-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
           <div>
             <p className="font-display text-base text-paper">
-              {activeTab === 'shame' ? 'Think your resume is even more disastrous? 👀' : 'Think you can beat these scores? 🚀'}
+              {activeTab === 'shame'
+                ? (isHinglish ? 'Lagta hai tera resume isse bhi zyada disastrous hai? 👀' : 'Think your resume is even more disastrous? 👀')
+                : (isHinglish ? 'Lagta hai tu in scores ko beat kar sakta hai? 🚀' : 'Think you can beat these scores? 🚀')}
             </p>
             <p className="font-mono text-xs text-tan-dim">
-              Upload your resume for a brutal red-pen roast and see where you rank.
+              {isHinglish
+                ? 'Apna resume upload kar brutal red-pen roast ke liye aur rank check kar.'
+                : 'Upload your resume for a brutal red-pen roast and see where you rank.'}
             </p>
           </div>
           <Link to="/roast" className="btn-primary shrink-0 text-xs">
-            Roast my resume now
+            {isHinglish ? 'Abhi resume roast karwayein' : 'Roast my resume now'}
           </Link>
         </div>
 
