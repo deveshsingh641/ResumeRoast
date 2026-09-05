@@ -249,7 +249,7 @@ async def create_roast(
     existing_roast_id = database.check_dedup(content_hash)
     if existing_roast_id:
         existing_roast = database.get_roast(existing_roast_id)
-        if existing_roast:
+        if existing_roast and "overall_score" in existing_roast:
             import json as _json
             issues = existing_roast.get("issues") or []
             if isinstance(issues, str):
@@ -270,7 +270,7 @@ async def create_roast(
             return JSONResponse(
                 content={
                     "id": existing_roast_id,
-                    "overall_score": existing_roast.get("overall_score", 30),
+                    "overall_score": existing_roast["overall_score"],
                     "band": existing_roast.get("band", "mid"),
                     "one_line_verdict": existing_roast.get("one_line_verdict", ""),
                     "issues": issues[:3] if is_free_tier else issues,
@@ -488,6 +488,8 @@ MAX_REACTIONS_PER_CLIENT_PER_ROAST = 10
 @router.post("/roast/{roast_id}/react")
 async def add_reaction(roast_id: str, payload: ReactionPayload, request: Request) -> JSONResponse:
     client_key = f"{_device_fingerprint(request)}:{roast_id}"
+    if len(_REACTION_COUNTS_BY_CLIENT) > 5000:
+        _REACTION_COUNTS_BY_CLIENT.clear()
     current_count = _REACTION_COUNTS_BY_CLIENT.get(client_key, 0)
     if current_count >= MAX_REACTIONS_PER_CLIENT_PER_ROAST:
         # Rate-limit reached; return existing reactions without incrementing

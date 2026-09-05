@@ -142,7 +142,7 @@ export default function Footer({
 
                 {/* GitHub */}
                 <a
-                  href="https://github.com/deveshsingh641"
+                  href={githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/30 border border-white/10 rounded font-mono text-xs text-tan hover:text-paper transition-colors"
@@ -155,7 +155,7 @@ export default function Footer({
 
                 {/* Twitter / X */}
                 <a
-                  href="https://twitter.com"
+                  href={twitterUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.04] hover:bg-white/[0.08] hover:border-sky-400/40 border border-white/10 rounded font-mono text-xs text-tan hover:text-sky-300 transition-colors"
@@ -168,7 +168,7 @@ export default function Footer({
 
                 {/* LinkedIn */}
                 <a
-                  href="https://linkedin.com"
+                  href={linkedinUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.04] hover:bg-white/[0.08] hover:border-blue-400/40 border border-white/10 rounded font-mono text-xs text-tan hover:text-blue-300 transition-colors"

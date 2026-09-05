@@ -586,3 +586,37 @@ async def check_subscription_status(email: str) -> JSONResponse:
             "is_pro": status == "pro",
         }
     )
+
+
+class ManualUpgradeRequest(BaseModel):
+    email: str
+    plan: str = "monthly"
+    utr: str
+    notes: Optional[str] = None
+
+
+@router.post("/payment/manual-request")
+async def manual_payment_request(payload: ManualUpgradeRequest) -> JSONResponse:
+    """
+    Early Adopter Manual UPI Transfer Stopgap.
+    Allows users who transfer directly via personal UPI while Razorpay automated KYC
+    is pending to log their transfer reference for validation.
+    """
+    clean_email = payload.email.strip().lower()
+    clean_utr = payload.utr.strip()
+    if not clean_email or "@" not in clean_email:
+        raise HTTPException(status_code=400, detail="Invalid email address.")
+    if len(clean_utr) < 6:
+        raise HTTPException(status_code=400, detail="Please provide a valid UPI transaction reference (UTR).")
+
+    database.create_or_get_user(clean_email)
+    logger.info(f"Manual UPI upgrade requested for {clean_email}, UTR: {clean_utr}, Plan: {payload.plan}")
+
+    return JSONResponse(
+        content={
+            "status": "pending_verification",
+            "message": "Manual transfer reference recorded. Once verified, your account is upgraded to Pro.",
+            "email": clean_email,
+            "utr": clean_utr,
+        }
+    )

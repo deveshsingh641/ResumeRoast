@@ -18,8 +18,9 @@ export default function VoiceNoteBubble({ roastId, oneLineVerdict }: VoiceNoteBu
   const [loading, setLoading] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [script, setScript] = useState<string | null>(null)
-  const [duration, setDuration] = useState(28)
+  const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
+  const [error, setError] = useState<string | null>(null)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -28,6 +29,7 @@ export default function VoiceNoteBubble({ roastId, oneLineVerdict }: VoiceNoteBu
     const lang = getCurrentLanguage()
     try {
       setLoading(true)
+      setError(null)
       const { data } = await axios.post(`/api/roast/${roastId}/voice?lang=${lang}`)
       setAudioUrl(data.audio_url)
       setScript(data.script)
@@ -39,17 +41,11 @@ export default function VoiceNoteBubble({ roastId, oneLineVerdict }: VoiceNoteBu
         }
       }, 200)
     } catch {
-      setAudioUrl(`/api/roast/${roastId}/voice/audio?lang=${lang}`)
-      setScript(
+      setError(
         lang === 'hi-IN'
-          ? `Arre bhai, maine tera resume check kiya: ${oneLineVerdict || 'Thoda numbers daalo boss!'}`
-          : `I reviewed your resume: ${oneLineVerdict || 'Add concrete metrics to your bullet points!'}`
+          ? 'Voice roast generate karne mein dikkat aayi. Kripya dubara try karein.'
+          : 'Could not generate voice roast note. Please try again.'
       )
-      setTimeout(() => {
-        if (audioRef.current) {
-          audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {})
-        }
-      }, 200)
     } finally {
       setLoading(false)
     }
@@ -213,6 +209,19 @@ export default function VoiceNoteBubble({ roastId, oneLineVerdict }: VoiceNoteBu
               <span>📥 Download MP3</span>
             </a>
           )}
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-2.5 text-center">
+          <p className="font-mono text-xs text-stamp">{error}</p>
+          <button
+            type="button"
+            onClick={handleGenerateVoice}
+            className="font-mono text-xs text-amber-300 hover:underline mt-1 inline-block"
+          >
+            ↻ Retry generating audio
+          </button>
         </div>
       )}
 

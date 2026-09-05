@@ -682,17 +682,35 @@ def _generate_domain_fix(line: str, domain: str, cat: str, lang: str) -> str:
     )
 
 
+KNOWN_TOOLS = [
+    "react", "python", "javascript", "typescript", "api", "graphql", "aws", "gcp",
+    "docker", "kubernetes", "postgres", "sql", "redis", "kafka", "spark", "flutter",
+    "swift", "cypress", "selenium", "node", "java", "c++", "go", "ci/cd", "etl",
+    "linux", "cloud", "ui", "database", "backend", "frontend", "devops",
+    "figma", "revit", "etabs", "dcf", "epic", "haccp", "splunk", "oscp"
+]
+
+
+def _extract_tool(text: str) -> str | None:
+    t_lower = text.lower()
+    for t in KNOWN_TOOLS:
+        if re.search(rf"\b{re.escape(t)}\b", t_lower):
+            return t
+    return None
+
+
 def _calculate_grounded_score(
     resume_text: str, lines: list[str], issues: list[dict], domain: str
 ) -> int:
     """
     Computes a realistic, nuanced 0-100 score based on actual document characteristics:
-    - Metric density (percentage of lines containing numbers/metrics)
+    - Metric density (continuous response curve)
     - Action verb strength
     - Buzzword and cliché count
     - Length and depth balance
     - Section presence
-    - Deterministic tie-breaker based on document content hash
+    - Lexical diversity & vocabulary richness
+    - Fine-grained deterministic tie-breaker based on document content hash
     """
     raw_lower = resume_text.lower()
     total_lines = max(1, len(lines))
@@ -700,22 +718,14 @@ def _calculate_grounded_score(
     # 1. Base Score
     score = 52.0
 
-    # 2. Metric density evaluation
+    # 2. Metric density evaluation (continuous curve)
     metric_lines = sum(
         1 for line in lines
         if any(c.isdigit() for c in line) or "%" in line or "$" in line or "₹" in line
         or bool(_SPELLED_NUMBERS.search(line))
     )
     metric_ratio = metric_lines / total_lines
-
-    if metric_ratio >= 0.40:
-        score += 18.0
-    elif metric_ratio >= 0.25:
-        score += 10.0
-    elif metric_ratio >= 0.12:
-        score += 3.0
-    else:
-        score -= 12.0  # Penalty for metric desert
+    score += max(-14.0, min(22.0, (metric_ratio * 40.0) - 10.0))
 
     # 3. Strong Action Verbs vs Passive Verbs
     strong_verbs = [
@@ -746,7 +756,13 @@ def _calculate_grounded_score(
     elif word_count > 1600:
         score -= 8.0   # Excessive novella
 
-    # 6. Structural sections presence
+    # 6. Lexical diversity & vocabulary richness
+    words = [w for w in raw_lower.split() if len(w) > 2]
+    unique_words_count = len(set(words))
+    lexical_ratio = unique_words_count / max(1, len(words))
+    score += (lexical_ratio - 0.50) * 16.0
+
+    # 7. Structural sections presence
     if any(h in raw_lower for h in ["experience", "employment", "work history", "clinical experience", "engagement history"]):
         score += 4.0
     if any(h in raw_lower for h in ["education", "academic", "degree", "university", "college"]):
@@ -754,13 +770,17 @@ def _calculate_grounded_score(
     if any(h in raw_lower for h in ["skills", "certifications", "technical arsenal", "licens"]):
         score += 4.0
 
-    # 7. Issue severity drag
+    # 8. Issue severity drag
     score -= min(15.0, len(issues) * 2.0)
 
-    # 8. Deterministic content micro-variance (prevents exact artificial ties across distinct inputs)
-    content_hash_int = int(hashlib.sha256(resume_text.encode()).hexdigest()[:6], 16)
-    variance = (content_hash_int % 7) - 3  # -3 to +3
-    score += variance
+    # 9. Deterministic content micro-variance (prevents exact artificial ties across distinct inputs)
+    content_hash_full = hashlib.sha256(resume_text.strip().encode("utf-8")).hexdigest()
+    h1 = int(content_hash_full[:8], 16)
+    h2 = int(content_hash_full[8:16], 16)
+    v1 = (h1 % 29) - 14
+    v2 = (h2 % 5) - 2
+    char_offset = ((len(resume_text) % 13) - 6) * 0.6
+    score += v1 + (v2 * 0.5) + char_offset
 
     # Clamp to valid, realistic range (16 - 88)
     final_score = int(max(16, min(88, round(score))))
@@ -827,6 +847,130 @@ def _extract_grounded_strengths(resume_text: str, domain: str, lang: str) -> lis
     return strengths[:2]
 
 
+def _generate_grounded_verdict(
+    resume_text: str,
+    domain: str,
+    band: str,
+    top_cat: str,
+    lang: str,
+) -> str:
+    """
+    Produces an authentically grounded, domain- and tool-aware verdict that
+    uniquely reflects the specific resume's content, avoiding repetitive generic lines.
+    """
+    tool = _extract_tool(resume_text)
+    t_name = tool.title() if tool else None
+    content_hash_num = int(hashlib.sha256(resume_text.strip().encode("utf-8")).hexdigest()[:8], 16)
+
+    if lang == "hi-IN":
+        domain_verdicts = {
+            "culinary": [
+                "Chef ka haath toh dikh raha hai boss, par inventory aur food cost ke numbers gayab hain 🍳",
+                "Kitchen leadership solid hai, par cover volume aur daily order count missing hai 🔪",
+            ],
+            "legal": [
+                "Vakalat achhi hai boss, par contracts aur deal sizes ke quantifiable numbers kahan hain? ⚖️",
+                "Legal drafting clean hai, par case volume aur transaction scale suspense mein hain 📜",
+            ],
+            "finance": [
+                "Finance background solid hai bhai, par portfolio scale aur DCF metrics gayab hain 📊",
+                "Equity research clean hai, par dollar figures aur returns ke exact numbers do 💼",
+            ],
+            "healthcare": [
+                "Clinical care solid hai, par patient volume aur ER protocol metrics daalna zaroori hai 🩺",
+                "Patient care standout hai boss, par triage volume aur treatment metrics add karo 🏥",
+            ],
+            "education": [
+                "Padhai solid karwayi hai, par student pass percentages aur test scores ka proof do 🍎",
+                "Teaching dedication clear hai, par class sizes aur performance gains quantify karo 📚",
+            ],
+            "marketing": [
+                "Campaigns ache hain boss, par CAC, ROAS aur lead conversion numbers kahan hain? 📣",
+                "Marketing copy creative hai, par CTR aur qualified leads ka data gayab hai 📈",
+            ],
+            "design": [
+                "Design portfolio clean hai, par user retention aur checkout drop-off numbers kahan gaye? 🎨",
+                "Figma screens sundar hain, par usability testing aur conversion gains quantify karo 🖌️",
+            ],
+            "engineering": [
+                f"'{t_name}' stack toh solid use kiya hai bhai, par production scale aur metrics gayab hain 📉" if t_name else "Engineering experience solid hai, par system throughput aur scale metrics gayab hain 💻",
+                f"'{t_name}' pe kaam kiya achha hai boss, par latency aur user numbers quantify karo 🚀" if t_name else "Clean technical foundation, par latency aur reliability ke numbers missing hain ⚙️",
+            ],
+        }
+        tool_options = [
+            f"'{t_name}' stack toh use kiya hai bhai, par production scale aur metrics missing hain 📉",
+            f"'{t_name}' pe kaam kiya sahi hai boss, par impact numbers aur scale quantify karo 🚀",
+            f"'{t_name}' ka experience dikhta hai, par buzzwords chhodke exact metrics do 🎯",
+        ] if t_name else []
+    else:
+        domain_verdicts = {
+            "culinary": [
+                "Culinary experience is clear, but recipes don't convince hiring managers without food cost numbers 🍳",
+                "Kitchen leadership is evident, but inventory savings and cover volume went missing 🔪",
+            ],
+            "legal": [
+                "Legal background is evident, but contract values and transaction volumes are omitted ⚖️",
+                "Strong contract drafting, but silent on deal sizes and litigation outcome metrics 📜",
+            ],
+            "finance": [
+                "Financial modeling background is clear, but portfolio sizes and DCF variance went missing 📊",
+                "Solid analytical foundation, but needs concrete dollar figures and investment returns 💼",
+            ],
+            "healthcare": [
+                "Clinical nursing care is evident, but patient ratios and triage volumes are missing 🩺",
+                "Dedicated patient care on display, but needs measurable clinical volume and outcomes 🏥",
+            ],
+            "education": [
+                "Teaching dedication is clear, but student outcome percentiles and pass metrics need numbers 🍎",
+                "Strong classroom instruction, but silent on standardized score gains and class sizes 📚",
+            ],
+            "marketing": [
+                "Campaign strategy is visible, but CAC, ROAS, and pipeline conversion numbers went missing 📣",
+                "Creative marketing vision, but where are the MQL growth figures and campaign metrics? 📈",
+            ],
+            "design": [
+                "Visual design sense is clear, but conversion impact and user retention metrics went missing 🎨",
+                "Thoughtful UX workflows, but needs hard metrics on user drop-off reduction and adoption 🖌️",
+            ],
+            "engineering": [
+                f"Solid technical arsenal with '{t_name}', but production throughput and scale numbers went missing 📉" if t_name else "Engineering experience is visible, but system throughput and scale metrics went missing 💻",
+                f"Hands-on expertise with '{t_name}', but needs quantifiable uptime and latency metrics 🚀" if t_name else "Clean technical foundation, but lacks concrete latency and reliability metrics ⚙️",
+            ],
+        }
+        tool_options = [
+            f"Solid technical arsenal with '{t_name}', but production throughput and scale numbers went missing 📉",
+            f"Hands-on expertise with '{t_name}', but needs quantifiable uptime and latency metrics 🚀",
+            f"Demonstrated proficiency in '{t_name}', but pair it with measurable impact rather than buzzwords 🎯",
+        ] if t_name else []
+
+    if tool_options and domain in ("engineering", "general"):
+        return tool_options[content_hash_num % len(tool_options)]
+
+    if domain in domain_verdicts:
+        pool = domain_verdicts[domain]
+        return pool[content_hash_num % len(pool)]
+
+    lang_pool = VERDICT_POOLS.get(lang, VERDICT_POOLS["en"])
+    if band == "strong":
+        candidates = lang_pool.get("strong", [])
+    elif band == "mid":
+        if top_cat == "no-metrics":
+            candidates = lang_pool.get("mid_metrics", lang_pool["mid_general"])
+        elif top_cat == "buzzword":
+            candidates = lang_pool.get("mid_buzzwords", lang_pool["mid_general"])
+        else:
+            candidates = lang_pool.get("mid_general", [])
+    else:
+        if top_cat == "no-metrics":
+            candidates = lang_pool.get("weak_metrics", lang_pool["weak_general"])
+        elif top_cat == "buzzword":
+            candidates = lang_pool.get("weak_buzzwords", lang_pool["weak_general"])
+        else:
+            candidates = lang_pool.get("weak_general", [])
+
+    return candidates[content_hash_num % len(candidates)] if candidates else "Resume needs focused improvements."
+
+
 def _generate_fallback_roast(
     resume_text: str, exclusion_block: str = "", language: str = HINGLISH_LANGUAGE
 ) -> dict[str, Any]:
@@ -848,21 +992,6 @@ def _generate_fallback_roast(
 
     recent_exclusions = set(anti_repeat_memory.get_recent_roasts())
     used_roasts: set[str] = set()
-
-    KNOWN_TOOLS = [
-        "react", "python", "javascript", "typescript", "api", "graphql", "aws", "gcp",
-        "docker", "kubernetes", "postgres", "sql", "redis", "kafka", "spark", "flutter",
-        "swift", "cypress", "selenium", "node", "java", "c++", "go", "ci/cd", "etl",
-        "linux", "cloud", "ui", "database", "backend", "frontend", "devops",
-        "figma", "revit", "etabs", "dcf", "epic", "haccp", "splunk", "oscp"
-    ]
-
-    def _extract_tool(text: str) -> str | None:
-        t_lower = text.lower()
-        for t in KNOWN_TOOLS:
-            if re.search(rf"\b{re.escape(t)}\b", t_lower):
-                return t
-        return None
 
     def _select_roast(cat: str, line_quote: str, fallback_default: str) -> str:
         tool = _extract_tool(line_quote)
@@ -992,7 +1121,11 @@ def _generate_fallback_roast(
             break
 
     if not issues:
-        sample_line = lines[0] if lines else "Experienced Professional"
+        if lines:
+            sample_line = lines[0]
+        else:
+            non_empty_lines = [l.strip() for l in resume_text.splitlines() if l.strip()]
+            sample_line = non_empty_lines[0] if non_empty_lines else resume_text[:60].strip()
         fallback_text = joke_bank.get("buzzword", [default_cat_joke])[0]
         roast_text = _select_roast("buzzword", sample_line, fallback_text)
         fix_advice = _generate_domain_fix(sample_line, domain, "buzzword", lang)
@@ -1019,27 +1152,7 @@ def _generate_fallback_roast(
         cat_counts[iss["category"]] = cat_counts.get(iss["category"], 0) + 1
     top_cat = max(cat_counts, key=cat_counts.get) if cat_counts else "general"
 
-    lang_pool = VERDICT_POOLS.get(lang, VERDICT_POOLS["en"])
-    if band == "strong":
-        candidates = lang_pool.get("strong", [])
-    elif band == "mid":
-        if top_cat == "no-metrics":
-            candidates = lang_pool.get("mid_metrics", lang_pool["mid_general"])
-        elif top_cat == "buzzword":
-            candidates = lang_pool.get("mid_buzzwords", lang_pool["mid_general"])
-        else:
-            candidates = lang_pool.get("mid_general", [])
-    else:
-        if top_cat == "no-metrics":
-            candidates = lang_pool.get("weak_metrics", lang_pool["weak_general"])
-        elif top_cat == "buzzword":
-            candidates = lang_pool.get("weak_buzzwords", lang_pool["weak_general"])
-        else:
-            candidates = lang_pool.get("weak_general", [])
-
-    content_hash_num = int(hashlib.sha256(resume_text.encode()).hexdigest()[:6], 16)
-    verdict = candidates[content_hash_num % len(candidates)] if candidates else "Resume needs focused improvements."
-
+    verdict = _generate_grounded_verdict(resume_text, domain, band, top_cat, lang)
     strengths = _extract_grounded_strengths(resume_text, domain, lang)
 
     return {

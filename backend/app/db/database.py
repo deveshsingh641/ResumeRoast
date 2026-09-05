@@ -150,6 +150,7 @@ def init_db() -> None:
                 cur.execute(SCHEMA_SQL)
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT;")
                 cur.execute("ALTER TABLE roasts ADD COLUMN IF NOT EXISTS resume_text TEXT;")
+                cur.execute("DELETE FROM wall_entries WHERE top_roast_lines::text LIKE '%Data do bhai%';")
             conn.commit()
     except Exception as e:
         print(f"[WARN] DB init error: {e}")
@@ -630,42 +631,70 @@ def get_battle(battle_id: str) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 # Wall of Shame / Wall of Fame Helpers
 # ---------------------------------------------------------------------------
-
 def save_wall_entry(
-    *,
-    roast_id: Optional[str],
-    entry_type: str,
-    score: int,
-    band: str,
-    one_line_verdict: str,
-    top_roast_lines: list[str],
+    roast_id: Optional[str] = None,
+    entry_type: str = "shame",
+    score: int = 50,
+    band: str = "mid",
+    one_line_verdict: str = "",
+    top_roast_lines: Optional[list[str]] = None,
     device_fingerprint: Optional[str] = None,
 ) -> str:
-    """Save an anonymized public wall entry."""
-    entry_id = str(uuid4())
-    now_utc = datetime.now(timezone.utc).isoformat()
+    """Save an anonymized public wall entry with deduplication."""
     valid_roast_id = roast_id if _is_valid_uuid(roast_id) else None
 
-    entry = {
-        "id": entry_id,
-        "roast_id": valid_roast_id,
-        "type": entry_type,
-        "score": score,
-        "band": band,
-        "one_line_verdict": one_line_verdict,
-        "top_roast_lines": top_roast_lines,
-        "flag_count": 0,
-        "hidden": False,
-        "device_fingerprint": device_fingerprint,
-        "created_at": now_utc,
-    }
+    # Filter out test artifacts
+    clean_lines = [
+        line for line in (top_roast_lines or [])
+        if line and "data do bhai" not in line.lower()
+    ]
+    if not clean_lines:
+        clean_lines = [one_line_verdict] if one_line_verdict else []
 
     if not DATABASE_URL:
+        if valid_roast_id:
+            for v in _wall_entries_memory.values():
+                if v.get("roast_id") == valid_roast_id:
+                    return v["id"]
+        for v in _wall_entries_memory.values():
+            if v.get("one_line_verdict") == one_line_verdict and v.get("score") == score:
+                return v["id"]
+
+        entry_id = str(uuid4())
+        now_utc = datetime.now(timezone.utc).isoformat()
+        entry = {
+            "id": entry_id,
+            "roast_id": valid_roast_id,
+            "type": entry_type,
+            "score": score,
+            "band": band,
+            "one_line_verdict": one_line_verdict,
+            "top_roast_lines": clean_lines,
+            "flag_count": 0,
+            "hidden": False,
+            "device_fingerprint": device_fingerprint,
+            "created_at": now_utc,
+        }
         _wall_entries_memory[entry_id] = entry
         return entry_id
 
+    entry_id = str(uuid4())
     with _get_conn() as conn:
         with conn.cursor() as cur:
+            if valid_roast_id:
+                cur.execute("SELECT id FROM wall_entries WHERE roast_id = %s LIMIT 1", (valid_roast_id,))
+                row = cur.fetchone()
+                if row:
+                    return str(row["id"])
+
+            cur.execute(
+                "SELECT id FROM wall_entries WHERE one_line_verdict = %s AND score = %s AND hidden = FALSE LIMIT 1",
+                (one_line_verdict, score),
+            )
+            dup = cur.fetchone()
+            if dup:
+                return str(dup["id"])
+
             cur.execute(
                 """
                 INSERT INTO wall_entries
@@ -679,7 +708,7 @@ def save_wall_entry(
                     score,
                     band,
                     one_line_verdict,
-                    json.dumps(top_roast_lines),
+                    json.dumps(clean_lines),
                     device_fingerprint,
                 ),
             )

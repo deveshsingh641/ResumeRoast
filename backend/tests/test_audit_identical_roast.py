@@ -551,6 +551,52 @@ class TestAuditIdenticalRoastRegression(unittest.TestCase):
                     f"Concurrency leakage: quote '{qt}' does not belong to {res['role']}"
                 )
 
+    def test_zero_hardcoding_audit_10_resumes(self):
+        """
+        Section 1.4 Standing Regression Test:
+        Uploads 10 distinct resumes and asserts:
+        - No two results share an identical overall_score.
+        - No two results share an identical one_line_verdict.
+        - Every quoted_text in every result is a real substring of that specific resume's text.
+        """
+        subset = self.prepared[:10]
+        results = []
+        for i, p in enumerate(subset):
+            mime = "application/pdf" if p["filename"].endswith(".pdf") else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            resp = self.client.post(
+                "/api/roast",
+                files={"file": (p["filename"], p["bytes"], mime)},
+                headers={"X-User-Email": f"zero_hardcode_{i}@pro.com", "X-Forwarded-For": f"192.168.1.{i+1}"},
+            )
+            self.assertEqual(resp.status_code, 200, f"Upload failed for {p['role']}: {resp.text}")
+            results.append({"role": p["role"], "text": p["text"], "response": resp.json()})
+
+        self.assertEqual(len(results), 10)
+
+        # 1. No two results share an identical overall_score
+        scores = [r["response"]["overall_score"] for r in results]
+        self.assertEqual(
+            len(set(scores)), 10,
+            f"Expected 10 unique scores across 10 distinct resumes, but got duplicate scores: {scores}"
+        )
+
+        # 2. No two results share an identical one_line_verdict
+        verdicts = [r["response"]["one_line_verdict"] for r in results]
+        self.assertEqual(
+            len(set(verdicts)), 10,
+            f"Expected 10 unique verdicts across 10 distinct resumes, but got duplicates: {verdicts}"
+        )
+
+        # 3. Every quoted_text in every result is a real substring of that specific resume's extracted text
+        for res in results:
+            resume_lower = res["text"].lower()
+            for iss in res["response"].get("issues", []):
+                qt = iss.get("quoted_text", "").strip().lower()
+                self.assertTrue(
+                    qt in resume_lower or qt[:25] in resume_lower,
+                    f"Ungrounded quoted_text '{qt}' not found in resume text for {res['role']}"
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

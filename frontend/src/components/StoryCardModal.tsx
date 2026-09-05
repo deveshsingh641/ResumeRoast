@@ -17,8 +17,8 @@ export default function StoryCardModal({ isOpen, onClose, result }: StoryCardMod
 
   if (!isOpen) return null
 
-  const topRoast = result.issues?.[0]?.roast || result.one_line_verdict || 'Resume needs major overhaul'
-  const worstQuote = result.issues?.[0]?.quoted_text || 'Responsible for cross-functional synergy & driving deliverables'
+  const topRoast = result.issues?.[0]?.roast || result.one_line_verdict
+  const worstQuote = result.issues?.[0]?.quoted_text || result.one_line_verdict
 
   const generateCanvas = async () => {
     if (!cardRef.current) return null

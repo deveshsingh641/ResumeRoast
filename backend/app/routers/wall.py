@@ -42,11 +42,17 @@ async def publish_to_wall(req: PublishRequest, request: Request) -> JSONResponse
         except Exception:
             issues = []
 
+    if "overall_score" not in roast or not roast.get("one_line_verdict"):
+        raise HTTPException(
+            status_code=422,
+            detail="Incomplete roast data: score and verdict are required to publish to Wall.",
+        )
+
     # Anonymize and categorize
     payload = wall_service.prepare_wall_entry_payload(
-        overall_score=roast.get("overall_score", 50),
+        overall_score=roast["overall_score"],
         band=roast.get("band", "mid"),
-        one_line_verdict=roast.get("one_line_verdict", ""),
+        one_line_verdict=roast["one_line_verdict"],
         issues=issues,
     )
 

@@ -43,6 +43,36 @@ export default function PricingPage() {
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
   const [gatewayConfig, setGatewayConfig] = useState<GatewayConfig | null>(null)
   const [simulatedOrder, setSimulatedOrder] = useState<SimulatedOrderData | null>(null)
+  const [showManualUpi, setShowManualUpi] = useState(false)
+  const [manualUtr, setManualUtr] = useState('')
+  const [manualSubmitted, setManualSubmitted] = useState(false)
+  const [manualLoading, setManualLoading] = useState(false)
+  const [manualError, setManualError] = useState<string | null>(null)
+
+  const handleManualSubmit = async () => {
+    if (!email || !email.includes('@')) {
+      setManualError('Please enter a valid email address first.')
+      return
+    }
+    if (manualUtr.trim().length < 6) {
+      setManualError('Please enter a valid UPI transaction reference (UTR).')
+      return
+    }
+    try {
+      setManualLoading(true)
+      setManualError(null)
+      await axios.post('/api/payment/manual-request', {
+        email: email.trim().toLowerCase(),
+        plan: annual ? 'annual' : 'monthly',
+        utr: manualUtr.trim(),
+      })
+      setManualSubmitted(true)
+    } catch (err: any) {
+      setManualError(err?.response?.data?.detail || 'Failed to record manual transfer. Please check details.')
+    } finally {
+      setManualLoading(false)
+    }
+  }
 
   // Prepopulate email from localStorage if available
   useEffect(() => {
@@ -395,6 +425,92 @@ export default function PricingPage() {
               Unlock Pro Now ({annual ? '₹799' : '₹99'})
             </button>
           </div>
+        </div>
+
+        {/* Early Adopter Direct UPI Bridge (KYC Review Interim Stopgap) */}
+        <div className="max-w-[800px] mx-auto mb-16 bg-[#16130F] border border-white/[0.1] rounded-sm p-6 text-left shadow-lg">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-mono text-[10px] text-amber-400 font-bold bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-sm uppercase">
+                  Early Adopter Bridge // Direct UPI Transfer
+                </span>
+                {gatewayConfig?.mode === 'test' && (
+                  <span className="font-mono text-[10px] text-sky-400 bg-sky-400/10 border border-sky-400/30 px-2 py-0.5 rounded-sm uppercase">
+                    Test Mode Active
+                  </span>
+                )}
+              </div>
+              <h3 className="font-display text-base sm:text-lg text-paper">
+                Want immediate Pro activation via direct personal UPI?
+              </h3>
+              <p className="font-mono text-xs text-tan-dim mt-1 max-w-xl leading-relaxed">
+                While automated Razorpay payment KYC is pending review, you can transfer directly via UPI to unlock Pro without waiting.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowManualUpi((v) => !v)}
+              className="btn-ghost !text-xs whitespace-nowrap shrink-0"
+            >
+              {showManualUpi ? 'Hide UPI Details ▲' : 'View Direct UPI Option ▼'}
+            </button>
+          </div>
+
+          {showManualUpi && (
+            <div className="mt-5 pt-5 border-t border-white/[0.08] space-y-4 animate-fadeIn">
+              <div className="bg-black/40 border border-white/[0.08] p-4 rounded-sm font-mono text-xs text-tan space-y-2">
+                <div>
+                  <span className="text-tan-dim">UPI ID: </span>
+                  <strong className="text-amber-300 font-bold select-all">deveshsingh641@okaxis</strong>
+                </div>
+                <div>
+                  <span className="text-tan-dim">Amount: </span>
+                  <span className="text-paper font-semibold">{annual ? '₹799 (Annual Pass)' : '₹99 (Monthly Pass)'}</span>
+                </div>
+                <div>
+                  <span className="text-tan-dim">Scan or Pay: </span>
+                  <span className="text-tan">Send via GPay, PhonePe, Paytm, or BHIM, then paste the 12-digit UTR below.</span>
+                </div>
+              </div>
+
+              {manualSubmitted ? (
+                <div className="p-3 bg-emerald-950/40 border border-emerald-500/50 rounded-sm font-mono text-xs text-emerald-300">
+                  ✓ Payment reference recorded! Your Pro pass will be verified and activated.
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <input
+                    type="email"
+                    placeholder="Your account email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="flex-1 bg-[#1A1612] border border-white/[0.15] text-paper font-mono text-xs p-2.5 rounded-sm focus:outline-none focus:border-amber-400"
+                  />
+                  <input
+                    type="text"
+                    placeholder="12-digit UTR / Ref #"
+                    value={manualUtr}
+                    onChange={(e) => setManualUtr(e.target.value)}
+                    className="flex-1 bg-[#1A1612] border border-white/[0.15] text-paper font-mono text-xs p-2.5 rounded-sm focus:outline-none focus:border-amber-400"
+                  />
+                  <button
+                    type="button"
+                    disabled={manualLoading}
+                    onClick={handleManualSubmit}
+                    className="btn-primary !py-2.5 !text-xs whitespace-nowrap"
+                  >
+                    {manualLoading ? 'Submitting…' : 'Submit Reference'}
+                  </button>
+                </div>
+              )}
+
+              {manualError && (
+                <p className="font-mono text-xs text-stamp">{manualError}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Modal for Email & Razorpay In-Page Checkout */}

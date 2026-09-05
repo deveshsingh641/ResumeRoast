@@ -27,10 +27,26 @@ from slowapi.util import get_remote_address
 from app.db.database import init_db, cleanup_expired_roasts
 from app.routers import analytics, battle, i18n, payment, roast, usage, voice, wall
 
+from contextlib import asynccontextmanager
+
 # ---------------------------------------------------------------------------
 # Rate limiter (per-IP, using slowapi)
 # ---------------------------------------------------------------------------
 limiter = Limiter(key_func=get_remote_address)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        init_db()
+    except Exception as e:
+        logger.warning(f"Database init warning: {e}")
+    try:
+        cleanup_expired_roasts()
+    except Exception as e:
+        logger.warning(f"Database cleanup warning: {e}")
+    yield
+
 
 # ---------------------------------------------------------------------------
 # FastAPI app
@@ -40,6 +56,7 @@ app = FastAPI(
     description="Brutally honest AI-powered resume critiques with WhatsApp voice notes, battles, and wall.",
     version="0.2.0",
     docs_url="/docs" if os.getenv("ENVIRONMENT") != "production" else None,
+    lifespan=lifespan,
 )
 
 # Attach slowapi rate-limit exceeded handler
@@ -106,21 +123,6 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
             "detail": "Something went wrong on our end. Please try again in a moment."
         },
     )
-
-
-# ---------------------------------------------------------------------------
-# Startup
-# ---------------------------------------------------------------------------
-@app.on_event("startup")
-async def on_startup() -> None:
-    try:
-        init_db()
-    except Exception as e:
-        logger.warning(f"Database init warning: {e}")
-    try:
-        cleanup_expired_roasts()
-    except Exception as e:
-        logger.warning(f"Database cleanup warning: {e}")
 
 
 # ---------------------------------------------------------------------------

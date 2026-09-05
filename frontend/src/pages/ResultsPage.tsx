@@ -40,6 +40,8 @@ export default function ResultsPage() {
   const [xRayMode, setXRayMode] = useState(false)
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
   const [fixesCopied, setFixesCopied] = useState(false)
+  const [wallPublished, setWallPublished] = useState(false)
+  const [wallPublishing, setWallPublishing] = useState(false)
 
   // 1.1 Cinematic Reveal Sequence Orchestrator
   const {
@@ -620,24 +622,27 @@ export default function ResultsPage() {
 
             <button
               type="button"
+              disabled={wallPublishing || wallPublished}
               onClick={async () => {
+                if (wallPublished || wallPublishing) return
                 try {
-                  const btn = document.getElementById('wall-btn')
-                  if (btn) btn.innerText = isHinglish ? 'Publishing…' : 'Publishing…'
+                  setWallPublishing(true)
                   await axios.post('/api/wall/publish', { roast_id: result.id })
-                  if (btn) {
-                    btn.innerText = isHinglish ? '✓ Wall pe post ho gaya!' : '✓ Added to Wall!'
-                    btn.setAttribute('disabled', 'true')
-                  }
-                } catch {
-                  const btn = document.getElementById('wall-btn')
-                  if (btn) btn.innerText = isHinglish ? '✓ Added to Wall' : '✓ Added to Wall'
+                  setWallPublished(true)
+                } catch (err) {
+                  console.error('Failed to post to wall:', err)
+                  setWallPublished(true)
+                } finally {
+                  setWallPublishing(false)
                 }
               }}
-              id="wall-btn"
-              className="btn-ghost shrink-0 text-xs text-amber-400 hover:border-amber-400"
+              className="btn-ghost shrink-0 text-xs text-amber-400 hover:border-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {isHinglish ? 'Wall pe daal do' : 'Post to Wall'}
+              {wallPublishing
+                ? (isHinglish ? 'Publishing…' : 'Publishing…')
+                : wallPublished
+                ? (isHinglish ? '✓ Wall pe post ho gaya!' : '✓ Added to Wall!')
+                : (isHinglish ? 'Wall pe daal do' : 'Post to Wall')}
             </button>
           </div>
         </section>

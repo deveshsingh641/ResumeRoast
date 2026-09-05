@@ -8,7 +8,7 @@ interface ScoreJourneyProps {
   totalIssues?: number
 }
 
-export default function ScoreJourney({ currentScore, band, totalIssues = 6 }: ScoreJourneyProps) {
+export default function ScoreJourney({ currentScore, band, totalIssues }: ScoreJourneyProps) {
   // Calculate milestone scores dynamically
   const step1Gain = 25
   const step2Gain = 18
@@ -17,6 +17,8 @@ export default function ScoreJourney({ currentScore, band, totalIssues = 6 }: Sc
   const scoreStep1 = Math.min(65, currentScore + step1Gain)
   const scoreStep2 = Math.min(82, scoreStep1 + step2Gain)
   const scoreStep3 = Math.min(96, Math.max(85, scoreStep2 + step3Gain))
+
+  const countDisplay = totalIssues && totalIssues > 0 ? `${totalIssues} ` : ''
 
   return (
     <div className="w-full max-w-[640px] mx-auto bg-gradient-to-b from-[#181410] to-[#120F0C] border border-white/[0.08] rounded-sm p-6 text-left relative overflow-hidden shadow-xl">
@@ -37,7 +39,7 @@ export default function ScoreJourney({ currentScore, band, totalIssues = 6 }: Sc
       </div>
 
       <p className="font-mono text-xs text-tan-dim mb-6 leading-relaxed">
-        Ye {totalIssues} galtiyan theek karne se tera resume sidha Top 5% ATS filter mein enter kar sakta hai.
+        Ye {countDisplay}galtiyan theek karne se tera resume sidha Top 5% ATS filter mein enter kar sakta hai.
       </p>
 
       {/* Steps Visual Track */}

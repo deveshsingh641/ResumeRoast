@@ -67,8 +67,13 @@ async def generate_voice_roast(roast_id: str, request: Request) -> JSONResponse:
         except Exception:
             issues = []
 
-    one_line_verdict = roast.get("one_line_verdict", "Resume needs major overhaul.")
-    overall_score = roast.get("overall_score", 50)
+    one_line_verdict = roast.get("one_line_verdict")
+    overall_score = roast.get("overall_score")
+    if overall_score is None or not one_line_verdict:
+        raise HTTPException(
+            status_code=422,
+            detail="Incomplete roast report: score and verdict must be present to generate voice note.",
+        )
 
     # 1. Build language-accurate script
     script = voice_service.build_voice_roast_script(
@@ -122,10 +127,15 @@ async def get_voice_audio(roast_id: str, request: Request) -> FileResponse:
             except Exception:
                 issues = []
 
+        verdict = roast.get("one_line_verdict")
+        score = roast.get("overall_score")
+        if score is None or not verdict:
+            raise HTTPException(status_code=404, detail="Incomplete roast data for voice note audio.")
+
         script = voice_service.build_voice_roast_script(
-            one_line_verdict=roast.get("one_line_verdict", ""),
+            one_line_verdict=verdict,
             issues=issues,
-            overall_score=roast.get("overall_score", 50),
+            overall_score=score,
             language=lang,
         )
         audio_path = voice_service.generate_voice_roast_audio(roast_id, script, language=lang)

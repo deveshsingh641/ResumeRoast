@@ -74,11 +74,12 @@ class TestBugFixes(unittest.TestCase):
         # fetchone for count_query
         mock_cur.fetchone.return_value = None
 
-        with patch.object(database, "_get_conn") as mock_get_conn:
-            mock_get_conn.return_value.__enter__.return_value = mock_conn
-            result = database.get_wall_entries(entry_type="shame", sort_by="recent", page=1, limit=10)
-            self.assertEqual(result["total"], 0)
-            self.assertEqual(result["items"], [])
+        with patch.object(database, "DATABASE_URL", "postgresql://fake:fake@localhost:5432/fake"):
+            with patch.object(database, "_get_conn") as mock_get_conn:
+                mock_get_conn.return_value.__enter__.return_value = mock_conn
+                result = database.get_wall_entries(entry_type="shame", sort_by="recent", page=1, limit=10)
+                self.assertEqual(result["total"], 0)
+                self.assertEqual(result["items"], [])
 
     def test_get_roast_handles_null_issues_and_strengths(self):
         """Test that get_roast endpoint returns [] when issues/strengths are None in db."""

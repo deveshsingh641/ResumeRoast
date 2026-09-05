@@ -27,16 +27,27 @@ export default function WallPage() {
   const [sortBy, setSortBy] = useState<'recent' | 'score'>('recent')
   const [entries, setEntries] = useState<WallEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set())
+  const [flaggedIds, setFlaggedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('resumeroast_flagged_ids')
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
 
   const fetchWall = async (type: 'shame' | 'fame', sort: 'recent' | 'score') => {
     try {
       setLoading(true)
       const { data } = await axios.get(`/api/wall?type=${type}&sort=${sort}&limit=24`)
-      setEntries(data.items || [])
+      if (data && Array.isArray(data.items) && data.items.length > 0) {
+        setEntries(data.items)
+      } else {
+        throw new Error('Empty feed')
+      }
     } catch (err) {
-      console.warn('Failed to load wall feed:', err)
-      // Fallback demo entries
+      console.warn('Using showcase fallback for wall feed:', err)
+      // Fallback showcase entries
       setEntries(
         type === 'shame'
           ? [
@@ -62,6 +73,25 @@ export default function WallPage() {
               {
                 id: 'shame-2',
                 type: 'shame',
+                score: 21,
+                band: 'weak',
+                one_line_verdict: isHinglish
+                  ? 'Buzzword ki dukaan khol rakhi hai bhai 🤖'
+                  : 'A digital museum of buzzwords with zero actual proof 🤖',
+                top_roast_lines: isHinglish
+                  ? [
+                      'Synergized, leveraged, orchestrated — par code ek line bhi likha ya nahi?',
+                      'Hobbies mein "Browsing internet" daala hai? Year 2003 se time travel karke aaye ho kya?',
+                    ]
+                  : [
+                      'Synergized, leveraged, orchestrated — but did you actually write a single line of working code?',
+                      'Listed "Browsing Internet" under hobbies? Welcome back from the year 2003.',
+                    ],
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: 'shame-3',
+                type: 'shame',
                 score: 34,
                 band: 'weak',
                 one_line_verdict: isHinglish
@@ -69,8 +99,8 @@ export default function WallPage() {
                   : 'Looking at this template brought tears to our eyes 😭',
                 top_roast_lines: isHinglish
                   ? [
-                      'Arre yaar "Pythno" aur "Jacascript"? 🤡 Spellcheck skip kar diya kya?',
-                      '4 page ka resume? Novel likh rahe ho kya bhai?',
+                      'Arre yaar "Pythno" aur "Jacascript"? 🤡 Spellcheck skip kar diya kya bhai?',
+                      '4 page ka resume for entry-level dev? Novel likh rahe ho kya boss?',
                     ]
                   : [
                       'Did you really type "Pythno" and "Jacascript"? 🤡 Spellcheck has left the building.',
@@ -83,18 +113,37 @@ export default function WallPage() {
               {
                 id: 'fame-1',
                 type: 'fame',
+                score: 92,
+                band: 'strong',
+                one_line_verdict: isHinglish
+                  ? 'Recruiter pehli nazar mein shortlist karega 🚀'
+                  : 'First-glance shortlist material, exemplary engineering clarity 🚀',
+                top_roast_lines: isHinglish
+                  ? [
+                      'Har bullet point mein action verb + context + measurable business outcome quantified.',
+                      'Clean minimal 1-page layout, zero corporate buzzwords, 100% parseable by ATS.',
+                    ]
+                  : [
+                      'Every bullet point follows action verb + context + measurable business impact.',
+                      'Clean minimal 1-page layout with verified links and flawless ATS readability.',
+                    ],
+                created_at: new Date().toISOString(),
+              },
+              {
+                id: 'fame-2',
+                type: 'fame',
                 score: 88,
                 band: 'strong',
                 one_line_verdict: isHinglish
-                  ? 'Ekdum solid profile hai boss, bas thoda polish karo 🔥'
-                  : 'Genuinely solid profile, just needs minor final polish 🔥',
+                  ? 'Ekdum solid profile hai boss, crisp metrics! 🔥'
+                  : 'Genuinely solid profile, crisp quantifiable metrics 🔥',
                 top_roast_lines: isHinglish
                   ? [
-                      'FastAPI aur React ka combination mast hai, metrics bhi crisp hain.',
-                      'GitHub live links clean hain, ATS easily parse karega.',
+                      'FastAPI aur React ka crisp integration, 45k req/min with 99.9% uptime quantified.',
+                      'GitHub live repo links verified aur clean structured technical hierarchy.',
                     ]
                   : [
-                      'The FastAPI and React stack is well quantified with crisp business impact.',
+                      'The FastAPI and React stack is well quantified with 45k req/min uptime metrics.',
                       'GitHub live repository links are clean and effortlessly parseable by ATS systems.',
                     ],
                 created_at: new Date().toISOString(),
@@ -114,9 +163,21 @@ export default function WallPage() {
     if (flaggedIds.has(id)) return
     try {
       await axios.post(`/api/wall/${id}/flag`)
-      setFlaggedIds((prev) => new Set(prev).add(id))
+      setFlaggedIds((prev) => {
+        const next = new Set(prev).add(id)
+        try {
+          localStorage.setItem('resumeroast_flagged_ids', JSON.stringify(Array.from(next)))
+        } catch {}
+        return next
+      })
     } catch {
-      setFlaggedIds((prev) => new Set(prev).add(id))
+      setFlaggedIds((prev) => {
+        const next = new Set(prev).add(id)
+        try {
+          localStorage.setItem('resumeroast_flagged_ids', JSON.stringify(Array.from(next)))
+        } catch {}
+        return next
+      })
     }
   }
 
@@ -307,16 +368,17 @@ export default function WallPage() {
               return (
                 <div
                   key={entry.id}
-                  className="paper-mockup-card bg-paper text-ink rounded-sm p-5 flex flex-col justify-between transition-all relative shadow-paper border border-black/10 group hover:-translate-y-1"
+                  className="paper-mockup-card bg-paper text-ink rounded-sm p-6 flex flex-col justify-between transition-all duration-200 relative border border-black/15 group hover:-translate-y-1 min-h-[260px]"
                   style={{
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.35)',
                     transform: `rotate(${cardRotation}deg)`,
                     ['--paper-rotate' as string]: `${cardRotation}deg`,
                   }}
                 >
                   {/* Top: ScoreStamp & Type */}
                   <div>
-                    <div className="flex items-center justify-between mb-3 border-b border-black/10 pb-2">
-                      <span className="font-mono text-[10px] text-ink/60 uppercase font-semibold">
+                    <div className="flex items-center justify-between gap-3 mb-3.5 border-b border-black/10 pb-2.5">
+                      <span className="font-mono text-[11px] tracking-wider text-ink/70 uppercase font-semibold">
                         {entry.type === 'shame' ? '🔥 DISASTER ENTRY' : '⭐ HALL OF FAME'}
                       </span>
                       <ScoreStamp
@@ -328,15 +390,15 @@ export default function WallPage() {
                     </div>
 
                     {/* Verdict */}
-                    <h3 className="font-display text-base text-ink leading-snug mb-3">
+                    <h3 className="font-display text-[15px] sm:text-base text-ink leading-snug mb-3.5">
                       "{entry.one_line_verdict}"
                     </h3>
 
                     {/* Redacted Roast Snippets */}
-                    <div className="space-y-2 mb-4">
+                    <div className="space-y-2 mb-5">
                       {entry.top_roast_lines?.map((line, lIdx) => (
-                        <div key={lIdx} className="bg-black/[0.04] border-l-2 border-stamp rounded-[1px] p-2">
-                          <p className="font-mono text-xs text-ink/85 leading-relaxed">
+                        <div key={lIdx} className="bg-black/[0.04] border-l-2 border-stamp rounded-[2px] p-2.5">
+                          <p className="font-mono text-xs text-ink/90 leading-relaxed">
                             {line}
                           </p>
                         </div>
@@ -345,13 +407,17 @@ export default function WallPage() {
                   </div>
 
                   {/* Bottom: Flag / Report with subtle hover appearance */}
-                  <div className="pt-2.5 border-t border-black/10 flex items-center justify-between text-[10px] font-mono text-ink/60">
-                    <span>ANONYMOUS CANDIDATE</span>
+                  <div className="pt-3 border-t border-black/10 flex items-center justify-between text-[11px] font-mono text-ink/65">
+                    <span className="font-semibold tracking-wide">ANONYMOUS CANDIDATE</span>
                     <button
                       type="button"
                       onClick={() => handleFlag(entry.id)}
                       disabled={flaggedIds.has(entry.id)}
-                      className="opacity-60 hover:opacity-100 hover:text-stamp transition-opacity flex items-center gap-1"
+                      className={`transition-colors flex items-center gap-1 ${
+                        flaggedIds.has(entry.id)
+                          ? 'text-stamp font-medium cursor-default'
+                          : 'hover:text-stamp cursor-pointer'
+                      }`}
                       title="Report this entry"
                     >
                       {flaggedIds.has(entry.id) ? '✓ Reported' : '🚩 Flag'}

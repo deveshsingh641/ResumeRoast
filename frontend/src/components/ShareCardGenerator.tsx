@@ -18,7 +18,7 @@ export default function ShareCardGenerator({ result }: ShareCardGeneratorProps) 
   const [shareNotice, setShareNotice] = useState<string | null>(null)
 
   const topRoast = result.issues[0]?.roast || result.one_line_verdict
-  const worstQuote = result.issues[0]?.quoted_text || 'Responsible for driving synergistic deliverables'
+  const worstQuote = result.issues[0]?.quoted_text || result.one_line_verdict
 
   const whatsappShareText = `Bhai mera resume roast ho gaya 😂🔥!\n\nScore: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\n\nDekh tere resume ka kya banta hai: https://resumeroast.app`
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappShareText)}`

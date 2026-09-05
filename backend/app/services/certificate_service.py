@@ -57,10 +57,10 @@ def get_credential_title(score: int, band: str, seed: Optional[str] = None) -> s
 def generate_certificate_pdf(
     *,
     roast_id: str,
+    score: int,
+    band: str,
+    one_line_verdict: str,
     candidate_name: str = "Anonymous Candidate",
-    score: int = 22,
-    band: str = "weak",
-    one_line_verdict: str = "Bhai ye resume hai ya birthday card ka message? 🎂",
     created_at: Optional[str] = None,
     is_pro: bool = False,
     language: str = "en",
