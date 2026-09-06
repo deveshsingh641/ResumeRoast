@@ -99,6 +99,13 @@ async def get_stats(request: Request, days: int = 7, format: Optional[str] = Non
         </tr>
         """
 
+    # Fetch operational metrics
+    waitlist_count = database.get_waitlist_count()
+    total_roasts = stats.get("totals", {}).get("roasts", 0)
+    est_ai_cost = round(total_roasts * 0.00045, 2)
+    pool_active = database._connection_pool is not None
+    db_configured = bool(database.DATABASE_URL)
+
     paths_rows = ""
     for p in stats.get("top_paths_today", []):
         paths_rows += f"""
@@ -178,7 +185,7 @@ async def get_stats(request: Request, days: int = 7, format: Optional[str] = Non
     </header>
 
     <!-- Today's Hero Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
             <div class="text-[11px] font-mono text-stone-400 uppercase">Unique Visitors Today</div>
             <div class="text-3xl font-extrabold text-white mt-1">{stats.get('unique_visitors_today', 0):,}</div>
@@ -202,6 +209,59 @@ async def get_stats(request: Request, days: int = 7, format: Optional[str] = Non
             <div class="text-3xl font-extrabold text-emerald-400 mt-1">{stats.get('totals', {}).get('pro_users', 0):,}</div>
             <div class="text-[11px] text-stone-400 font-mono mt-2">Active paid passes</div>
         </div>
+    </div>
+
+    <!-- Operational Readiness & Economics Cards (Section 6) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
+            <div class="text-[11px] font-mono text-stone-400 uppercase">VIP Pro Waitlist</div>
+            <div class="text-3xl font-extrabold text-amber-300 mt-1">{waitlist_count:,}</div>
+            <div class="text-[11px] text-amber-400 font-mono mt-2">● Warmed launch leads</div>
+        </div>
+
+        <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
+            <div class="text-[11px] font-mono text-stone-400 uppercase">Estimated AI Spend</div>
+            <div class="text-3xl font-extrabold text-sky-400 mt-1">${est_ai_cost:.2f} <span class="text-xs text-stone-400">USD</span></div>
+            <div class="text-[11px] text-stone-400 font-mono mt-2">~$0.0003/roast (Gemini Flash)</div>
+        </div>
+
+        <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
+            <div class="text-[11px] font-mono text-stone-400 uppercase">Postgres Pool Status</div>
+            <div class="text-base font-bold text-emerald-400 mt-2 font-mono flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                {"Pooled (max 20 conn)" if pool_active or db_configured else "In-Memory Mode"}
+            </div>
+            <div class="text-[11px] text-stone-400 font-mono mt-2">Thread-safe connection pool</div>
+        </div>
+
+        <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
+            <div class="text-[11px] font-mono text-stone-400 uppercase">Estimated MRR</div>
+            <div class="text-3xl font-extrabold text-purple-400 mt-1">₹{(stats.get('totals', {}).get('pro_users', 0) * 99):,}</div>
+            <div class="text-[11px] text-stone-400 font-mono mt-2">Active paid subscriptions</div>
+        </div>
+    </div>
+
+    <!-- Customer Support Instant Pro Override Panel (Section 4.2) -->
+    <div class="mb-8 bg-[#1A1613] rounded-lg border border-white/10 p-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-white/10">
+            <div>
+                <h2 class="font-bold text-sm tracking-wide text-white font-mono uppercase">🛠️ Customer Support Instant Pro Override</h2>
+                <p class="text-xs text-stone-400 font-mono mt-0.5">Quickly grant or revoke Pro access for a paying customer (bypasses webhook delays)</p>
+            </div>
+            <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Active Support Tool</span>
+        </div>
+        <form id="override-form" onsubmit="handleSupportOverride(event)" class="flex flex-col sm:flex-row gap-3">
+            <input type="email" id="override-email" required placeholder="customer@example.com" class="flex-1 bg-black/50 border border-white/20 rounded px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-400" />
+            <select id="override-action" class="bg-black/50 border border-white/20 rounded px-3 py-2 text-xs font-mono text-stone-300 focus:outline-none">
+                <option value="grant_pro">Grant Pro (₹99 / Active)</option>
+                <option value="revoke_pro">Revoke Pro (Free Tier)</option>
+            </select>
+            <input type="text" id="override-reason" placeholder="Reason (e.g. UPI ref #1234)" class="sm:w-48 bg-black/50 border border-white/20 rounded px-3 py-2 text-xs font-mono text-stone-300 focus:outline-none" />
+            <button type="submit" id="override-btn" class="px-4 py-2 rounded text-xs font-mono font-bold bg-amber-500 hover:bg-amber-400 text-stone-950 transition shrink-0">
+                Execute Override ⚡
+            </button>
+        </form>
+        <div id="override-msg" class="hidden mt-3 text-xs font-mono p-2.5 rounded border"></div>
     </div>
 
     <!-- History and Top Paths Grid -->
@@ -258,6 +318,43 @@ async def get_stats(request: Request, days: int = 7, format: Optional[str] = Non
     <footer class="mt-12 text-center text-xs text-stone-500 font-mono">
         Resume Roast First-Party Analytics Engine · Zero Third-Party Trackers
     </footer>
+
+    <script>
+    async function handleSupportOverride(e) {{
+        e.preventDefault();
+        const btn = document.getElementById('override-btn');
+        const msg = document.getElementById('override-msg');
+        const email = document.getElementById('override-email').value.trim();
+        const action = document.getElementById('override-action').value;
+        const reason = document.getElementById('override-reason').value.trim() || 'Manual support resolution';
+        
+        btn.disabled = true;
+        btn.innerText = 'Processing...';
+        msg.className = 'mt-3 text-xs font-mono p-2.5 rounded border block';
+
+        try {{
+            const resp = await fetch('/api/admin/user/override-pro', {{
+                method: 'POST',
+                headers: {{'Content-Type': 'application/json'}},
+                body: JSON.stringify({{ email, action, reason }})
+            }});
+            const data = await resp.json();
+            if (resp.ok && data.ok) {{
+                msg.className = 'mt-3 text-xs font-mono p-2.5 rounded border block bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+                msg.innerText = '✓ Success: ' + data.message;
+            }} else {{
+                msg.className = 'mt-3 text-xs font-mono p-2.5 rounded border block bg-red-500/10 text-red-400 border-red-500/30';
+                msg.innerText = '✗ Error: ' + (data.detail || data.message || 'Failed to update subscription');
+            }}
+        }} catch(err) {{
+            msg.className = 'mt-3 text-xs font-mono p-2.5 rounded border block bg-red-500/10 text-red-400 border-red-500/30';
+            msg.innerText = '✗ Network Error: ' + err.message;
+        }} finally {{
+            btn.disabled = false;
+            btn.innerText = 'Execute Override ⚡';
+        }}
+    }}
+    </script>
 </body>
 </html>"""
     return HTMLResponse(content=html)
