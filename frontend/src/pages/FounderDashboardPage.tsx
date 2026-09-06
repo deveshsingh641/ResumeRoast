@@ -42,12 +42,7 @@ export default function FounderDashboardPage() {
 
   const [searchParams] = useSearchParams()
   const [adminKey, setAdminKey] = useState<string>(() => {
-    return (
-      searchParams.get('key') ||
-      sessionStorage.getItem('rr_admin_key') ||
-      localStorage.getItem('rr_admin_key') ||
-      ''
-    )
+    return searchParams.get('key') || sessionStorage.getItem('rr_admin_key') || ''
   })
   const [inputKey, setInputKey] = useState('')
   const [authError, setAuthError] = useState('')
@@ -104,20 +99,24 @@ export default function FounderDashboardPage() {
         // non-blocking
       }
 
-      // Success
+      // Success: store strictly in temporary browser session
       setIsAuthenticated(true)
       sessionStorage.setItem('rr_admin_key', keyToUse)
-      localStorage.setItem('rr_admin_key', keyToUse)
     } catch (err: any) {
-      console.warn('Founder auth failed:', err)
+      console.warn('Founder auth check:', err.response?.status)
       setIsAuthenticated(false)
       sessionStorage.removeItem('rr_admin_key')
-      localStorage.removeItem('rr_admin_key')
-      setAuthError(
-        err.response?.status === 401
-          ? 'Invalid founder secret key. Access denied.'
-          : 'Failed to connect to backend server. Make sure backend is running.'
-      )
+
+      if (err.response?.status === 429) {
+        setAuthError(
+          err.response?.data?.detail ||
+            'Security Lockout: Too many failed founder authentication attempts. Try again in 15 minutes.'
+        )
+      } else if (err.response?.status === 401) {
+        setAuthError('Invalid founder secret key. Access denied.')
+      } else {
+        setAuthError('Failed to connect to backend server. Please make sure backend is running.')
+      }
     } finally {
       setLoading(false)
     }
@@ -145,7 +144,6 @@ export default function FounderDashboardPage() {
     setAdminKey('')
     setInputKey('')
     sessionStorage.removeItem('rr_admin_key')
-    localStorage.removeItem('rr_admin_key')
   }
 
   const handleOverrideSubmit = async (e: React.FormEvent) => {
@@ -231,7 +229,7 @@ export default function FounderDashboardPage() {
                 autoFocus
                 value={inputKey}
                 onChange={(e) => setInputKey(e.target.value)}
-                placeholder="Enter secret key (e.g. devesh666)"
+                placeholder="Enter confidential founder key..."
                 className="w-full bg-black/60 border border-white/20 rounded-lg px-3.5 py-2.5 text-sm font-mono text-white placeholder:text-stone-600 focus:outline-none focus:border-amber-400 transition"
               />
             </div>

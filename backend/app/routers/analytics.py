@@ -18,6 +18,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 from app.db import database
+from app.services.admin_auth import apply_secure_admin_headers, verify_admin_access
 
 logger = logging.getLogger("analytics")
 router = APIRouter(tags=["analytics"])
@@ -46,28 +47,6 @@ def _get_client_hash(request: Request) -> str:
 
     ua = request.headers.get("User-Agent", "")
     return hashlib.sha256(f"{ip}:{ua}".encode("utf-8")).hexdigest()[:32]
-
-
-def _verify_admin_access(request: Request) -> bool:
-    """
-    Verify founder access via secure session cookie, X-Admin-Key header, or query parameter.
-    """
-    configured_key = os.getenv("ADMIN_SECRET_KEY", "").strip()
-    if not configured_key:
-        return True
-
-    provided_key = (
-        request.cookies.get("rr_admin_key")
-        or request.headers.get("X-Admin-Key")
-        or request.query_params.get("admin_key")
-        or request.query_params.get("key")
-        or ""
-    ).strip()
-
-    if not provided_key:
-        return False
-
-    return hmac.compare_digest(configured_key, provided_key)
 
 
 def _render_founder_login_html(error: Optional[str] = None) -> str:
@@ -501,13 +480,12 @@ async def track_page_visit(payload: TrackRequest, request: Request) -> JSONRespo
 async def get_stats(request: Request, format: Optional[str] = None):
     """
     Founder Dashboard entry point.
-    Gated behind founder secret authentication.
+    Gated behind founder secret authentication with brute-force lockout defense.
     """
-    # Check if query parameter provided an admin key:
-    configured_key = os.getenv("ADMIN_SECRET_KEY", "devesh666").strip()
+    configured_key = os.getenv("ADMIN_SECRET_KEY", "").strip()
     query_key = (request.query_params.get("key") or request.query_params.get("admin_key") or "").strip()
 
-    if query_key and configured_key and hmac.compare_digest(configured_key, query_key):
+    if query_key and configured_key and verify_admin_access(request, explicit_key=query_key):
         resp = RedirectResponse(url="/stats", status_code=303)
         resp.set_cookie(
             key="rr_admin_key",
@@ -516,22 +494,24 @@ async def get_stats(request: Request, format: Optional[str] = None):
             httponly=True,
             samesite="lax",
         )
-        return resp
+        return apply_secure_admin_headers(resp)
 
-    if not _verify_admin_access(request):
-        return HTMLResponse(content=_render_founder_login_html(), status_code=401)
+    if not verify_admin_access(request):
+        return apply_secure_admin_headers(
+            HTMLResponse(content=_render_founder_login_html(), status_code=401)
+        )
 
-    return HTMLResponse(content=_render_dashboard_html(request))
+    return apply_secure_admin_headers(HTMLResponse(content=_render_dashboard_html(request)))
 
 
 @router.post("/stats/login")
 async def post_stats_login(request: Request):
-    """Process founder login form and set session cookie."""
+    """Process founder login form with brute-force defense."""
     form_data = await request.form()
     provided_key = str(form_data.get("admin_key") or "").strip()
-    configured_key = os.getenv("ADMIN_SECRET_KEY", "devesh666").strip()
+    configured_key = os.getenv("ADMIN_SECRET_KEY", "").strip()
 
-    if configured_key and hmac.compare_digest(configured_key, provided_key):
+    if configured_key and verify_admin_access(request, explicit_key=provided_key):
         resp = RedirectResponse(url="/stats", status_code=303)
         resp.set_cookie(
             key="rr_admin_key",
@@ -540,11 +520,13 @@ async def post_stats_login(request: Request):
             httponly=True,
             samesite="lax",
         )
-        return resp
+        return apply_secure_admin_headers(resp)
     else:
-        return HTMLResponse(
-            content=_render_founder_login_html(error="Invalid Founder Secret Key. Access Denied."),
-            status_code=401,
+        return apply_secure_admin_headers(
+            HTMLResponse(
+                content=_render_founder_login_html(error="Invalid Founder Secret Key. Access Denied."),
+                status_code=401,
+            )
         )
 
 
@@ -553,7 +535,7 @@ async def get_stats_logout():
     """Clear founder session and lock dashboard."""
     resp = RedirectResponse(url="/stats", status_code=303)
     resp.delete_cookie(key="rr_admin_key")
-    return resp
+    return apply_secure_admin_headers(resp)
 
 
 @router.get("/api/stats")
@@ -562,18 +544,22 @@ async def get_stats_api(request: Request, days: int = 7, format: Optional[str] =
     if format == "html":
         return RedirectResponse(url="/stats", status_code=302)
 
-    if not _verify_admin_access(request):
+    if not verify_admin_access(request):
         raise HTTPException(status_code=401, detail="Unauthorized: Founder access only")
 
     stats = database.get_analytics_stats(days=min(max(days, 1), 30))
-    return JSONResponse(content=stats)
+    return apply_secure_admin_headers(JSONResponse(content=stats))
 
 
 @router.get("/api/admin/roasts")
-async def get_admin_roasts(limit: int = 20) -> JSONResponse:
+async def get_admin_roasts(request: Request, limit: int = 20) -> JSONResponse:
     """List recent uploaded roasts with scores, verdicts, and full resume text."""
+    if not verify_admin_access(request):
+        raise HTTPException(status_code=401, detail="Unauthorized: Founder access only")
     roasts = database.get_recent_roasts(limit=min(max(limit, 1), 100))
-    return JSONResponse(content={"ok": True, "count": len(roasts), "roasts": roasts})
+    return apply_secure_admin_headers(
+        JSONResponse(content={"ok": True, "count": len(roasts), "roasts": roasts})
+    )
 
 
 @router.get("/api/admin/metrics")
@@ -582,7 +568,7 @@ async def get_founder_metrics(request: Request) -> JSONResponse:
     Lightweight Founder Operational Metrics Dashboard (Section 6.2).
     Tracks roasts, error rates, waitlist, pro conversions, and estimated AI costs.
     """
-    if not _verify_admin_access(request):
+    if not verify_admin_access(request):
         raise HTTPException(status_code=401, detail="Unauthorized: Founder access only")
 
     stats = database.get_analytics_stats(days=7)
@@ -601,7 +587,7 @@ async def get_founder_metrics(request: Request) -> JSONResponse:
         "database_configured": bool(database.DATABASE_URL),
     }
 
-    return JSONResponse(
+    response = JSONResponse(
         content={
             "ok": True,
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -625,6 +611,7 @@ async def get_founder_metrics(request: Request) -> JSONResponse:
             "infrastructure": pool_stats,
         }
     )
+    return apply_secure_admin_headers(response)
 
 
 @router.post("/api/admin/user/override-pro")
@@ -633,7 +620,7 @@ async def override_user_pro_status(payload: AdminOverrideRequest, request: Reque
     Support Override Tool (Section 4.2).
     Instantly grant or revoke Pro status for a customer with payment/webhook delays.
     """
-    if not _verify_admin_access(request):
+    if not verify_admin_access(request):
         raise HTTPException(status_code=401, detail="Unauthorized: Founder access only")
 
     clean_email = payload.email.strip().lower()
@@ -644,7 +631,7 @@ async def override_user_pro_status(payload: AdminOverrideRequest, request: Reque
     database.update_subscription(clean_email, target_status)
     logger.info(f"[SUPPORT_OVERRIDE] {payload.action} for {clean_email}. Reason: {payload.reason}")
 
-    return JSONResponse(
+    response = JSONResponse(
         content={
             "ok": True,
             "email": clean_email,
@@ -653,3 +640,4 @@ async def override_user_pro_status(payload: AdminOverrideRequest, request: Reque
             "reason": payload.reason,
         }
     )
+    return apply_secure_admin_headers(response)

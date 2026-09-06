@@ -31,9 +31,16 @@ def _clear_all_memory():
         database._dedup_cache.clear()
 
 
+from app.services import admin_auth
+
+
 @pytest.fixture(autouse=True)
 def ensure_db_isolated():
     """Guarantee that tests always operate strictly in-memory and clean state between tests."""
+    os.environ["ADMIN_SECRET_KEY"] = ""
+    admin_auth._failed_attempts.clear()
     _clear_all_memory()
     yield
+    os.environ["ADMIN_SECRET_KEY"] = ""
+    admin_auth._failed_attempts.clear()
     _clear_all_memory()

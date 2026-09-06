@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.db import database
+from app.services.admin_auth import apply_secure_admin_headers, verify_admin_access
 from app.services.email_notifier import send_suggestion_alert
 
 logger = logging.getLogger("suggestion")
@@ -33,19 +34,6 @@ def _device_fingerprint(request: Request) -> str:
     ua = request.headers.get("User-Agent", "")
     raw = f"{ip}:{ua}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
-
-
-def _verify_admin_access(request: Request) -> bool:
-    """Verify admin secret key from X-Admin-Key header or query parameter."""
-    configured_key = os.getenv("ADMIN_SECRET_KEY", "").strip()
-    provided_key = (
-        request.headers.get("X-Admin-Key")
-        or request.query_params.get("admin_key")
-        or ""
-    ).strip()
-    if not configured_key:
-        return True
-    return hmac.compare_digest(configured_key, provided_key)
 
 
 class SuggestionCreateRequest(BaseModel):
@@ -141,13 +129,13 @@ async def get_admin_suggestions(
     status: Optional[str] = None,
 ) -> JSONResponse:
     """Admin-only list of submitted suggestions sorted newest first."""
-    if not _verify_admin_access(request):
+    if not verify_admin_access(request):
         raise HTTPException(status_code=401, detail="Unauthorized admin access")
 
     suggestions = database.get_suggestions(limit=min(max(limit, 1), 200), status=status)
     total_count = database.get_suggestion_count()
 
-    return JSONResponse(
+    response = JSONResponse(
         content={
             "ok": True,
             "count": len(suggestions),
@@ -155,6 +143,7 @@ async def get_admin_suggestions(
             "suggestions": suggestions,
         }
     )
+    return apply_secure_admin_headers(response)
 
 
 @router.patch("/api/admin/suggestions/{suggestion_id}")
@@ -164,7 +153,7 @@ async def update_admin_suggestion_status(
     request: Request,
 ) -> JSONResponse:
     """Admin-only status updater ('new' | 'reviewed' | 'planned' | 'done' | 'not-planned')."""
-    if not _verify_admin_access(request):
+    if not verify_admin_access(request):
         raise HTTPException(status_code=401, detail="Unauthorized admin access")
 
     valid_statuses = {"new", "reviewed", "planned", "done", "not-planned"}
