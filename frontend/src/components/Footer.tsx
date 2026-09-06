@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { normalizeLang } from '@/i18n/detector'
+import { openSuggestionBox } from '@/components/SuggestionStickyTrigger'
 
 interface FooterProps {
   portfolioUrl?: string
@@ -205,11 +206,19 @@ export default function Footer({
             <Link to="/terms" className="hover:text-tan transition-colors">
               Terms
             </Link>
+            <button
+              type="button"
+              onClick={openSuggestionBox}
+              className="text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer font-medium"
+            >
+              <span>💡</span>
+              <span>{isHinglish ? 'Suggest something' : 'Suggest something'}</span>
+            </button>
             <a
-              href="mailto:deveshsingh20666@gmail.com?subject=ResumeRoast%20Support%20%26%20Feedback"
+              href="mailto:support@resumeroast.app?subject=ResumeRoast%20Support%20%26%20Feedback"
               className="hover:text-amber-300 transition-colors"
             >
-              support: deveshsingh20666@gmail.com
+              support: support@resumeroast.app
             </a>
             <a
               href="https://github.com/deveshsingh641/ResumeRoast/issues"

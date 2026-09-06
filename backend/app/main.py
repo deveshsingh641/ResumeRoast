@@ -25,7 +25,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.db.database import init_db, cleanup_expired_roasts
-from app.routers import analytics, battle, i18n, match, payment, roast, usage, voice, waitlist, wall
+from app.routers import analytics, battle, i18n, match, payment, roast, suggestion, usage, voice, waitlist, wall
 
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
@@ -135,6 +135,7 @@ app.include_router(analytics.router)
 app.include_router(i18n.router)
 app.include_router(waitlist.router)
 app.include_router(match.router)
+app.include_router(suggestion.router)
 
 
 from fastapi import FastAPI, HTTPException, Request

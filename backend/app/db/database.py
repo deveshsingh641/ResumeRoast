@@ -42,6 +42,7 @@ _dedup_cache: dict[str, tuple[float, str]] = {}  # content_hash -> (timestamp, r
 _reactions_memory: dict[str, dict[str, int]] = {}  # roast_id -> {emoji: count}
 _unique_visitors_memory: set[str] = set()  # "visitor_hash:YYYY-MM-DD"
 _waitlist_memory: dict[str, dict] = {}  # email -> waitlist record
+_suggestions_memory: list[dict] = []  # suggestions in-memory store
 
 # Connection pool for high-concurrency traffic bursts
 _connection_pool: Optional[pool.ThreadedConnectionPool] = None
@@ -188,12 +189,25 @@ CREATE TABLE IF NOT EXISTS pro_waitlist (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS suggestions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    text TEXT NOT NULL,
+    category TEXT DEFAULT 'feedback',
+    email TEXT,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'new',
+    device_fingerprint TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_roasts_expires_at ON roasts (expires_at);
 CREATE INDEX IF NOT EXISTS idx_battles_expires_at ON battles (expires_at);
 CREATE INDEX IF NOT EXISTS idx_wall_type_score ON wall_entries (type, hidden, score, created_at);
 CREATE INDEX IF NOT EXISTS idx_roast_reactions_roast_id ON roast_reactions (roast_id);
 CREATE INDEX IF NOT EXISTS idx_daily_visitors_date ON daily_unique_visitors (date);
 CREATE INDEX IF NOT EXISTS idx_pro_waitlist_email ON pro_waitlist (email);
+CREATE INDEX IF NOT EXISTS idx_suggestions_created_at ON suggestions (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_suggestions_status ON suggestions (status);
 """
 
 
@@ -209,6 +223,9 @@ def init_db() -> None:
                 cur.execute("ALTER TABLE roasts ADD COLUMN IF NOT EXISTS resume_text TEXT;")
                 cur.execute("CREATE TABLE IF NOT EXISTS pro_waitlist (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, source TEXT NOT NULL DEFAULT 'pricing', user_id UUID REFERENCES users(id) ON DELETE SET NULL, created_at TIMESTAMPTZ DEFAULT now());")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_pro_waitlist_email ON pro_waitlist (email);")
+                cur.execute("CREATE TABLE IF NOT EXISTS suggestions (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), text TEXT NOT NULL, category TEXT DEFAULT 'feedback', email TEXT, user_id UUID REFERENCES users(id) ON DELETE SET NULL, status TEXT NOT NULL DEFAULT 'new', device_fingerprint TEXT, created_at TIMESTAMPTZ DEFAULT now());")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_suggestions_created_at ON suggestions (created_at DESC);")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_suggestions_status ON suggestions (status);")
                 cur.execute("DELETE FROM wall_entries WHERE top_roast_lines::text LIKE '%Data do bhai%';")
             conn.commit()
     except Exception as e:
@@ -1343,6 +1360,148 @@ def get_recent_roasts(limit: int = 20) -> list[dict]:
     except Exception as e:
         print(f"[WARN] Error fetching recent roasts: {e}")
         return []
+
+
+# ---------------------------------------------------------------------------
+# Suggestion Box Helpers (Section 3)
+# ---------------------------------------------------------------------------
+
+def save_suggestion(
+    *,
+    text: str,
+    category: str = "feedback",
+    email: Optional[str] = None,
+    user_id: Optional[str] = None,
+    device_fingerprint: Optional[str] = None,
+) -> dict:
+    """Save user product suggestion, feature request, or feedback."""
+    sug_id = str(uuid4())
+    now_utc = datetime.now(timezone.utc).isoformat()
+    clean_text = text.strip()[:2000]
+    clean_cat = (category or "feedback").strip().lower()
+    if clean_cat not in {"feature", "bug", "feedback", "other"}:
+        clean_cat = "feedback"
+    clean_email = email.strip()[:150] if email else None
+
+    entry = {
+        "id": sug_id,
+        "text": clean_text,
+        "category": clean_cat,
+        "email": clean_email,
+        "user_id": user_id,
+        "status": "new",
+        "device_fingerprint": device_fingerprint,
+        "created_at": now_utc,
+    }
+
+    if not DATABASE_URL:
+        _suggestions_memory.insert(0, entry)
+        return entry
+
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            valid_user_uuid = user_id if _is_valid_uuid(user_id) else None
+            cur.execute(
+                """
+                INSERT INTO suggestions (id, text, category, email, user_id, status, device_fingerprint, created_at)
+                VALUES (%s, %s, %s, %s, %s, 'new', %s, %s)
+                RETURNING *
+                """,
+                (sug_id, clean_text, clean_cat, clean_email, valid_user_uuid, device_fingerprint, now_utc),
+            )
+            row = cur.fetchone()
+        conn.commit()
+
+    d = dict(row)
+    if isinstance(d.get("id"), uuid.UUID):
+        d["id"] = str(d["id"])
+    if isinstance(d.get("user_id"), uuid.UUID):
+        d["user_id"] = str(d["user_id"])
+    if isinstance(d.get("created_at"), (datetime, date)):
+        d["created_at"] = d["created_at"].isoformat()
+    return d
+
+
+def get_suggestions(limit: int = 50, status: Optional[str] = None) -> list[dict]:
+    """Retrieve suggestions list sorted newest-first, optionally filtered by status."""
+    if not DATABASE_URL:
+        results = _suggestions_memory
+        if status:
+            results = [s for s in results if s.get("status") == status]
+        return results[:limit]
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                if status:
+                    cur.execute(
+                        "SELECT * FROM suggestions WHERE status = %s ORDER BY created_at DESC LIMIT %s",
+                        (status, limit),
+                    )
+                else:
+                    cur.execute(
+                        "SELECT * FROM suggestions ORDER BY created_at DESC LIMIT %s",
+                        (limit,),
+                    )
+                rows = cur.fetchall()
+
+        results = []
+        for r in rows:
+            d = dict(r)
+            if isinstance(d.get("id"), uuid.UUID):
+                d["id"] = str(d["id"])
+            if isinstance(d.get("user_id"), uuid.UUID):
+                d["user_id"] = str(d["user_id"])
+            if isinstance(d.get("created_at"), (datetime, date)):
+                d["created_at"] = d["created_at"].isoformat()
+            results.append(d)
+        return results
+    except Exception as e:
+        print(f"[WARN] Error fetching suggestions: {e}")
+        return []
+
+
+def update_suggestion_status(suggestion_id: str, status: str) -> bool:
+    """Update status of a suggestion ('new' | 'reviewed' | 'planned' | 'done' | 'not-planned')."""
+    clean_status = status.strip().lower()
+    valid_statuses = {"new", "reviewed", "planned", "done", "not-planned"}
+    if clean_status not in valid_statuses:
+        return False
+
+    if not DATABASE_URL:
+        for s in _suggestions_memory:
+            if s.get("id") == suggestion_id:
+                s["status"] = clean_status
+                return True
+        return False
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE suggestions SET status = %s WHERE id = %s RETURNING id",
+                    (clean_status, suggestion_id),
+                )
+                updated = cur.fetchone()
+            conn.commit()
+        return bool(updated)
+    except Exception as e:
+        print(f"[WARN] Error updating suggestion status: {e}")
+        return False
+
+
+def get_suggestion_count() -> int:
+    """Return total count of suggestions."""
+    if not DATABASE_URL:
+        return len(_suggestions_memory)
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) AS total FROM suggestions")
+                row = cur.fetchone()
+                return (row["total"] if row and "total" in row else 0) or 0
+    except Exception:
+        return len(_suggestions_memory)
 
 
 

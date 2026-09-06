@@ -145,6 +145,33 @@ async def get_stats(request: Request, days: int = 7, format: Optional[str] = Non
             </details>
         </div>
         """
+    recent_suggestions = database.get_suggestions(limit=10)
+    suggestions_html = ""
+    for s in recent_suggestions:
+        cat = s.get("category", "feedback").upper()
+        status = s.get("status", "new").upper()
+        status_color = "#38BDF8" if status == "NEW" else "#FBBF24" if status == "REVIEWED" else "#10B981" if status in {"PLANNED", "DONE"} else "#94A3B8"
+        email_part = f"· <span class='text-amber-400'>{s.get('email')}</span>" if s.get("email") else "· <span class='text-stone-500'>Anonymous</span>"
+        created = (s.get("created_at") or "")[:19].replace("T", " ")
+        suggestions_html += f"""
+        <div class="bg-[#14110E] p-3.5 rounded border border-white/[0.06] text-left">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-white/10 text-stone-300">
+                        {cat}
+                    </span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold" style="color: {status_color}; background-color: {status_color}22; border: 1px solid {status_color}44;">
+                        {status}
+                    </span>
+                    <span class="text-[11px] font-mono text-stone-400">{created} UTC {email_part}</span>
+                </div>
+            </div>
+            <p class="text-xs font-mono text-stone-200 whitespace-pre-wrap leading-relaxed">{s.get('text')}</p>
+        </div>
+        """
+    if not suggestions_html:
+        suggestions_html = '<div class="py-4 text-center text-xs text-stone-500 font-mono">No suggestions submitted yet.</div>'
+
     if not recent_roasts_html:
         recent_roasts_html = '<div class="py-6 text-center text-xs text-stone-500 font-mono">No resumes uploaded yet today.</div>'
 
@@ -311,6 +338,20 @@ async def get_stats(request: Request, days: int = 7, format: Optional[str] = Non
         </div>
         <div class="p-4 space-y-4">
             {recent_roasts_html}
+        </div>
+    </div>
+
+    <!-- Suggestion Box Submissions (Section 5) -->
+    <div class="mt-8 bg-[#1A1613] rounded-lg border border-white/10 overflow-hidden">
+        <div class="px-5 py-4 border-b border-white/10 flex justify-between items-center">
+            <div>
+                <h2 class="font-bold text-sm tracking-wide text-white font-mono uppercase">💡 Suggestion Box Submissions</h2>
+                <p class="text-xs text-stone-400 font-mono mt-0.5">Feature ideas, bug reports, and general feedback submitted by users</p>
+            </div>
+            <span class="text-xs font-mono text-sky-400 bg-sky-400/10 px-2 py-1 rounded border border-sky-400/20">Live Suggestions</span>
+        </div>
+        <div class="p-4 space-y-3">
+            {suggestions_html}
         </div>
     </div>
 

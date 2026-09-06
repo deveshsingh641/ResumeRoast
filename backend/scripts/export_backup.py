@@ -61,9 +61,10 @@ def main():
         backup_payload["tables"]["roasts"] = list(database._memory_store.values())
         backup_payload["tables"]["pro_waitlist"] = list(database._waitlist_memory.values())
         backup_payload["tables"]["battles"] = list(getattr(database, "_battles_memory", {}).values())
+        backup_payload["tables"]["suggestions"] = list(database._suggestions_memory)
     else:
         print("[INFO] Connecting to primary PostgreSQL database...")
-        table_names = ["users", "roasts", "pro_waitlist", "battles", "wall_entries"]
+        table_names = ["users", "roasts", "pro_waitlist", "suggestions", "battles", "wall_entries"]
         with database._get_conn() as conn:
             with conn.cursor() as cur:
                 for tbl in table_names:

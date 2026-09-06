@@ -14,6 +14,8 @@ import PrivacyPage from '@/pages/PrivacyPage'
 import TermsPage from '@/pages/TermsPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
+import SuggestionStickyTrigger from '@/components/SuggestionStickyTrigger'
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -33,6 +35,7 @@ export default function App() {
         {/* Catch-all 404 */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      <SuggestionStickyTrigger />
       <PageTracker />
       <Analytics />
       <SpeedInsights />

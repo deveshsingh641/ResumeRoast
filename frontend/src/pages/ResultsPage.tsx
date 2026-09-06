@@ -61,6 +61,16 @@ export default function ResultsPage() {
     enabled: true,
   })
 
+  // Track that user has seen a result for subtle sticky trigger activation
+  useEffect(() => {
+    if (result) {
+      try {
+        localStorage.setItem('resumeroast_has_seen_result', 'true')
+        if (result.id) localStorage.setItem('resumeroast_last_id', result.id)
+      } catch {}
+    }
+  }, [result])
+
   const handleDownloadCertificate = async () => {
     if (!result) return
     try {
