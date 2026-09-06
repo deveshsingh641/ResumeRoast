@@ -1333,13 +1333,39 @@ def get_roasts_paginated(
     offset: int = 0,
     search: Optional[str] = None,
     band: Optional[str] = None,
-) -> tuple[list[dict], int]:
-    """Retrieve candidate roasts with pagination, search, band filtering, and total count."""
+    unique_only: bool = True,
+) -> tuple[list[dict], int, int, int]:
+    """Retrieve candidate roasts with pagination, search, band filtering, deduplication, and total counts.
+    Returns: (items, total_filtered, total_unique, total_all)
+    """
     clean_limit = min(max(limit, 1), 200)
     clean_offset = max(offset, 0)
 
     if not DATABASE_URL:
-        items = list(_memory_store.values())
+        raw_items = list(_memory_store.values())
+        total_all = len(raw_items)
+
+        grouped: dict[str, dict] = {}
+        for item in sorted(raw_items, key=lambda x: x.get("created_at", "")):
+            text = (item.get("resume_text") or "").strip().lower()
+            key = text if text else (item.get("one_line_verdict") or "") + str(item.get("overall_score") or "")
+            if key not in grouped:
+                entry = dict(item)
+                entry["upload_count"] = 1
+                entry["first_created_at"] = item.get("created_at")
+                grouped[key] = entry
+            else:
+                grouped[key]["upload_count"] += 1
+                grouped[key]["created_at"] = item.get("created_at")
+                grouped[key]["overall_score"] = item.get("overall_score")
+                grouped[key]["band"] = item.get("band")
+                grouped[key]["one_line_verdict"] = item.get("one_line_verdict")
+
+        total_unique = len(grouped)
+        items = list(grouped.values()) if unique_only else [
+            dict(x, upload_count=1, first_created_at=x.get("created_at")) for x in raw_items
+        ]
+
         if search:
             s_low = search.lower().strip()
             items = [
@@ -1349,15 +1375,36 @@ def get_roasts_paginated(
             ]
         if band and band != "all":
             items = [x for x in items if (x.get("band") or "").lower() == band.lower()]
+
         items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-        total = len(items)
-        return items[clean_offset:clean_offset + clean_limit], total
+        total_filtered = len(items)
+        return items[clean_offset : clean_offset + clean_limit], total_filtered, total_unique, total_all
 
     try:
         with _get_conn() as conn:
             with conn.cursor() as cur:
+                # 1. Total all rows in DB
+                cur.execute("SELECT COUNT(*) AS c FROM roasts;")
+                c_row = cur.fetchone()
+                total_all = (c_row["c"] if isinstance(c_row, dict) and "c" in c_row else c_row[0]) if c_row else 0
+
+                # 2. Total unique resumes in DB
+                cur.execute(
+                    """
+                    SELECT COUNT(DISTINCT 
+                        CASE 
+                            WHEN resume_text IS NOT NULL AND TRIM(resume_text) != '' 
+                            THEN md5(TRIM(LOWER(resume_text)))
+                            ELSE md5(COALESCE(one_line_verdict, '') || COALESCE(overall_score::text, ''))
+                        END
+                    ) AS c FROM roasts;
+                    """
+                )
+                u_row = cur.fetchone()
+                total_unique = (u_row["c"] if isinstance(u_row, dict) and "c" in u_row else u_row[0]) if u_row else 0
+
                 where_clauses = []
-                params = []
+                params: list[Any] = []
                 if search:
                     where_clauses.append("(one_line_verdict ILIKE %s OR resume_text ILIKE %s)")
                     s_pattern = f"%{search.strip()}%"
@@ -1368,27 +1415,71 @@ def get_roasts_paginated(
 
                 where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
-                # Total count matching filters
-                cur.execute(f"SELECT COUNT(*) as c FROM roasts {where_sql}", tuple(params))
-                count_row = cur.fetchone()
-                total = (
-                    count_row["c"]
-                    if isinstance(count_row, dict) and "c" in count_row
-                    else (count_row[0] if count_row else 0)
-                ) or 0
+                if unique_only:
+                    base_cte = """
+                    WITH grouped AS (
+                        SELECT 
+                            CASE 
+                                WHEN resume_text IS NOT NULL AND TRIM(resume_text) != '' 
+                                THEN md5(TRIM(LOWER(resume_text)))
+                                ELSE md5(COALESCE(one_line_verdict, '') || COALESCE(overall_score::text, ''))
+                            END as dedup_key,
+                            COUNT(*) as upload_count,
+                            MAX(created_at) as latest_created_at,
+                            MIN(created_at) as first_created_at,
+                            (ARRAY_AGG(id ORDER BY created_at DESC))[1] as latest_id
+                        FROM roasts
+                        GROUP BY 1
+                    ),
+                    unique_roasts AS (
+                        SELECT 
+                            r.id,
+                            r.overall_score,
+                            r.band,
+                            r.one_line_verdict,
+                            r.resume_text,
+                            r.created_at,
+                            g.upload_count,
+                            g.first_created_at,
+                            g.latest_created_at
+                        FROM grouped g
+                        JOIN roasts r ON r.id = g.latest_id
+                    )
+                    """
+                    # Total matching filter
+                    cur.execute(f"{base_cte} SELECT COUNT(*) as c FROM unique_roasts {where_sql}", tuple(params))
+                    cnt_row = cur.fetchone()
+                    total_filtered = (cnt_row["c"] if isinstance(cnt_row, dict) and "c" in cnt_row else cnt_row[0]) if cnt_row else 0
 
-                # Paginated items
-                cur.execute(
-                    f"""
-                    SELECT id, overall_score, band, one_line_verdict, resume_text, created_at
-                    FROM roasts
-                    {where_sql}
-                    ORDER BY created_at DESC
-                    LIMIT %s OFFSET %s
-                    """,
-                    tuple(params + [clean_limit, clean_offset]),
-                )
-                rows = cur.fetchall()
+                    # Paginated query
+                    cur.execute(
+                        f"""
+                        {base_cte}
+                        SELECT id, overall_score, band, one_line_verdict, resume_text, created_at, upload_count, first_created_at
+                        FROM unique_roasts
+                        {where_sql}
+                        ORDER BY created_at DESC
+                        LIMIT %s OFFSET %s
+                        """,
+                        tuple(params + [clean_limit, clean_offset]),
+                    )
+                    rows = cur.fetchall()
+                else:
+                    cur.execute(f"SELECT COUNT(*) as c FROM roasts {where_sql}", tuple(params))
+                    cnt_row = cur.fetchone()
+                    total_filtered = (cnt_row["c"] if isinstance(cnt_row, dict) and "c" in cnt_row else cnt_row[0]) if cnt_row else 0
+
+                    cur.execute(
+                        f"""
+                        SELECT id, overall_score, band, one_line_verdict, resume_text, created_at, 1 as upload_count, created_at as first_created_at
+                        FROM roasts
+                        {where_sql}
+                        ORDER BY created_at DESC
+                        LIMIT %s OFFSET %s
+                        """,
+                        tuple(params + [clean_limit, clean_offset]),
+                    )
+                    rows = cur.fetchall()
 
         result = []
         for r in rows:
@@ -1397,16 +1488,18 @@ def get_roasts_paginated(
                 d["id"] = str(d["id"])
             if isinstance(d.get("created_at"), (datetime, date)):
                 d["created_at"] = d["created_at"].isoformat()
+            if isinstance(d.get("first_created_at"), (datetime, date)):
+                d["first_created_at"] = d["first_created_at"].isoformat()
             result.append(d)
-        return result, total
+        return result, total_filtered, total_unique, total_all
     except Exception as e:
         print(f"[WARN] Error fetching paginated roasts: {e}")
-        return [], 0
+        return [], 0, 0, 0
 
 
 def get_recent_roasts(limit: int = 20) -> list[dict]:
     """Retrieve recently uploaded roasts for admin review (backwards compatible)."""
-    roasts, _ = get_roasts_paginated(limit=limit, offset=0)
+    roasts, _, _, _ = get_roasts_paginated(limit=limit, offset=0, unique_only=False)
     return roasts
 
 

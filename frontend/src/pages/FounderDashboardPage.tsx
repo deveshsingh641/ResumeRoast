@@ -20,6 +20,8 @@ interface RoastItem {
   one_line_verdict: string
   resume_text?: string
   created_at: string
+  upload_count?: number
+  first_created_at?: string
 }
 
 interface SuggestionItem {
@@ -58,6 +60,9 @@ export default function FounderDashboardPage() {
   // Paginated Roasts Explorer State
   const [recentRoasts, setRecentRoasts] = useState<RoastItem[]>([])
   const [totalRoastsCount, setTotalRoastsCount] = useState(0)
+  const [totalUniqueCount, setTotalUniqueCount] = useState(0)
+  const [totalAllCount, setTotalAllCount] = useState(0)
+  const [roastsUniqueOnly, setRoastsUniqueOnly] = useState(true)
   const [roastsLimit, setRoastsLimit] = useState(25)
   const [roastsOffset, setRoastsOffset] = useState(0)
   const [roastsSearch, setRoastsSearch] = useState('')
@@ -77,7 +82,8 @@ export default function FounderDashboardPage() {
     offset: number = roastsOffset,
     limit: number = roastsLimit,
     search: string = roastsSearch,
-    band: string = roastsBand
+    band: string = roastsBand,
+    uniqueOnly: boolean = roastsUniqueOnly
   ) => {
     setRoastsLoading(true)
     try {
@@ -85,6 +91,7 @@ export default function FounderDashboardPage() {
       const params = new URLSearchParams()
       params.set('limit', String(limit))
       params.set('offset', String(offset))
+      params.set('unique', String(uniqueOnly))
       if (search.trim()) params.set('search', search.trim())
       if (band && band !== 'all') params.set('band', band)
 
@@ -92,6 +99,8 @@ export default function FounderDashboardPage() {
       if (data && data.ok) {
         setRecentRoasts(data.roasts || [])
         setTotalRoastsCount(data.total || 0)
+        setTotalUniqueCount(data.total_unique || data.total || 0)
+        setTotalAllCount(data.total_all || 0)
       }
     } catch (err) {
       console.warn('Failed to load roasts:', err)
@@ -552,23 +561,62 @@ export default function FounderDashboardPage() {
         </div>
       </div>
 
-      {/* ── Section 5: Uploaded Resumes Explorer with Full Pagination ── */}
+      {/* ── Section 5: Uploaded Resumes Explorer with Deduplication & Full Pagination ── */}
       <div className="mb-8 bg-[#1A1613] rounded-lg border border-white/10 overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="px-5 py-4 border-b border-white/10 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
             <h2 className="font-bold text-sm tracking-wide text-white font-mono uppercase flex items-center gap-2">
               <span>📄 Uploaded Resumes Explorer</span>
-              <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                {totalRoastsCount} Total Resumes
+              <span className="text-xs px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                {roastsUniqueOnly ? `${totalUniqueCount} Unique Resumes` : `${totalAllCount} Total Uploads`}
               </span>
             </h2>
             <p className="text-xs text-tan-dim font-mono mt-0.5">
-              Candidate resumes submitted for roasting with scores, extracted text, and verdict
+              Candidate resumes submitted for roasting · {roastsUniqueOnly ? 'Deduplicated (1 display per unique candidate resume)' : 'Raw upload log (all attempts)'}
             </p>
           </div>
-          <span className="text-xs font-mono text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded border border-amber-400/20 shrink-0">
-            Live Supabase Sync
-          </span>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* View Mode Toggle: Unique vs All */}
+            <div className="inline-flex rounded-md p-0.5 bg-black/60 border border-white/15 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => {
+                  setRoastsUniqueOnly(true)
+                  setRoastsOffset(0)
+                  loadRoasts(adminKey, 0, roastsLimit, roastsSearch, roastsBand, true)
+                }}
+                className={`px-3 py-1 rounded transition cursor-pointer ${
+                  roastsUniqueOnly
+                    ? 'bg-amber-500 text-black font-bold shadow-sm'
+                    : 'text-stone-400 hover:text-white'
+                }`}
+                title="Group multiple uploads of the same resume so each unique candidate displays only once"
+              >
+                ✨ Unique ({totalUniqueCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRoastsUniqueOnly(false)
+                  setRoastsOffset(0)
+                  loadRoasts(adminKey, 0, roastsLimit, roastsSearch, roastsBand, false)
+                }}
+                className={`px-3 py-1 rounded transition cursor-pointer ${
+                  !roastsUniqueOnly
+                    ? 'bg-amber-500 text-black font-bold shadow-sm'
+                    : 'text-stone-400 hover:text-white'
+                }`}
+                title="View every single upload attempt including repeat uploads"
+              >
+                📋 All Uploads ({totalAllCount})
+              </button>
+            </div>
+
+            <span className="text-xs font-mono text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded border border-amber-400/20 shrink-0">
+              Live Supabase Sync
+            </span>
+          </div>
         </div>
 
         {/* Filter & Search Toolbar */}
@@ -581,8 +629,8 @@ export default function FounderDashboardPage() {
               onChange={(e) => {
                 const val = e.target.value
                 setRoastsSearch(val)
-                loadRoasts(adminKey, 0, roastsLimit, val, roastsBand)
                 setRoastsOffset(0)
+                loadRoasts(adminKey, 0, roastsLimit, val, roastsBand, roastsUniqueOnly)
               }}
               placeholder="🔍 Search candidate skills, text, or verdicts..."
               className="w-full bg-black/50 border border-white/20 rounded px-3 py-1.5 text-xs font-mono text-white placeholder:text-stone-600 focus:outline-none focus:border-amber-400"
@@ -595,8 +643,8 @@ export default function FounderDashboardPage() {
             onChange={(e) => {
               const val = e.target.value
               setRoastsBand(val)
-              loadRoasts(adminKey, 0, roastsLimit, roastsSearch, val)
               setRoastsOffset(0)
+              loadRoasts(adminKey, 0, roastsLimit, roastsSearch, val, roastsUniqueOnly)
             }}
             className="bg-black/50 border border-white/20 rounded px-3 py-1.5 text-xs font-mono text-stone-300 focus:outline-none"
           >
@@ -612,8 +660,8 @@ export default function FounderDashboardPage() {
             onChange={(e) => {
               const val = Number(e.target.value)
               setRoastsLimit(val)
-              loadRoasts(adminKey, 0, val, roastsSearch, roastsBand)
               setRoastsOffset(0)
+              loadRoasts(adminKey, 0, val, roastsSearch, roastsBand, roastsUniqueOnly)
             }}
             className="bg-black/50 border border-white/20 rounded px-3 py-1.5 text-xs font-mono text-stone-300 focus:outline-none"
           >
@@ -632,13 +680,15 @@ export default function FounderDashboardPage() {
             </div>
           ) : recentRoasts.length === 0 ? (
             <div className="py-8 text-center text-xs text-tan-dim font-mono">
-              {roastsSearch ? 'No resumes matching your search filter.' : 'No candidate resumes uploaded yet.'}
+              {roastsSearch ? 'No resumes matching your search filter.' : 'No candidate resumes found.'}
             </div>
           ) : (
             recentRoasts.map((r) => {
               const score = r.overall_score || 0
               const scoreColor = score <= 40 ? '#E8422D' : score <= 70 ? '#FFB93C' : '#10B981'
               const resText = r.resume_text || 'No text content preserved.'
+              const uploadCount = r.upload_count || 1
+              const hasMultiple = uploadCount > 1
 
               return (
                 <div
@@ -646,7 +696,7 @@ export default function FounderDashboardPage() {
                   className="bg-[#14110E] p-4 rounded border border-white/[0.06] text-left hover:border-white/15 transition-colors"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span
                         className="px-2 py-0.5 rounded text-xs font-mono font-bold"
                         style={{
@@ -657,8 +707,25 @@ export default function FounderDashboardPage() {
                       >
                         {score}/100 · {(r.band || 'weak').toUpperCase()}
                       </span>
+
+                      {/* Repeat Upload Badge */}
+                      {hasMultiple ? (
+                        <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          Uploaded {uploadCount}x
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded text-[11px] font-mono bg-white/5 text-stone-400 border border-white/10">
+                          1st upload
+                        </span>
+                      )}
+
                       <span className="text-xs font-mono text-tan-dim">
                         {r.created_at?.slice(0, 19).replace('T', ' ')} UTC
+                        {hasMultiple && r.first_created_at && r.first_created_at !== r.created_at && (
+                          <span className="text-stone-500 ml-1.5">
+                            (First: {r.first_created_at.slice(0, 10)})
+                          </span>
+                        )}
                       </span>
                     </div>
 
@@ -692,7 +759,8 @@ export default function FounderDashboardPage() {
           <div className="px-5 py-3.5 bg-white/[0.02] border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono text-tan-dim">
             <div>
               Showing {roastsOffset + 1} - {Math.min(roastsOffset + roastsLimit, totalRoastsCount)} of{' '}
-              <span className="text-white font-bold">{totalRoastsCount}</span> candidate resumes
+              <span className="text-white font-bold">{totalRoastsCount}</span>{' '}
+              {roastsUniqueOnly ? 'unique candidate resumes' : 'total upload entries'}
             </div>
 
             <div className="flex items-center gap-2">
@@ -702,7 +770,7 @@ export default function FounderDashboardPage() {
                 onClick={() => {
                   const newOffset = Math.max(0, roastsOffset - roastsLimit)
                   setRoastsOffset(newOffset)
-                  loadRoasts(adminKey, newOffset, roastsLimit, roastsSearch, roastsBand)
+                  loadRoasts(adminKey, newOffset, roastsLimit, roastsSearch, roastsBand, roastsUniqueOnly)
                 }}
                 className="px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-stone-200 border border-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
@@ -720,7 +788,7 @@ export default function FounderDashboardPage() {
                 onClick={() => {
                   const newOffset = roastsOffset + roastsLimit
                   setRoastsOffset(newOffset)
-                  loadRoasts(adminKey, newOffset, roastsLimit, roastsSearch, roastsBand)
+                  loadRoasts(adminKey, newOffset, roastsLimit, roastsSearch, roastsBand, roastsUniqueOnly)
                 }}
                 className="px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-stone-200 border border-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >

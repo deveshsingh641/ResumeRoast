@@ -558,17 +558,19 @@ async def get_admin_roasts(
     offset: int = 0,
     search: Optional[str] = None,
     band: Optional[str] = None,
+    unique: bool = True,
 ) -> JSONResponse:
-    """List uploaded roasts with pagination, search, band filter, and full resume text."""
+    """List uploaded roasts with pagination, search, band filter, and deduplication option."""
     if not verify_admin_access(request):
         raise HTTPException(status_code=401, detail="Unauthorized: Founder access only")
     clean_limit = min(max(limit, 1), 200)
     clean_offset = max(offset, 0)
-    roasts, total = database.get_roasts_paginated(
+    roasts, total, total_unique, total_all = database.get_roasts_paginated(
         limit=clean_limit,
         offset=clean_offset,
         search=search,
         band=band,
+        unique_only=unique,
     )
     return apply_secure_admin_headers(
         JSONResponse(
@@ -576,6 +578,9 @@ async def get_admin_roasts(
                 "ok": True,
                 "count": len(roasts),
                 "total": total,
+                "total_unique": total_unique,
+                "total_all": total_all,
+                "unique_only": unique,
                 "limit": clean_limit,
                 "offset": clean_offset,
                 "roasts": roasts,

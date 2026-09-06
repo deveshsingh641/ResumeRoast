@@ -74,3 +74,31 @@ def test_brute_force_lockout_after_five_failed_attempts():
     )
     assert locked_correct.status_code == 429
     assert "Security lockout" in locked_correct.json().get("detail", "")
+
+
+def test_candidate_resumes_deduplication():
+    client = TestClient(app)
+    # 1. Fetch with unique=true (default)
+    resp_unique = client.get(
+        "/api/admin/roasts?unique=true&limit=100",
+        headers={"X-Admin-Key": "ultra_secure_founder_key_2026"},
+    )
+    assert resp_unique.status_code == 200
+    data_u = resp_unique.json()
+    assert data_u["ok"] is True
+    assert "total_unique" in data_u
+    assert "total_all" in data_u
+    assert data_u["unique_only"] is True
+    # Ensure total_unique <= total_all
+    assert data_u["total_unique"] <= data_u["total_all"]
+
+    # 2. Fetch with unique=false
+    resp_all = client.get(
+        "/api/admin/roasts?unique=false&limit=100",
+        headers={"X-Admin-Key": "ultra_secure_founder_key_2026"},
+    )
+    assert resp_all.status_code == 200
+    data_a = resp_all.json()
+    assert data_a["unique_only"] is False
+    assert data_a["total"] == data_u["total_all"]
+
