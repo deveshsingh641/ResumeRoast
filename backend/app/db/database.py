@@ -1328,26 +1328,68 @@ def get_analytics_stats(days: int = 7) -> dict:
     }
 
 
-def get_recent_roasts(limit: int = 20) -> list[dict]:
-    """Retrieve recently uploaded roasts for admin review."""
+def get_roasts_paginated(
+    limit: int = 25,
+    offset: int = 0,
+    search: Optional[str] = None,
+    band: Optional[str] = None,
+) -> tuple[list[dict], int]:
+    """Retrieve candidate roasts with pagination, search, band filtering, and total count."""
+    clean_limit = min(max(limit, 1), 200)
+    clean_offset = max(offset, 0)
+
     if not DATABASE_URL:
         items = list(_memory_store.values())
+        if search:
+            s_low = search.lower().strip()
+            items = [
+                x for x in items
+                if s_low in (x.get("one_line_verdict") or "").lower()
+                or s_low in (x.get("resume_text") or "").lower()
+            ]
+        if band and band != "all":
+            items = [x for x in items if (x.get("band") or "").lower() == band.lower()]
         items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-        return items[:limit]
+        total = len(items)
+        return items[clean_offset:clean_offset + clean_limit], total
 
     try:
         with _get_conn() as conn:
             with conn.cursor() as cur:
+                where_clauses = []
+                params = []
+                if search:
+                    where_clauses.append("(one_line_verdict ILIKE %s OR resume_text ILIKE %s)")
+                    s_pattern = f"%{search.strip()}%"
+                    params.extend([s_pattern, s_pattern])
+                if band and band != "all":
+                    where_clauses.append("band = %s")
+                    params.append(band.strip().lower())
+
+                where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+                # Total count matching filters
+                cur.execute(f"SELECT COUNT(*) as c FROM roasts {where_sql}", tuple(params))
+                count_row = cur.fetchone()
+                total = (
+                    count_row["c"]
+                    if isinstance(count_row, dict) and "c" in count_row
+                    else (count_row[0] if count_row else 0)
+                ) or 0
+
+                # Paginated items
                 cur.execute(
-                    """
+                    f"""
                     SELECT id, overall_score, band, one_line_verdict, resume_text, created_at
                     FROM roasts
+                    {where_sql}
                     ORDER BY created_at DESC
-                    LIMIT %s
+                    LIMIT %s OFFSET %s
                     """,
-                    (limit,),
+                    tuple(params + [clean_limit, clean_offset]),
                 )
                 rows = cur.fetchall()
+
         result = []
         for r in rows:
             d = dict(r)
@@ -1356,10 +1398,16 @@ def get_recent_roasts(limit: int = 20) -> list[dict]:
             if isinstance(d.get("created_at"), (datetime, date)):
                 d["created_at"] = d["created_at"].isoformat()
             result.append(d)
-        return result
+        return result, total
     except Exception as e:
-        print(f"[WARN] Error fetching recent roasts: {e}")
-        return []
+        print(f"[WARN] Error fetching paginated roasts: {e}")
+        return [], 0
+
+
+def get_recent_roasts(limit: int = 20) -> list[dict]:
+    """Retrieve recently uploaded roasts for admin review (backwards compatible)."""
+    roasts, _ = get_roasts_paginated(limit=limit, offset=0)
+    return roasts
 
 
 # ---------------------------------------------------------------------------

@@ -52,9 +52,17 @@ export default function FounderDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null)
   const [trafficHistory, setTrafficHistory] = useState<TrafficDay[]>([])
-  const [recentRoasts, setRecentRoasts] = useState<RoastItem[]>([])
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
   const [topPaths, setTopPaths] = useState<Array<{ path: string; views: number }>>([])
+
+  // Paginated Roasts Explorer State
+  const [recentRoasts, setRecentRoasts] = useState<RoastItem[]>([])
+  const [totalRoastsCount, setTotalRoastsCount] = useState(0)
+  const [roastsLimit, setRoastsLimit] = useState(25)
+  const [roastsOffset, setRoastsOffset] = useState(0)
+  const [roastsSearch, setRoastsSearch] = useState('')
+  const [roastsBand, setRoastsBand] = useState('all')
+  const [roastsLoading, setRoastsLoading] = useState(false)
 
   // Support Override Tool State
   const [overrideEmail, setOverrideEmail] = useState('')
@@ -62,6 +70,35 @@ export default function FounderDashboardPage() {
   const [overrideReason, setOverrideReason] = useState('')
   const [overrideMsg, setOverrideMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [overrideLoading, setOverrideLoading] = useState(false)
+
+  // Load paginated roasts
+  const loadRoasts = async (
+    keyToUse: string,
+    offset: number = roastsOffset,
+    limit: number = roastsLimit,
+    search: string = roastsSearch,
+    band: string = roastsBand
+  ) => {
+    setRoastsLoading(true)
+    try {
+      const headers = { 'X-Admin-Key': keyToUse }
+      const params = new URLSearchParams()
+      params.set('limit', String(limit))
+      params.set('offset', String(offset))
+      if (search.trim()) params.set('search', search.trim())
+      if (band && band !== 'all') params.set('band', band)
+
+      const { data } = await axios.get(`/api/admin/roasts?${params.toString()}`, { headers })
+      if (data && data.ok) {
+        setRecentRoasts(data.roasts || [])
+        setTotalRoastsCount(data.total || 0)
+      }
+    } catch (err) {
+      console.warn('Failed to load roasts:', err)
+    } finally {
+      setRoastsLoading(false)
+    }
+  }
 
   // Validate admin key and load dashboard
   const fetchDashboardData = async (keyToUse: string) => {
@@ -77,14 +114,12 @@ export default function FounderDashboardPage() {
         setTrafficHistory(metricsData.traffic_7d || [])
       }
 
-      // 2. Fetch recent roasts
-      const { data: roastsData } = await axios.get('/api/admin/roasts?limit=12', { headers })
-      if (roastsData && roastsData.ok) {
-        setRecentRoasts(roastsData.roasts || [])
-      }
+      // 2. Fetch paginated roasts
+      await loadRoasts(keyToUse, 0, roastsLimit, roastsSearch, roastsBand)
+      setRoastsOffset(0)
 
       // 3. Fetch user suggestions
-      const { data: suggData } = await axios.get('/api/admin/suggestions?limit=50', { headers })
+      const { data: suggData } = await axios.get('/api/admin/suggestions?limit=100', { headers })
       if (suggData && suggData.ok) {
         setSuggestions(suggData.suggestions || [])
       }
@@ -517,26 +552,87 @@ export default function FounderDashboardPage() {
         </div>
       </div>
 
-      {/* ── Section 5: Uploaded Resumes Explorer ── */}
+      {/* ── Section 5: Uploaded Resumes Explorer with Full Pagination ── */}
       <div className="mb-8 bg-[#1A1613] rounded-lg border border-white/10 overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/10 flex justify-between items-center">
+        <div className="px-5 py-4 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
-            <h2 className="font-bold text-sm tracking-wide text-white font-mono uppercase">
-              📄 Uploaded Resumes Explorer ({recentRoasts.length})
+            <h2 className="font-bold text-sm tracking-wide text-white font-mono uppercase flex items-center gap-2">
+              <span>📄 Uploaded Resumes Explorer</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                {totalRoastsCount} Total Resumes
+              </span>
             </h2>
             <p className="text-xs text-tan-dim font-mono mt-0.5">
-              Candidate resumes submitted for roasting with scores and full extracted text
+              Candidate resumes submitted for roasting with scores, extracted text, and verdict
             </p>
           </div>
-          <span className="text-xs font-mono text-amber-400 bg-amber-400/10 px-2 py-1 rounded border border-amber-400/20">
+          <span className="text-xs font-mono text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded border border-amber-400/20 shrink-0">
             Live Supabase Sync
           </span>
         </div>
 
-        <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
-          {recentRoasts.length === 0 ? (
-            <div className="py-6 text-center text-xs text-tan-dim font-mono">
-              No candidate resumes uploaded yet today.
+        {/* Filter & Search Toolbar */}
+        <div className="p-4 bg-white/[0.02] border-b border-white/[0.08] flex flex-wrap items-center gap-3">
+          {/* Search Input */}
+          <div className="flex-1 min-w-[220px]">
+            <input
+              type="text"
+              value={roastsSearch}
+              onChange={(e) => {
+                const val = e.target.value
+                setRoastsSearch(val)
+                loadRoasts(adminKey, 0, roastsLimit, val, roastsBand)
+                setRoastsOffset(0)
+              }}
+              placeholder="🔍 Search candidate skills, text, or verdicts..."
+              className="w-full bg-black/50 border border-white/20 rounded px-3 py-1.5 text-xs font-mono text-white placeholder:text-stone-600 focus:outline-none focus:border-amber-400"
+            />
+          </div>
+
+          {/* Band Filter */}
+          <select
+            value={roastsBand}
+            onChange={(e) => {
+              const val = e.target.value
+              setRoastsBand(val)
+              loadRoasts(adminKey, 0, roastsLimit, roastsSearch, val)
+              setRoastsOffset(0)
+            }}
+            className="bg-black/50 border border-white/20 rounded px-3 py-1.5 text-xs font-mono text-stone-300 focus:outline-none"
+          >
+            <option value="all">All Score Bands</option>
+            <option value="weak">Critical / Weak (≤ 40)</option>
+            <option value="average">Needs Polish (41 - 70)</option>
+            <option value="good">Interview Ready (71+)</option>
+          </select>
+
+          {/* Page Size Selector */}
+          <select
+            value={roastsLimit}
+            onChange={(e) => {
+              const val = Number(e.target.value)
+              setRoastsLimit(val)
+              loadRoasts(adminKey, 0, val, roastsSearch, roastsBand)
+              setRoastsOffset(0)
+            }}
+            className="bg-black/50 border border-white/20 rounded px-3 py-1.5 text-xs font-mono text-stone-300 focus:outline-none"
+          >
+            <option value={12}>12 per page</option>
+            <option value={25}>25 per page</option>
+            <option value={50}>50 per page</option>
+            <option value={100}>100 per page</option>
+          </select>
+        </div>
+
+        {/* Resumes List */}
+        <div className="p-4 space-y-4 max-h-[560px] overflow-y-auto">
+          {roastsLoading ? (
+            <div className="py-8 text-center text-xs text-tan-dim font-mono animate-pulse">
+              Loading resumes from Supabase...
+            </div>
+          ) : recentRoasts.length === 0 ? (
+            <div className="py-8 text-center text-xs text-tan-dim font-mono">
+              {roastsSearch ? 'No resumes matching your search filter.' : 'No candidate resumes uploaded yet.'}
             </div>
           ) : (
             recentRoasts.map((r) => {
@@ -590,6 +686,49 @@ export default function FounderDashboardPage() {
             })
           )}
         </div>
+
+        {/* Pagination Controls Footer */}
+        {totalRoastsCount > 0 && (
+          <div className="px-5 py-3.5 bg-white/[0.02] border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono text-tan-dim">
+            <div>
+              Showing {roastsOffset + 1} - {Math.min(roastsOffset + roastsLimit, totalRoastsCount)} of{' '}
+              <span className="text-white font-bold">{totalRoastsCount}</span> candidate resumes
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={roastsOffset === 0 || roastsLoading}
+                onClick={() => {
+                  const newOffset = Math.max(0, roastsOffset - roastsLimit)
+                  setRoastsOffset(newOffset)
+                  loadRoasts(adminKey, newOffset, roastsLimit, roastsSearch, roastsBand)
+                }}
+                className="px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-stone-200 border border-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                ← Previous
+              </button>
+
+              <span className="px-2 font-bold text-amber-400">
+                Page {Math.floor(roastsOffset / roastsLimit) + 1} /{' '}
+                {Math.max(1, Math.ceil(totalRoastsCount / roastsLimit))}
+              </span>
+
+              <button
+                type="button"
+                disabled={roastsOffset + roastsLimit >= totalRoastsCount || roastsLoading}
+                onClick={() => {
+                  const newOffset = roastsOffset + roastsLimit
+                  setRoastsOffset(newOffset)
+                  loadRoasts(adminKey, newOffset, roastsLimit, roastsSearch, roastsBand)
+                }}
+                className="px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-stone-200 border border-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Section 6: 7-Day Traffic & Top Pages Grid ── */}

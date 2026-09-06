@@ -552,13 +552,35 @@ async def get_stats_api(request: Request, days: int = 7, format: Optional[str] =
 
 
 @router.get("/api/admin/roasts")
-async def get_admin_roasts(request: Request, limit: int = 20) -> JSONResponse:
-    """List recent uploaded roasts with scores, verdicts, and full resume text."""
+async def get_admin_roasts(
+    request: Request,
+    limit: int = 25,
+    offset: int = 0,
+    search: Optional[str] = None,
+    band: Optional[str] = None,
+) -> JSONResponse:
+    """List uploaded roasts with pagination, search, band filter, and full resume text."""
     if not verify_admin_access(request):
         raise HTTPException(status_code=401, detail="Unauthorized: Founder access only")
-    roasts = database.get_recent_roasts(limit=min(max(limit, 1), 100))
+    clean_limit = min(max(limit, 1), 200)
+    clean_offset = max(offset, 0)
+    roasts, total = database.get_roasts_paginated(
+        limit=clean_limit,
+        offset=clean_offset,
+        search=search,
+        band=band,
+    )
     return apply_secure_admin_headers(
-        JSONResponse(content={"ok": True, "count": len(roasts), "roasts": roasts})
+        JSONResponse(
+            content={
+                "ok": True,
+                "count": len(roasts),
+                "total": total,
+                "limit": clean_limit,
+                "offset": clean_offset,
+                "roasts": roasts,
+            }
+        )
     )
 
 
