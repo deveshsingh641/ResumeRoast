@@ -215,13 +215,6 @@ export default function Footer({
               <span>{isHinglish ? 'Suggest something' : 'Suggest something'}</span>
             </button>
             <a
-              href="/stats"
-              className="text-tan-dim hover:text-amber-300 transition-colors flex items-center gap-1"
-            >
-              <span>📊</span>
-              <span>Stats</span>
-            </a>
-            <a
               href="mailto:support@resumeroast.app?subject=ResumeRoast%20Support%20%26%20Feedback"
               className="hover:text-amber-300 transition-colors"
             >

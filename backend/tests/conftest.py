@@ -11,6 +11,7 @@ if str(backend_dir) not in sys.path:
 # CRITICAL: Isolate automated tests completely from remote production database!
 # This prevents test runs from polluting Supabase or inserting test data into the live Wall of Shame.
 os.environ["DATABASE_URL"] = ""
+os.environ["ADMIN_SECRET_KEY"] = ""
 
 from app.db import database
 database.DATABASE_URL = ""
