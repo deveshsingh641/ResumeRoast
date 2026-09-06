@@ -10,11 +10,12 @@ import logging
 import os
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.db import database
+from app.services.email_notifier import send_suggestion_alert
 
 logger = logging.getLogger("suggestion")
 router = APIRouter(tags=["suggestions"])
@@ -59,10 +60,14 @@ class SuggestionStatusUpdateRequest(BaseModel):
 
 
 @router.post("/api/suggestions")
-async def create_suggestion(payload: SuggestionCreateRequest, request: Request) -> JSONResponse:
+async def create_suggestion(
+    payload: SuggestionCreateRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> JSONResponse:
     """
     Public low-friction suggestion & feedback box.
-    No auth required. Includes honeypot and daily rate limiting.
+    No auth required. Includes honeypot, daily rate limiting, and background email alerts.
     """
     # 1. Honeypot check: real users never fill the hidden 'website' field
     if payload.website and payload.website.strip():
@@ -107,6 +112,16 @@ async def create_suggestion(payload: SuggestionCreateRequest, request: Request) 
 
     # 5. Increment usage counter
     database.increment_usage(usage_key)
+
+    # 6. Trigger non-blocking background email dispatch to founder
+    background_tasks.add_task(
+        send_suggestion_alert,
+        suggestion_id=entry["id"],
+        text=clean_text,
+        category=category,
+        submitter_email=clean_email,
+        created_at=entry.get("created_at"),
+    )
 
     logger.info(f"[SUGGESTION] New suggestion received #{entry['id']} [{category}]: {clean_text[:60]!r}")
 
