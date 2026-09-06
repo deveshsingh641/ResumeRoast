@@ -118,23 +118,28 @@ By default, Resume Roast works with zero configuration using in-memory storage (
 
 ---
 
-## 💳 Enabling Stripe Checkout (Optional)
+## 💳 Razorpay & Pro Waitlist Configuration (Pending KYC)
 
-To enable paid subscription unlocks for unlimited roasts:
+While Razorpay KYC is under review:
+- **Default State**: The application runs in **"Pro Launching Soon"** mode (`VITE_PRO_LAUNCHING_SOON=true`).
+- All public buttons (`/pricing`, locked issue cards, daily limit notifications, JD match mode) display **"Pro launching soon 🔜"** and lead visitors directly to the early-access waitlist capture (`POST /api/waitlist/join`).
+- **Internal Payment Test Harness**: Test credentials can still be verified without exposing public checkout by visiting:
+  `https://your-frontend.vercel.app/pricing?test_checkout=true`
 
-1. Create a Stripe account at [stripe.com](https://stripe.com).
-2. Create two recurring products/prices in Stripe:
-   - Monthly Pass ($4.99/mo)
-   - Annual Pass ($29/yr)
-3. Set the following environment variables in your backend:
+### Flipping Pro Live Once KYC Clears (3–4 business days):
+1. In your **Render / Backend** dashboard, update:
    ```env
-   STRIPE_SECRET_KEY=sk_live_...
-   STRIPE_WEBHOOK_SECRET=whsec_...
-   STRIPE_MONTHLY_PRICE_ID=price_...
-   STRIPE_ANNUAL_PRICE_ID=price_...
+   RAZORPAY_KEY_ID=rzp_live_...
+   RAZORPAY_KEY_SECRET=live_secret_...
+   RAZORPAY_WEBHOOK_SECRET=live_whsec_...
    ```
-4. Point your Stripe Webhook endpoint to:
-   `https://resumeroast-api.onrender.com/api/webhook/stripe`
+2. In your **Vercel / Frontend** dashboard, set:
+   ```env
+   VITE_RAZORPAY_KEY_ID=rzp_live_...
+   VITE_PRO_LAUNCHING_SOON=false
+   ```
+3. Trigger a redeploy on Vercel. All public CTAs will instantly switch from "Pro launching soon 🔜" to the active in-page Razorpay checkout modal!
+4. Query the `pro_waitlist` table or export participants via `GET /api/waitlist/entries` and send the launch announcement email with their promised early-bird discount perk.
 
 ---
 
