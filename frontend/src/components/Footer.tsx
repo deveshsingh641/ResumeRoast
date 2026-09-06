@@ -117,6 +117,13 @@ export default function Footer({
                   >
                     <span>⭐ Star</span>
                   </a>
+                  <Link
+                    to="/stats"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded font-mono text-xs text-red-400 hover:text-red-300 transition-colors"
+                    title="Founder Executive Desk"
+                  >
+                    <span>📊 Stats</span>
+                  </Link>
                 </div>
               </div>
 
@@ -214,6 +221,13 @@ export default function Footer({
               <span>💡</span>
               <span>{isHinglish ? 'Suggest something' : 'Suggest something'}</span>
             </button>
+            <Link
+              to="/stats"
+              className="hover:text-amber-300 transition-colors flex items-center gap-1 text-tan-dim"
+            >
+              <span>📊</span>
+              <span>Stats</span>
+            </Link>
             <a
               href="mailto:support@resumeroast.app?subject=ResumeRoast%20Support%20%26%20Feedback"
               className="hover:text-amber-300 transition-colors"

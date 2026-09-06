@@ -13,6 +13,7 @@ import PricingPage from '@/pages/PricingPage'
 import PrivacyPage from '@/pages/PrivacyPage'
 import TermsPage from '@/pages/TermsPage'
 import NotFoundPage from '@/pages/NotFoundPage'
+import FounderDashboardPage from '@/pages/FounderDashboardPage'
 
 import SuggestionStickyTrigger from '@/components/SuggestionStickyTrigger'
 
@@ -31,6 +32,9 @@ export default function App() {
         <Route path="/admin/checkout-test" element={<PricingPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/stats" element={<FounderDashboardPage />} />
+        <Route path="/admin" element={<FounderDashboardPage />} />
+        <Route path="/founder" element={<FounderDashboardPage />} />
 
         {/* Catch-all 404 */}
         <Route path="*" element={<NotFoundPage />} />
