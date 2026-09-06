@@ -10,6 +10,7 @@ import MarqueeTicker from '@/components/MarqueeTicker'
 import PlacementSeasonBanner from '@/components/PlacementSeasonBanner'
 import LiveRoastCounter from '@/components/LiveRoastCounter'
 import Footer from '@/components/Footer'
+import WaitlistModal from '@/components/WaitlistModal'
 import { getSampleResumes, getDailyRotationIndex } from '@/data/sampleRoast'
 
 /* ── 4 Stats Hairline Gap Grid (Section A.6) ── */
@@ -209,6 +210,7 @@ function PricingSection() {
   const { i18n } = useTranslation()
   const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
   const [annual, setAnnual] = useState(false)
+  const [showWaitlist, setShowWaitlist] = useState(false)
 
   const features = isHinglish
     ? [
@@ -339,12 +341,24 @@ function PricingSection() {
               </ul>
             </div>
 
-            <Link to="/pricing" className="btn-primary w-full justify-center">
-              {isHinglish ? 'Pro pe upgrade karo' : 'Upgrade to Pro'}
-            </Link>
+            <button
+              type="button"
+              onClick={() => setShowWaitlist(true)}
+              className="btn-primary w-full justify-center font-semibold"
+            >
+              Pro launching soon 🔜
+            </button>
           </div>
         </div>
       </div>
+
+      <WaitlistModal
+        isOpen={showWaitlist}
+        onClose={() => setShowWaitlist(false)}
+        source="landing_pricing_card"
+        headline="Pro Launching Soon 🔜"
+        subheadline="We're putting the finishing touches on Pro. Join the waitlist for launch notification, early priority, and an exclusive launch discount."
+      />
     </section>
   )
 }

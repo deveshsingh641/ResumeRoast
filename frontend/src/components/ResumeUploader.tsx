@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { normalizeLang } from '@/i18n/detector'
 import { useAppStore } from '@/store/useAppStore'
 import ProcessingState from './ProcessingState'
+import WaitlistModal from './WaitlistModal'
 
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_EXTENSIONS = ['.pdf', '.docx']
@@ -21,14 +22,13 @@ function validateFile(file: File, isHinglish = false): string | null {
   const ext = '.' + file.name.split('.').pop()?.toLowerCase()
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     return isHinglish
-      ? 'Sirf PDF ya DOCX (5MB tak) supported hai — is file format ko parse nahi kiya ja sakta.'
-      : "Only PDF or DOCX, up to 5MB — that file's format isn't supported."
+      ? 'Sirf PDF aur DOCX formats supported hain. Text-based documents upload karein.'
+      : 'Only PDF and DOCX files are supported. Please ensure your file has selectable text.'
   }
   if (file.size > MAX_SIZE) {
-    const sizeMb = (file.size / 1024 / 1024).toFixed(1)
     return isHinglish
-      ? `Sirf PDF ya DOCX (5MB tak) allowed hai — ye file kaafi badi hai (${sizeMb}MB).`
-      : `Only PDF or DOCX, up to 5MB — that file's a bit big (${sizeMb}MB).`
+      ? 'File size 5MB se chhota hona chahiye.'
+      : 'File size exceeds 5MB limit. Please upload a smaller resume document.'
   }
   return null
 }
@@ -40,6 +40,7 @@ export default function ResumeUploader() {
   const { setUploadStatus, setUploadError, setResult, uploadStatus } = useAppStore()
   const [isDragOver, setIsDragOver] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [showWaitlist, setShowWaitlist] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -223,15 +224,24 @@ export default function ResumeUploader() {
             <span>{errorMessage}</span>
           </div>
           {(errorMessage.toLowerCase().includes('daily') || errorMessage.toLowerCase().includes('limit')) && (
-            <Link
-              to="/pricing"
-              className="text-ember underline text-xs font-semibold hover:text-amber-300 ml-5 inline-block"
+            <button
+              type="button"
+              onClick={() => setShowWaitlist(true)}
+              className="text-ember underline text-xs font-semibold hover:text-amber-300 ml-5 inline-block text-left"
             >
-              Upgrade to Pro for unlimited daily roasts →
-            </Link>
+              Pro launching soon 🔜 — Join waitlist for unlimited daily roasts →
+            </button>
           )}
         </div>
       )}
+
+      <WaitlistModal
+        isOpen={showWaitlist}
+        onClose={() => setShowWaitlist(false)}
+        source="daily_limit_uploader"
+        headline="Pro Launching Soon 🔜"
+        subheadline="Unlimited daily submissions will unlock the instant Pro is live. Join the waitlist for launch priority and early-bird perks."
+      />
     </div>
   )
 }

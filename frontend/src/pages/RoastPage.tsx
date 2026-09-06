@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { normalizeLang } from '@/i18n/detector'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import ResumeUploader from '@/components/ResumeUploader'
 import Footer from '@/components/Footer'
+import WaitlistModal from '@/components/WaitlistModal'
 import { useAppStore } from '@/store/useAppStore'
 
 export default function RoastPage() {
@@ -12,6 +14,7 @@ export default function RoastPage() {
   const isUpgraded = searchParams.get('upgraded') === 'true'
   const { i18n } = useTranslation()
   const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
+  const [showWaitlist, setShowWaitlist] = useState(false)
 
   return (
     <main className="min-h-screen flex flex-col justify-between p-6 desk-cursor">
@@ -28,8 +31,23 @@ export default function RoastPage() {
         </div>
       </header>
 
+      {/* Sub-Tab Switcher */}
+      <div className="max-w-[560px] w-full mx-auto mt-6 mb-2">
+        <div className="flex items-center justify-center gap-2 p-1.5 bg-white/[0.03] border border-white/[0.08] rounded-sm max-w-sm mx-auto">
+          <div className="flex-1 py-1.5 px-3 text-center font-mono text-xs font-bold text-paper bg-stamp/20 border border-stamp/40 rounded-sm shadow-sm">
+            🔥 {isHinglish ? 'General Roast' : 'General Roast'}
+          </div>
+          <Link
+            to="/match"
+            className="flex-1 py-1.5 px-3 text-center font-mono text-xs text-tan-dim hover:text-tan transition-colors rounded-sm hover:bg-white/[0.03]"
+          >
+            🎯 {isHinglish ? 'JD Match (NEW)' : 'JD Match (NEW)'}
+          </Link>
+        </div>
+      </div>
+
       {/* Center Dropzone / Grading Area */}
-      <div className="max-w-[560px] w-full mx-auto text-center my-auto py-12">
+      <div className="max-w-[560px] w-full mx-auto text-center my-auto py-8">
         <p className="section-label mb-3">
           {isHinglish ? 'DESK PE DOCUMENT RAKHO' : 'PLACE RESUME ON THE DESK'}
         </p>
@@ -72,9 +90,18 @@ export default function RoastPage() {
               ⚠ {uploadError}
             </p>
             {uploadError.includes('limit') && (
-              <Link to="/pricing" className="font-mono text-xs text-ember underline mt-2 inline-block">
-                {isHinglish ? 'Pro unlimited plan dekho →' : 'View Pro unlimited plan →'}
-              </Link>
+              <div className="mt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowWaitlist(true)}
+                  className="font-mono text-xs text-ember underline hover:text-amber-300"
+                >
+                  {isHinglish ? 'Pro launching soon 🔜 (Waitlist join karo →)' : 'Pro launching soon 🔜 (Join Waitlist for Unlimited →)'}
+                </button>
+                <Link to="/pricing" className="font-mono text-[11px] text-tan-dim hover:text-tan">
+                  View pricing →
+                </Link>
+              </div>
             )}
           </div>
         )}
@@ -89,6 +116,14 @@ export default function RoastPage() {
         </p>
         <Footer />
       </div>
+
+      <WaitlistModal
+        isOpen={showWaitlist}
+        onClose={() => setShowWaitlist(false)}
+        source="daily_limit_roast_page"
+        headline="Pro Launching Soon 🔜"
+        subheadline="Unlimited daily resume roasts will unlock the moment Pro goes live. Join the waitlist for launch priority and early-bird perks."
+      />
     </main>
   )
 }

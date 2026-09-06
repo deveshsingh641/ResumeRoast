@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react'
 import { PageTracker } from '@/components/PageTracker'
 import LandingPage from '@/pages/LandingPage'
 import RoastPage from '@/pages/RoastPage'
+import MatchPage from '@/pages/MatchPage'
 import ResultsPage from '@/pages/ResultsPage'
 import BattlePage from '@/pages/BattlePage'
 import WallPage from '@/pages/WallPage'
@@ -18,11 +19,13 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/roast" element={<RoastPage />} />
+        <Route path="/match" element={<MatchPage />} />
         <Route path="/roast/:id" element={<ResultsPage />} />
         <Route path="/battle" element={<BattlePage />} />
         <Route path="/battle/:id" element={<BattlePage />} />
         <Route path="/wall" element={<WallPage />} />
         <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/admin/checkout-test" element={<PricingPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
 

@@ -22,6 +22,7 @@ import PaperSkeleton from '@/components/PaperSkeleton'
 import StoryCardModal from '@/components/StoryCardModal'
 import RoastBackChat from '@/components/RoastBackChat'
 import Footer from '@/components/Footer'
+import WaitlistModal from '@/components/WaitlistModal'
 import { useCinematicReveal } from '@/hooks/useCinematicReveal'
 import { ExtendedRoastResult, getSampleRoastData } from '@/data/sampleRoast'
 
@@ -38,6 +39,7 @@ export default function ResultsPage() {
   const [downloadingCert, setDownloadingCert] = useState(false)
   const [downloadingFixed, setDownloadingFixed] = useState(false)
   const [xRayMode, setXRayMode] = useState(false)
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false)
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
   const [fixesCopied, setFixesCopied] = useState(false)
   const [wallPublished, setWallPublished] = useState(false)
@@ -508,12 +510,13 @@ export default function ResultsPage() {
                     : 'Upgrade to Pro to uncover all hidden flaws, full drop-in rewritten lines, and unlimited daily roasts.'}
                 </p>
               </div>
-              <Link
-                to={typeof window !== 'undefined' ? `/pricing?from=${encodeURIComponent(window.location.pathname)}` : '/pricing'}
-                className="btn-primary shrink-0"
+              <button
+                type="button"
+                onClick={() => setShowWaitlistModal(true)}
+                className="btn-primary shrink-0 font-semibold flex items-center gap-1.5"
               >
-                {isHinglish ? 'Poora roast unlock karo' : 'Unlock Full Roast'}
-              </Link>
+                <span>Pro launching soon 🔜</span>
+              </button>
             </div>
           </section>
         )}
@@ -560,6 +563,42 @@ export default function ResultsPage() {
               <span>{downloadingCert ? (isHinglish ? 'Generating PDF…' : 'Generating PDF…') : (isHinglish ? 'Download Certificate (PDF)' : 'Download Certificate (PDF)')}</span>
               <span>📥</span>
             </button>
+          </div>
+        </section>
+
+        {/* ── 5.9 Role-Specific JD Match CTA Card (ATS Reality Check) ── */}
+        <section
+          aria-label="Job Description Match CTA"
+          className="max-w-[640px] mx-auto text-left border border-stamp/40 bg-gradient-to-r from-stamp/10 via-[#1C160E] to-transparent rounded-sm p-6 shadow-xl relative overflow-hidden"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-xl">🎯</span>
+                <span className="font-mono text-[10px] text-stamp uppercase tracking-widest font-bold">
+                  {isHinglish ? 'ROLE TAILORING // ATS REALITY CHECK' : 'ROLE TAILORING // ATS REALITY CHECK'}
+                </span>
+                <span className="font-mono text-[9px] bg-stamp/20 text-paper border border-stamp/40 px-1.5 py-0.2 rounded-xs">
+                  NEW
+                </span>
+              </div>
+              <h3 className="font-display text-lg sm:text-xl text-paper">
+                {isHinglish
+                  ? 'Kisi specific company mein apply kar rahe ho?'
+                  : 'Applying to a specific company or role?'}
+              </h3>
+              <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
+                {isHinglish
+                  ? 'Isi resume ko unke exact Job Description ke saath match karo bina re-upload kiye. Pata lagao kaunse keywords missing hain.'
+                  : 'Match this roasted resume against their exact Job Description without re-uploading. Detect missing ATS keyword traps and get tailored rewrites.'}
+              </p>
+            </div>
+            <Link
+              to={`/match?roast_id=${result.id}`}
+              className="btn-primary shrink-0 !text-xs !py-3 !px-5 flex items-center gap-2 font-display tracking-wider uppercase whitespace-nowrap shadow-lg shadow-stamp/20 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+            >
+              <span>{isHinglish ? 'JD Se Match Karo →' : 'Match With Job Description →'}</span>
+            </Link>
           </div>
         </section>
 
@@ -649,6 +688,12 @@ export default function ResultsPage() {
 
         {/* ── 7. Bottom Navigation ── */}
         <div className="pt-8 flex flex-wrap justify-center gap-4">
+          <Link
+            to={`/match?roast_id=${result.id}`}
+            className="btn-ghost !border-stamp/50 text-paper hover:bg-stamp/10 font-mono"
+          >
+            {isHinglish ? '🎯 JD Match Mode Try Karo' : '🎯 Match with Job Description'}
+          </Link>
           <Link to="/battle" className="btn-ghost">
             {isHinglish ? '⚔️ 1-on-1 Battle Try Karo' : '⚔️ Try 1-on-1 Battle'}
           </Link>
@@ -670,6 +715,15 @@ export default function ResultsPage() {
         isOpen={isStoryModalOpen}
         onClose={() => setIsStoryModalOpen(false)}
         result={result}
+      />
+
+      {/* ── Pro Launching Soon Waitlist Modal ── */}
+      <WaitlistModal
+        isOpen={showWaitlistModal}
+        onClose={() => setShowWaitlistModal(false)}
+        source="results_page_hidden_flaws"
+        headline="Pro Launching Soon 🔜"
+        subheadline="All hidden flaws, drop-in bullet rewrites, and uncensored deep roasts unlock the moment Pro goes live. Join the waitlist for launch priority and early-bird perks."
       />
     </main>
   )

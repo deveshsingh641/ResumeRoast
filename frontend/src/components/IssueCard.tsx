@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import type { Issue } from '@/store/useAppStore'
 import { getHinglishTag } from '@/utils/categoryTags'
+import WaitlistModal from '@/components/WaitlistModal'
 
 export function getCategoryColor(category: string): string {
   switch (category) {
@@ -26,6 +27,7 @@ interface IssueCardProps {
 
 export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: IssueCardProps) {
   const [showFix, setShowFix] = useState(false)
+  const [showWaitlist, setShowWaitlist] = useState(false)
   const categoryColor = getCategoryColor(issue.category)
   const tagLabel = issue.badge_label?.trim() || getHinglishTag(issue.category)
 
@@ -94,12 +96,21 @@ export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: 
           <p className="font-mono text-xs text-tan">
             Issue #{rank} Free tier mein locked hai bhai 🔒
           </p>
-          <Link
-            to={typeof window !== 'undefined' ? `/pricing?from=${encodeURIComponent(window.location.pathname)}` : '/pricing'}
-            className="btn-ghost btn-ghost-sm"
+          <button
+            type="button"
+            onClick={() => setShowWaitlist(true)}
+            className="btn-ghost btn-ghost-sm !border-stamp/40 text-paper hover:!border-stamp transition-colors flex items-center gap-1.5"
           >
-            Poora roast unlock karo
-          </Link>
+            <span>Pro launching soon 🔜</span>
+          </button>
+
+          <WaitlistModal
+            isOpen={showWaitlist}
+            onClose={() => setShowWaitlist(false)}
+            source={`issue_card_locked_${rank}`}
+            headline="Pro Launching Soon 🔜"
+            subheadline="Locked issues, all hidden flaws, and drop-in bullet rewrites unlock the second Pro goes live. Join the waitlist for launch priority and early-bird perks."
+          />
         </div>
       )}
 

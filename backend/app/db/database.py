@@ -39,6 +39,8 @@ _usage_memory: dict[str, int] = {}  # key -> count for today (UTC)
 _dedup_cache: dict[str, tuple[float, str]] = {}  # content_hash -> (timestamp, roast_id)
 _reactions_memory: dict[str, dict[str, int]] = {}  # roast_id -> {emoji: count}
 _unique_visitors_memory: set[str] = set()  # "visitor_hash:YYYY-MM-DD"
+_waitlist_memory: dict[str, dict] = {}  # email -> waitlist record
+
 
 
 def _get_conn():
@@ -132,11 +134,20 @@ CREATE TABLE IF NOT EXISTS daily_unique_visitors (
     PRIMARY KEY (visitor_hash, date)
 );
 
+CREATE TABLE IF NOT EXISTS pro_waitlist (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    source TEXT NOT NULL DEFAULT 'pricing',
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_roasts_expires_at ON roasts (expires_at);
 CREATE INDEX IF NOT EXISTS idx_battles_expires_at ON battles (expires_at);
 CREATE INDEX IF NOT EXISTS idx_wall_type_score ON wall_entries (type, hidden, score, created_at);
 CREATE INDEX IF NOT EXISTS idx_roast_reactions_roast_id ON roast_reactions (roast_id);
 CREATE INDEX IF NOT EXISTS idx_daily_visitors_date ON daily_unique_visitors (date);
+CREATE INDEX IF NOT EXISTS idx_pro_waitlist_email ON pro_waitlist (email);
 """
 
 
@@ -150,10 +161,13 @@ def init_db() -> None:
                 cur.execute(SCHEMA_SQL)
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT;")
                 cur.execute("ALTER TABLE roasts ADD COLUMN IF NOT EXISTS resume_text TEXT;")
+                cur.execute("CREATE TABLE IF NOT EXISTS pro_waitlist (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, source TEXT NOT NULL DEFAULT 'pricing', user_id UUID REFERENCES users(id) ON DELETE SET NULL, created_at TIMESTAMPTZ DEFAULT now());")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_pro_waitlist_email ON pro_waitlist (email);")
                 cur.execute("DELETE FROM wall_entries WHERE top_roast_lines::text LIKE '%Data do bhai%';")
             conn.commit()
     except Exception as e:
         print(f"[WARN] DB init error: {e}")
+
 
 
 def check_dedup(content_hash: str) -> Optional[str]:
@@ -473,6 +487,129 @@ def get_user_language(email: str) -> Optional[str]:
             cur.execute("SELECT preferred_language FROM users WHERE email = %s", (email,))
             row = cur.fetchone()
             return row["preferred_language"] if row else None
+
+
+# ---------------------------------------------------------------------------
+# Pro Waitlist Helpers
+# ---------------------------------------------------------------------------
+def add_to_waitlist(
+    email: str, source: str = "pricing", user_id: Optional[str] = None
+) -> Tuple[dict, bool]:
+    """
+    Add email to Pro waitlist.
+    Deduplicates on email. If user exists in users table or user_id is given, links user_id.
+    Returns (record, is_new).
+    """
+    clean_email = email.strip().lower()
+    now_utc = datetime.now(timezone.utc).isoformat()
+
+    # Link user_id if not given but user exists
+    if not user_id:
+        if not DATABASE_URL:
+            existing_user = _users_memory.get(clean_email)
+            if existing_user:
+                user_id = existing_user.get("id")
+        else:
+            try:
+                with _get_conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id FROM users WHERE email = %s", (clean_email,))
+                        user_row = cur.fetchone()
+                        if user_row:
+                            user_id = str(user_row["id"])
+            except Exception:
+                pass
+
+    if not DATABASE_URL:
+        if clean_email in _waitlist_memory:
+            return _waitlist_memory[clean_email], False
+        entry = {
+            "id": str(uuid4()),
+            "email": clean_email,
+            "source": source or "pricing",
+            "user_id": user_id,
+            "created_at": now_utc,
+        }
+        _waitlist_memory[clean_email] = entry
+        return entry, True
+
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM pro_waitlist WHERE email = %s", (clean_email,))
+            row = cur.fetchone()
+            if row:
+                d = dict(row)
+                if isinstance(d.get("id"), uuid.UUID):
+                    d["id"] = str(d["id"])
+                if isinstance(d.get("user_id"), uuid.UUID):
+                    d["user_id"] = str(d["user_id"])
+                if isinstance(d.get("created_at"), (datetime, date)):
+                    d["created_at"] = d["created_at"].isoformat()
+                return d, False
+
+            entry_id = str(uuid4())
+            valid_user_uuid = user_id if _is_valid_uuid(user_id) else None
+            cur.execute(
+                """
+                INSERT INTO pro_waitlist (id, email, source, user_id, created_at)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING *
+                """,
+                (entry_id, clean_email, source or "pricing", valid_user_uuid, now_utc),
+            )
+            created = cur.fetchone()
+        conn.commit()
+
+    d = dict(created)
+    if isinstance(d.get("id"), uuid.UUID):
+        d["id"] = str(d["id"])
+    if isinstance(d.get("user_id"), uuid.UUID):
+        d["user_id"] = str(d["user_id"])
+    if isinstance(d.get("created_at"), (datetime, date)):
+        d["created_at"] = d["created_at"].isoformat()
+    return d, True
+
+
+def get_waitlist_count() -> int:
+    """Return total number of users on waitlist."""
+    if not DATABASE_URL:
+        return len(_waitlist_memory)
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) AS total FROM pro_waitlist")
+                row = cur.fetchone()
+                return row["total"] if row else 0
+    except Exception:
+        return len(_waitlist_memory)
+
+
+def get_waitlist_entries(limit: int = 100) -> list[dict]:
+    """Return recent waitlist entries (for diagnostics / admin)."""
+    if not DATABASE_URL:
+        entries = list(_waitlist_memory.values())
+        return entries[-limit:]
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT * FROM pro_waitlist ORDER BY created_at DESC LIMIT %s",
+                    (limit,),
+                )
+                rows = cur.fetchall()
+                results = []
+                for row in rows:
+                    d = dict(row)
+                    if isinstance(d.get("id"), uuid.UUID):
+                        d["id"] = str(d["id"])
+                    if isinstance(d.get("user_id"), uuid.UUID):
+                        d["user_id"] = str(d["user_id"])
+                    if isinstance(d.get("created_at"), (datetime, date)):
+                        d["created_at"] = d["created_at"].isoformat()
+                    results.append(d)
+                return results
+    except Exception:
+        return list(_waitlist_memory.values())[-limit:]
 
 
 # In-memory stores for battles and wall entries

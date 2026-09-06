@@ -6,6 +6,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 import axios from 'axios'
 import { useAppStore } from '@/store/useAppStore'
 import { loadRazorpaySDK, RazorpaySuccessResponse } from '@/utils/razorpay'
+import WaitlistModal from '@/components/WaitlistModal'
 
 type CheckoutStatus = 'idle' | 'creating_order' | 'modal_open' | 'verifying' | 'success' | 'failed' | 'cancelled' | 'error'
 
@@ -35,10 +36,16 @@ export default function PricingPage() {
   const navigate = useNavigate()
   const returnUrl = searchParams.get('from') || searchParams.get('return_to') || '/roast'
 
+  // Admin/Internal Test Gate: Keep real payment flow testable via ?test_checkout=true or /admin/checkout-test
+  const isTestMode = searchParams.get('test_checkout') === 'true' || (typeof window !== 'undefined' && window.location.pathname.includes('/admin/checkout-test'))
+  // Public visitors see "Pro Launching Soon" while Razorpay KYC is pending review
+  const isLaunchingSoon = (import.meta.env.VITE_PRO_LAUNCHING_SOON !== 'false') && !isTestMode
+
   const { usage, setUsage } = useAppStore()
   const [annual, setAnnual] = useState(false)
   const [email, setEmail] = useState('')
   const [showEmailModal, setShowEmailModal] = useState(false)
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false)
   const [checkoutStatus, setCheckoutStatus] = useState<CheckoutStatus>('idle')
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
   const [gatewayConfig, setGatewayConfig] = useState<GatewayConfig | null>(null)
@@ -48,6 +55,50 @@ export default function PricingPage() {
   const [manualSubmitted, setManualSubmitted] = useState(false)
   const [manualLoading, setManualLoading] = useState(false)
   const [manualError, setManualError] = useState<string | null>(null)
+
+  // Inline waitlist state
+  const [inlineWaitlistEmail, setInlineWaitlistEmail] = useState('')
+  const [inlineWaitlistLoading, setInlineWaitlistLoading] = useState(false)
+  const [inlineWaitlistStatus, setInlineWaitlistStatus] = useState<'idle' | 'success' | 'already_joined' | 'error'>('idle')
+  const [inlineWaitlistMessage, setInlineWaitlistMessage] = useState<string | null>(null)
+
+  const handleInlineWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const cleanEmail = (inlineWaitlistEmail || email).trim().toLowerCase()
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      setInlineWaitlistStatus('error')
+      setInlineWaitlistMessage('Please enter a valid email address.')
+      return
+    }
+
+    try {
+      setInlineWaitlistLoading(true)
+      setInlineWaitlistStatus('idle')
+      setInlineWaitlistMessage(null)
+
+      try {
+        localStorage.setItem('resumeroast_user_email', cleanEmail)
+      } catch {}
+
+      const { data } = await axios.post('/api/waitlist/join', {
+        email: cleanEmail,
+        source: 'pricing_inline',
+      })
+
+      if (data.is_already_on_list || data.status === 'already_joined') {
+        setInlineWaitlistStatus('already_joined')
+        setInlineWaitlistMessage(data.message || "You're already on the list! We'll email you the second Pro is live 🎉")
+      } else {
+        setInlineWaitlistStatus('success')
+        setInlineWaitlistMessage(data.message || "You're on the list — we'll email you the second Pro is live 🎉")
+      }
+    } catch (err: any) {
+      setInlineWaitlistStatus('error')
+      setInlineWaitlistMessage(err?.response?.data?.detail || 'Failed to join waitlist. Please try again.')
+    } finally {
+      setInlineWaitlistLoading(false)
+    }
+  }
 
   const handleManualSubmit = async () => {
     if (!email || !email.includes('@')) {
@@ -80,15 +131,20 @@ export default function PricingPage() {
       const savedEmail = localStorage.getItem('resumeroast_user_email')
       if (savedEmail) {
         setEmail(savedEmail)
+        setInlineWaitlistEmail(savedEmail)
       }
     } catch {}
+
+    if (searchParams.get('waitlist') === 'true') {
+      setShowWaitlistModal(true)
+    }
 
     // Fetch public gateway config for mode transparency
     axios
       .get('/api/billing/config')
       .then(({ data }) => setGatewayConfig(data))
       .catch(() => {})
-  }, [])
+  }, [searchParams])
 
   const comparisonRows = [
     { feature: 'Daily resume submissions', free: '1 submission / day', pro: 'Unlimited' },
@@ -412,51 +468,152 @@ export default function PricingPage() {
               </div>
             </div>
 
-            <button
-              id="razorpay-initiate-button"
-              type="button"
-              onClick={() => {
-                setShowEmailModal(true)
-                setCheckoutStatus('idle')
-                setCheckoutMessage(null)
-              }}
-              className="btn-primary w-full justify-center text-sm py-3"
-            >
-              Unlock Pro Now ({annual ? '₹799' : '₹99'})
-            </button>
+            {isLaunchingSoon ? (
+              <button
+                id="pro-launching-soon-button"
+                type="button"
+                onClick={() => {
+                  setShowWaitlistModal(true)
+                }}
+                className="btn-primary w-full justify-center text-sm py-3 font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                Pro launching soon 🔜
+              </button>
+            ) : (
+              <button
+                id="razorpay-initiate-button"
+                type="button"
+                onClick={() => {
+                  setShowEmailModal(true)
+                  setCheckoutStatus('idle')
+                  setCheckoutMessage(null)
+                }}
+                className="btn-primary w-full justify-center text-sm py-3 font-semibold"
+              >
+                {isTestMode ? `Test Razorpay Checkout (${annual ? '₹799' : '₹99'})` : `Unlock Pro Now (${annual ? '₹799' : '₹99'})`}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Early Adopter Direct UPI Bridge (KYC Review Interim Stopgap) */}
-        <div className="max-w-[800px] mx-auto mb-16 bg-[#16130F] border border-white/[0.1] rounded-sm p-6 text-left shadow-lg">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-mono text-[10px] text-amber-400 font-bold bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-sm uppercase">
-                  Early Adopter Bridge // Direct UPI Transfer
-                </span>
-                {gatewayConfig?.mode === 'test' && (
-                  <span className="font-mono text-[10px] text-sky-400 bg-sky-400/10 border border-sky-400/30 px-2 py-0.5 rounded-sm uppercase">
-                    Test Mode Active
+        {/* Pro Launching Soon — VIP Waitlist Capture Section */}
+        {isLaunchingSoon && (
+          <div className="max-w-[800px] mx-auto mb-16 bg-[#16130F] border border-white/[0.12] rounded-sm p-6 sm:p-8 text-left shadow-xl animate-fadeIn">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="font-mono text-[10px] text-amber-400 font-bold bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                    VIP WAITLIST // EARLY ACCESS ⚡
                   </span>
-                )}
+                  <span className="font-mono text-[10px] text-tan-dim bg-white/[0.04] border border-white/[0.08] px-2 py-0.5 rounded-sm uppercase">
+                    KYC Review in Progress
+                  </span>
+                </div>
+                <h3 className="font-display text-xl sm:text-2xl text-paper">
+                  Pro is almost here — we're finishing setup.
+                </h3>
+                <p className="font-mono text-xs text-tan-dim mt-1.5 max-w-xl leading-relaxed">
+                  Want to know the moment Pro is live? Join the waitlist for instant launch alert, 1 complimentary bonus roast, and an exclusive early-adopter launch discount.
+                </p>
               </div>
-              <h3 className="font-display text-base sm:text-lg text-paper">
-                Want immediate Pro activation via direct personal UPI?
-              </h3>
-              <p className="font-mono text-xs text-tan-dim mt-1 max-w-xl leading-relaxed">
-                While automated Razorpay payment KYC is pending review, you can transfer directly via UPI to unlock Pro without waiting.
-              </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowManualUpi((v) => !v)}
-              className="btn-ghost !text-xs whitespace-nowrap shrink-0"
-            >
-              {showManualUpi ? 'Hide UPI Details ▲' : 'View Direct UPI Option ▼'}
-            </button>
+            {inlineWaitlistStatus === 'success' || inlineWaitlistStatus === 'already_joined' ? (
+              <div className="bg-emerald-950/40 border border-emerald-500/50 rounded-sm p-4 text-emerald-300 font-mono text-xs space-y-1 animate-fadeIn">
+                <div className="font-bold flex items-center gap-2 text-emerald-200 text-sm">
+                  <span>🎉</span>
+                  <span>{inlineWaitlistStatus === 'success' ? "You're on the VIP list!" : "You're already on the list!"}</span>
+                </div>
+                <p className="text-tan-dim">
+                  {inlineWaitlistMessage || "We'll email you the second Pro is live 🎉"}
+                </p>
+                <p className="text-amber-300 text-[11px] pt-1 font-semibold">
+                  🎁 Early-adopter launch discount + bonus roast locked in for your email.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleInlineWaitlistSubmit} className="space-y-3">
+                <div className="flex flex-col sm:flex-row items-stretch gap-3">
+                  <input
+                    type="email"
+                    required
+                    placeholder="Enter your email for instant launch alert"
+                    value={inlineWaitlistEmail || email}
+                    onChange={(e) => {
+                      setInlineWaitlistEmail(e.target.value)
+                      setEmail(e.target.value)
+                    }}
+                    disabled={inlineWaitlistLoading}
+                    className="flex-1 bg-[#1A1612] border border-white/[0.15] text-paper font-mono text-xs p-3 rounded-sm focus:outline-none focus:border-amber-400 disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={inlineWaitlistLoading}
+                    className="btn-primary !py-3 !text-xs whitespace-nowrap font-medium"
+                  >
+                    {inlineWaitlistLoading ? 'Joining Waitlist…' : 'Get Launch Alert & Perk 🔜'}
+                  </button>
+                </div>
+                {inlineWaitlistStatus === 'error' && inlineWaitlistMessage && (
+                  <p className="font-mono text-xs text-stamp">⚠ {inlineWaitlistMessage}</p>
+                )}
+              </form>
+            )}
+
+            {/* Test Mode Entry point for developer / admin */}
+            <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-tan-dim">
+              <span>Admin / gateway testing?</span>
+              <button
+                type="button"
+                onClick={() => navigate('/pricing?test_checkout=true')}
+                className="text-ember hover:underline"
+              >
+                Open Razorpay Test Mode Harness →
+              </button>
+            </div>
           </div>
+        )}
+
+        {/* Test Mode Harness & Diagnostics (Admin Only) */}
+        {isTestMode && (
+          <div className="max-w-[800px] mx-auto mb-16 bg-[#16130F] border border-amber-500/40 rounded-sm p-6 text-left shadow-lg animate-fadeIn">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-mono text-[10px] text-amber-400 font-bold bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-sm uppercase">
+                    🧪 Razorpay Test Mode Harness Active
+                  </span>
+                  {gatewayConfig?.mode === 'test' && (
+                    <span className="font-mono text-[10px] text-sky-400 bg-sky-400/10 border border-sky-400/30 px-2 py-0.5 rounded-sm uppercase">
+                      Test Keys Configured
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-display text-base sm:text-lg text-paper">
+                  Admin / Developer Payment Test Environment
+                </h3>
+                <p className="font-mono text-xs text-tan-dim mt-1 max-w-xl leading-relaxed">
+                  Public visitors see the "Pro Launching Soon" state and waitlist capture. Use this view to validate the real Razorpay checkout modal, UPI flow, and signature verification with test credentials.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowManualUpi((v) => !v)}
+                  className="btn-ghost !text-xs whitespace-nowrap shrink-0"
+                >
+                  {showManualUpi ? 'Hide UPI Details ▲' : 'View Test UPI Option ▼'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/pricing')}
+                  className="btn-ghost !text-xs whitespace-nowrap shrink-0"
+                >
+                  Exit Test Mode ✕
+                </button>
+              </div>
+            </div>
 
           {showManualUpi && (
             <div className="mt-5 pt-5 border-t border-white/[0.08] space-y-4 animate-fadeIn">
@@ -512,6 +669,7 @@ export default function PricingPage() {
             </div>
           )}
         </div>
+      )}
 
         {/* Modal for Email & Razorpay In-Page Checkout */}
         {showEmailModal && (
@@ -710,6 +868,13 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      {/* Pro Launching Soon Waitlist Capture Modal */}
+      <WaitlistModal
+        isOpen={showWaitlistModal}
+        onClose={() => setShowWaitlistModal(false)}
+        source="pricing_pro_card"
+      />
     </main>
   )
 }
