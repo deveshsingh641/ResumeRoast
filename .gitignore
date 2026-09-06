@@ -45,6 +45,8 @@ backend/storage/voice_notes/*
 !backend/storage/voice_notes/.gitkeep
 backend/storage/certificates/*
 !backend/storage/certificates/.gitkeep
+backend/storage/backups/*
+!backend/storage/backups/.gitkeep
 
 # Frontend build outputs & logs
 frontend/dist/

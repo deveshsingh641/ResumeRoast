@@ -13,8 +13,10 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional, Tuple
 from uuid import uuid4
 
+from contextlib import contextmanager
 import psycopg2
 import psycopg2.extras
+from psycopg2 import pool
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -41,10 +43,54 @@ _reactions_memory: dict[str, dict[str, int]] = {}  # roast_id -> {emoji: count}
 _unique_visitors_memory: set[str] = set()  # "visitor_hash:YYYY-MM-DD"
 _waitlist_memory: dict[str, dict] = {}  # email -> waitlist record
 
+# Connection pool for high-concurrency traffic bursts
+_connection_pool: Optional[pool.ThreadedConnectionPool] = None
 
 
+def _get_connection_pool() -> Optional[pool.ThreadedConnectionPool]:
+    """Lazy initialize thread-safe connection pool for PostgreSQL."""
+    global _connection_pool
+    if _connection_pool is None and DATABASE_URL:
+        try:
+            min_conn = int(os.getenv("DB_POOL_MIN", "2"))
+            max_conn = int(os.getenv("DB_POOL_MAX", "20"))
+            _connection_pool = pool.ThreadedConnectionPool(
+                minconn=min_conn,
+                maxconn=max_conn,
+                dsn=DATABASE_URL,
+                cursor_factory=psycopg2.extras.RealDictCursor,
+            )
+        except Exception as e:
+            print(f"[WARN] Failed to initialize ThreadedConnectionPool: {e}")
+            _connection_pool = None
+    return _connection_pool
+
+
+@contextmanager
 def _get_conn():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    """Context manager yielding a pooled database connection."""
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not set; database operates in in-memory mode")
+
+    pool_inst = _get_connection_pool()
+    if pool_inst is not None:
+        conn = pool_inst.getconn()
+        try:
+            yield conn
+        finally:
+            try:
+                pool_inst.putconn(conn)
+            except Exception:
+                pass
+    else:
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+        try:
+            yield conn
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 SCHEMA_SQL = """

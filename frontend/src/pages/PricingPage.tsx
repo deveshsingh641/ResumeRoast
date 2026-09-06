@@ -887,6 +887,28 @@ export default function PricingPage() {
               ))}
             </div>
           </div>
+
+          {/* 7-Day Money-Back Guarantee & Support Banner */}
+          <div className="mt-8 p-4 rounded-sm border border-emerald-500/20 bg-emerald-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono">
+            <div className="flex items-center gap-2.5">
+              <span className="text-emerald-400 text-base">🛡️</span>
+              <div>
+                <span className="text-paper font-semibold">7-Day Money-Back Guarantee:</span>{' '}
+                <span className="text-tan-dim">
+                  Zero risk. If you encounter any technical fault or are unsatisfied within 7 days, we issue a 100% refund.
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0 text-[11px]">
+              <Link to="/terms#refund-policy" className="text-amber-400 underline hover:text-amber-300">
+                Refund Policy
+              </Link>
+              <span className="text-white/20">·</span>
+              <a href="mailto:support@resumeroast.app" className="text-tan hover:text-paper">
+                support@resumeroast.app
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 

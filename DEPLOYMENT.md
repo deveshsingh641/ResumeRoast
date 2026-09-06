@@ -1,6 +1,7 @@
 # 🚀 Resume Roast — Production Deployment Guide
 
 This guide covers the best, tested ways to deploy **Resume Roast** to production.
+For scaling, cost control, disaster recovery, and operational runbooks, see [OPERATIONAL_RUNBOOK.md](OPERATIONAL_RUNBOOK.md).
 
 ---
 

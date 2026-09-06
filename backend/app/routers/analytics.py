@@ -6,10 +6,13 @@ Anonymizes visitors using daily SHA-256 hashes without storing personal IP addre
 from __future__ import annotations
 
 import hashlib
+import hmac
 import logging
+import os
+from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
@@ -22,6 +25,12 @@ router = APIRouter(tags=["analytics"])
 class TrackRequest(BaseModel):
     path: Optional[str] = "/"
     referrer: Optional[str] = None
+
+
+class AdminOverrideRequest(BaseModel):
+    email: str
+    action: str = "grant_pro"  # "grant_pro" | "revoke_pro"
+    reason: Optional[str] = "Manual support override"
 
 
 def _get_client_hash(request: Request) -> str:
@@ -259,3 +268,95 @@ async def get_admin_roasts(limit: int = 20) -> JSONResponse:
     """List recent uploaded roasts with scores, verdicts, and full resume text."""
     roasts = database.get_recent_roasts(limit=min(max(limit, 1), 100))
     return JSONResponse(content={"ok": True, "count": len(roasts), "roasts": roasts})
+
+
+def _verify_admin_access(request: Request) -> bool:
+    """Verify admin secret key from X-Admin-Key header or query parameter."""
+    configured_key = os.getenv("ADMIN_SECRET_KEY", "").strip()
+    provided_key = (
+        request.headers.get("X-Admin-Key")
+        or request.query_params.get("admin_key")
+        or ""
+    ).strip()
+    if not configured_key:
+        return True
+    return hmac.compare_digest(configured_key, provided_key)
+
+
+@router.get("/api/admin/metrics")
+async def get_founder_metrics(request: Request) -> JSONResponse:
+    """
+    Lightweight Founder Operational Metrics Dashboard (Section 6.2).
+    Tracks roasts, error rates, waitlist, pro conversions, and estimated AI costs.
+    """
+    if not _verify_admin_access(request):
+        raise HTTPException(status_code=401, detail="Unauthorized admin access")
+
+    stats = database.get_analytics_stats(days=7)
+    waitlist_count = database.get_waitlist_count()
+    recent_waitlist = database.get_waitlist_entries(limit=10)
+
+    total_roasts = stats.get("totals", {}).get("roasts", 0)
+    total_battles = stats.get("totals", {}).get("battles", 0)
+    pro_users = stats.get("totals", {}).get("pro_users", 0)
+
+    # Unit cost economics
+    est_blended_ai_spend = round(total_roasts * 0.00045, 3)
+
+    pool_stats = {
+        "is_pooled": database._connection_pool is not None,
+        "database_configured": bool(database.DATABASE_URL),
+    }
+
+    return JSONResponse(
+        content={
+            "ok": True,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "summary": {
+                "total_roasts_all_time": total_roasts,
+                "total_battles_all_time": total_battles,
+                "unique_visitors_today": stats.get("unique_visitors_today", 0),
+                "pageviews_today": stats.get("pageviews_today", 0),
+                "waitlist_signups": waitlist_count,
+                "pro_subscribers": pro_users,
+                "estimated_mrr_inr": pro_users * 99,
+            },
+            "costs": {
+                "estimated_total_ai_spend_usd": est_blended_ai_spend,
+                "cost_per_roast_gemini_flash_usd": 0.0003,
+                "cost_per_roast_claude_sonnet_usd": 0.024,
+                "notes": "Primary volume served via Gemini Flash at ~$0.0003 - $0.0005 per roast.",
+            },
+            "traffic_7d": stats.get("daily_history", []),
+            "recent_waitlist": recent_waitlist[:5],
+            "infrastructure": pool_stats,
+        }
+    )
+
+
+@router.post("/api/admin/user/override-pro")
+async def override_user_pro_status(payload: AdminOverrideRequest, request: Request) -> JSONResponse:
+    """
+    Support Override Tool (Section 4.2).
+    Instantly grant or revoke Pro status for a customer with payment/webhook delays.
+    """
+    if not _verify_admin_access(request):
+        raise HTTPException(status_code=401, detail="Unauthorized admin access")
+
+    clean_email = payload.email.strip().lower()
+    if not clean_email or "@" not in clean_email:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+
+    target_status = "pro" if payload.action == "grant_pro" else "free"
+    database.update_subscription(clean_email, target_status)
+    logger.info(f"[SUPPORT_OVERRIDE] {payload.action} for {clean_email}. Reason: {payload.reason}")
+
+    return JSONResponse(
+        content={
+            "ok": True,
+            "email": clean_email,
+            "subscription_status": target_status,
+            "message": f"Successfully set subscription status to '{target_status}' for {clean_email}.",
+            "reason": payload.reason,
+        }
+    )
