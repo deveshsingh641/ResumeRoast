@@ -67,9 +67,16 @@ export default function WaitlistModal({
         localStorage.setItem('resumeroast_user_email', cleanEmail)
       } catch {}
 
+      let userId: string | undefined = undefined
+      try {
+        const storedId = localStorage.getItem('resumeroast_user_id')
+        if (storedId) userId = storedId
+      } catch {}
+
       const { data } = await axios.post('/api/waitlist/join', {
         email: cleanEmail,
         source: source,
+        user_id: userId,
       })
 
       if (data.is_already_on_list || data.status === 'already_joined') {
