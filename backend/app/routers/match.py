@@ -4,6 +4,8 @@ Match Router — Endpoints for Job Description (JD) Match Mode & ATS Reality Che
 from __future__ import annotations
 
 import logging
+import os
+import re
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
@@ -85,8 +87,10 @@ async def match_resume_with_jd(
             raise HTTPException(status_code=422, detail="File size exceeds 5MB limit.")
 
         content_type = file.content_type or "application/octet-stream"
+        raw_name = os.path.basename(file.filename or "resume.pdf")
+        clean_filename = re.sub(r"[^\w\.\-]", "_", raw_name)[:120] or "resume.pdf"
         try:
-            extracted_text, _ = extractor.extract_text(file.filename or "resume.pdf", content_type, file_bytes)
+            extracted_text, _ = extractor.extract_text(clean_filename, content_type, file_bytes)
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
         except Exception as e:

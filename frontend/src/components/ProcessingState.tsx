@@ -14,6 +14,8 @@ export default function ProcessingState() {
   const [currentStageIdx, setCurrentStageIdx] = useState(0)
   const [progressPercent, setProgressPercent] = useState(12)
 
+  const [isTakingLonger, setIsTakingLonger] = useState(false)
+
   useEffect(() => {
     // Stage cycle
     const stageTimer = setInterval(() => {
@@ -26,6 +28,9 @@ export default function ProcessingState() {
 
     const progressTimer = setInterval(() => {
       const elapsed = Date.now() - start
+      if (elapsed > 14000) {
+        setIsTakingLonger(true)
+      }
       if (elapsed < targetDuration) {
         const pct = Math.min(90, Math.round((elapsed / targetDuration) * 90) + 10)
         setProgressPercent(pct)
@@ -63,9 +68,19 @@ export default function ProcessingState() {
         />
       </div>
 
-      <p className="font-mono text-[11px] text-tan-dim">
-        Processing document on the grading desk · Estimated time ~15 seconds
-      </p>
+      <div className="flex flex-col gap-1.5">
+        <p className="font-mono text-[11px] text-tan-dim">
+          Processing document on the grading desk · Estimated time ~15 seconds
+        </p>
+        {isTakingLonger && (
+          <div className="pt-2 border-t border-white/[0.06] flex items-center gap-2 font-mono text-[11px] text-amber-300 animate-fadeIn">
+            <span>⏳</span>
+            <span>
+              Deep analysis taking a moment longer to verify every single metric & bullet point... almost done, please keep this tab open.
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -11,6 +11,7 @@ import PlacementSeasonBanner from '@/components/PlacementSeasonBanner'
 import LiveRoastCounter from '@/components/LiveRoastCounter'
 import Footer from '@/components/Footer'
 import WaitlistModal from '@/components/WaitlistModal'
+import { usePageTitle } from '@/utils/usePageTitle'
 import { getSampleResumes, getDailyRotationIndex } from '@/data/sampleRoast'
 
 /* ── 4 Stats Hairline Gap Grid (Section A.6) ── */
@@ -455,6 +456,7 @@ function FAQSection() {
 
 /* ── Main Landing Page ── */
 export default function LandingPage() {
+  usePageTitle('Brutally Honest AI Resume Critique')
   const { i18n } = useTranslation()
   const lang = normalizeLang(i18n.language)
   const isHinglish = lang === 'hi-IN'

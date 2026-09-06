@@ -7,8 +7,10 @@ import ResumeUploader from '@/components/ResumeUploader'
 import Footer from '@/components/Footer'
 import WaitlistModal from '@/components/WaitlistModal'
 import { useAppStore } from '@/store/useAppStore'
+import { usePageTitle } from '@/utils/usePageTitle'
 
 export default function RoastPage() {
+  usePageTitle('Upload & Grade Resume')
   const { uploadError } = useAppStore()
   const [searchParams] = useSearchParams()
   const isUpgraded = searchParams.get('upgraded') === 'true'

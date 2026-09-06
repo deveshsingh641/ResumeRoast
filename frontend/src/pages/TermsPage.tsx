@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import { usePageTitle } from '@/utils/usePageTitle'
 
 export default function TermsPage() {
+  usePageTitle('Terms of Service')
   return (
     <main className="min-h-screen pb-24">
       {/* Top Bar Header */}

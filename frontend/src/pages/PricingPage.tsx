@@ -7,6 +7,7 @@ import axios from 'axios'
 import { useAppStore } from '@/store/useAppStore'
 import { loadRazorpaySDK, RazorpaySuccessResponse } from '@/utils/razorpay'
 import WaitlistModal from '@/components/WaitlistModal'
+import { usePageTitle } from '@/utils/usePageTitle'
 
 type CheckoutStatus = 'idle' | 'creating_order' | 'modal_open' | 'verifying' | 'success' | 'failed' | 'cancelled' | 'error'
 
@@ -32,6 +33,7 @@ interface SimulatedOrderData {
 }
 
 export default function PricingPage() {
+  usePageTitle('Pro Pass & VIP Waitlist')
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const returnUrl = searchParams.get('from') || searchParams.get('return_to') || '/roast'
@@ -55,6 +57,18 @@ export default function PricingPage() {
   const [manualSubmitted, setManualSubmitted] = useState(false)
   const [manualLoading, setManualLoading] = useState(false)
   const [manualError, setManualError] = useState<string | null>(null)
+
+  // Escape key closes modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowEmailModal(false)
+        setShowWaitlistModal(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Inline waitlist state
   const [inlineWaitlistEmail, setInlineWaitlistEmail] = useState('')

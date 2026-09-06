@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
@@ -50,17 +51,21 @@ async def create_battle(
         )
 
     # 2. Extract text for Fighter 1
+    raw_f1_name = os.path.basename(fighter1.filename or "fighter1.pdf")
+    clean_f1_name = re.sub(r"[^\w\.\-]", "_", raw_f1_name)[:120] or "fighter1.pdf"
     try:
         f1_text, _ = extractor.extract_text(
-            fighter1.filename or "fighter1.pdf", fighter1.content_type or "", f1_bytes
+            clean_f1_name, fighter1.content_type or "", f1_bytes
         )
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Fighter 1 file error: {str(e)}")
 
     # 3. Extract text for Fighter 2
+    raw_f2_name = os.path.basename(fighter2.filename or "fighter2.pdf")
+    clean_f2_name = re.sub(r"[^\w\.\-]", "_", raw_f2_name)[:120] or "fighter2.pdf"
     try:
         f2_text, _ = extractor.extract_text(
-            fighter2.filename or "fighter2.pdf", fighter2.content_type or "", f2_bytes
+            clean_f2_name, fighter2.content_type or "", f2_bytes
         )
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Fighter 2 file error: {str(e)}")

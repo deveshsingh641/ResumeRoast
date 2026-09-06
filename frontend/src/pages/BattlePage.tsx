@@ -10,8 +10,10 @@ import { IssueList } from '@/components/IssueCard'
 import BattleShareCard from '@/components/BattleShareCard'
 import DeskClutter from '@/components/DeskClutter'
 import Footer from '@/components/Footer'
+import { usePageTitle } from '@/utils/usePageTitle'
 
 export default function BattlePage() {
+  usePageTitle('1-on-1 Resume Battle Arena')
   const { id } = useParams<{ id: string }>()
   const { i18n } = useTranslation()
   const isHinglish = normalizeLang(i18n.language) === 'hi-IN'

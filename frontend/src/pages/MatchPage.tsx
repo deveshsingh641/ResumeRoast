@@ -7,6 +7,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 import Footer from '@/components/Footer'
 import WaitlistModal from '@/components/WaitlistModal'
 import { useAppStore } from '@/store/useAppStore'
+import { usePageTitle } from '@/utils/usePageTitle'
 
 interface MissingKeyword {
   keyword: string
@@ -111,6 +112,7 @@ const PROCESSING_STAGES = [
 ]
 
 export default function MatchPage() {
+  usePageTitle('Job Description Match & ATS Gap Scanner')
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { i18n } = useTranslation()

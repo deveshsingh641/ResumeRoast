@@ -25,9 +25,11 @@ import Footer from '@/components/Footer'
 import WaitlistModal from '@/components/WaitlistModal'
 import { useCinematicReveal } from '@/hooks/useCinematicReveal'
 import { ExtendedRoastResult, getSampleRoastData } from '@/data/sampleRoast'
+import { usePageTitle } from '@/utils/usePageTitle'
 
 export default function ResultsPage() {
   const { id } = useParams<{ id: string }>()
+  usePageTitle(id ? `Roast Report #${id.slice(0, 6)}` : 'Roast Report')
   const { i18n } = useTranslation()
   const lang = normalizeLang(i18n.language)
   const isHinglish = lang === 'hi-IN'

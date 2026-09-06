@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
@@ -194,7 +195,8 @@ async def create_roast(
     request: Request,
     file: UploadFile = File(...),
 ) -> JSONResponse:
-    filename = file.filename or "resume.pdf"
+    raw_name = os.path.basename(file.filename or "resume.pdf")
+    filename = re.sub(r"[^\w\.\-]", "_", raw_name)[:120] or "resume.pdf"
     content_type = file.content_type or ""
 
     # 1. Read bytes & validate size

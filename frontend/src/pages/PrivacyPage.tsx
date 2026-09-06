@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import { usePageTitle } from '@/utils/usePageTitle'
 
 export default function PrivacyPage() {
+  usePageTitle('Privacy Policy')
   return (
     <main className="min-h-screen pb-24">
       {/* Top Bar Header */}
@@ -56,7 +58,7 @@ export default function PrivacyPage() {
           <section className="border-t border-white/[0.08] pt-6">
             <h2 className="font-display text-lg text-paper mb-2">4. Payment Information</h2>
             <p>
-              All payments for Pro access are processed directly by Stripe. We never store or handle your raw credit card numbers or banking credentials on our servers.
+              All payments for Pro access are processed directly by authorized payment gateways such as Razorpay (supporting UPI, QR, Netbanking, and Debit Cards). We never store or handle your raw credit card numbers, UPI PINs, or banking passwords on our servers.
             </p>
           </section>
 

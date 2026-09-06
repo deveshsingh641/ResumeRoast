@@ -12,6 +12,7 @@ import WallPage from '@/pages/WallPage'
 import PricingPage from '@/pages/PricingPage'
 import PrivacyPage from '@/pages/PrivacyPage'
 import TermsPage from '@/pages/TermsPage'
+import NotFoundPage from '@/pages/NotFoundPage'
 
 export default function App() {
   return (
@@ -30,20 +31,7 @@ export default function App() {
         <Route path="/terms" element={<TermsPage />} />
 
         {/* Catch-all 404 */}
-        <Route
-          path="*"
-          element={
-            <main className="min-h-screen flex flex-col items-center justify-center text-center px-4">
-              <p className="font-display text-5xl text-stamp mb-4">404</p>
-              <p className="font-mono text-tan text-sm mb-6">
-                This page doesn't exist. Your career doesn't have to share its fate.
-              </p>
-              <a href="/" className="btn-primary">
-                Back to Resume Roast
-              </a>
-            </main>
-          }
-        />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <PageTracker />
       <Analytics />

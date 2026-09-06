@@ -8,6 +8,7 @@ import ScoreStamp from '@/components/ScoreStamp'
 import DeskClutter from '@/components/DeskClutter'
 import Footer from '@/components/Footer'
 import type { ScoreBand } from '@/store/useAppStore'
+import { usePageTitle } from '@/utils/usePageTitle'
 
 interface WallEntry {
   id: string
@@ -20,6 +21,7 @@ interface WallEntry {
 }
 
 export default function WallPage() {
+  usePageTitle('Wall of Flame & Fame')
   const { i18n } = useTranslation()
   const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
 

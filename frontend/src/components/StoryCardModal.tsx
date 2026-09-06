@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import html2canvas from 'html2canvas'
 import type { RoastResult } from '@/store/useAppStore'
 import ScoreStamp from './ScoreStamp'
@@ -14,6 +14,17 @@ export default function StoryCardModal({ isOpen, onClose, result }: StoryCardMod
   const [isDownloading, setIsDownloading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [downloaded, setDownloaded] = useState(false)
+
+  // Escape key closes modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 

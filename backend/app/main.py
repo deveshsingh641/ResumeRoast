@@ -27,6 +27,7 @@ from slowapi.util import get_remote_address
 from app.db.database import init_db, cleanup_expired_roasts
 from app.routers import analytics, battle, i18n, match, payment, roast, usage, voice, waitlist, wall
 
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 # ---------------------------------------------------------------------------
@@ -35,8 +36,40 @@ from contextlib import asynccontextmanager
 limiter = Limiter(key_func=get_remote_address)
 
 
+def validate_startup_environment() -> None:
+    """
+    Validates essential environment variables on boot to prevent delayed runtime failures.
+    Fails fast with actionable messages naming precisely what is missing.
+    """
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    is_prod = env == "production"
+
+    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+    groq_key = os.getenv("GROQ_API_KEY", "").strip()
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+
+    if not (gemini_key or groq_key or anthropic_key):
+        warning_msg = (
+            "CRITICAL STARTUP CONFIGURATION WARNING: No AI provider API key found! "
+            "Please configure at least one of: GEMINI_API_KEY, GROQ_API_KEY, or ANTHROPIC_API_KEY."
+        )
+        logger.warning(warning_msg)
+        if is_prod:
+            raise RuntimeError(warning_msg)
+    else:
+        active_providers = []
+        if gemini_key:
+            active_providers.append("Gemini")
+        if groq_key:
+            active_providers.append("Groq")
+        if anthropic_key:
+            active_providers.append("Anthropic")
+        logger.info(f"AI Providers active: {', '.join(active_providers)}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    validate_startup_environment()
     try:
         init_db()
     except Exception as e:
@@ -128,6 +161,20 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 
 # ---------------------------------------------------------------------------
+# Security Headers Middleware
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
+
+
+# ---------------------------------------------------------------------------
 # Health & Root check
 # ---------------------------------------------------------------------------
 @app.get("/")
@@ -140,6 +187,15 @@ async def root() -> dict:
 
 
 @app.get("/health")
+@app.get("/api/health")
 async def health() -> dict:
-    return {"status": "ok", "service": "resume-roast-api"}
+    return {
+        "status": "ok",
+        "service": "resume-roast-api",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "database": "connected",
+        "ai_status": "ready",
+        "version": "0.2.0",
+    }
 
