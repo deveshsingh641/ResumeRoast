@@ -271,6 +271,25 @@ export default function PricingPage() {
     { feature: "Historical submissions log", free: "—", pro: "Included" },
   ];
 
+  const reportPaymentFailure = async (
+    userEmail: string,
+    stage: string,
+    errorMessage: string,
+    orderId?: string,
+  ) => {
+    try {
+      await axios.post("/api/payment/log-failure", {
+        email: userEmail,
+        stage,
+        error_message: errorMessage,
+        order_id: orderId,
+        plan: annual ? "annual" : "monthly",
+        user_agent:
+          typeof navigator !== "undefined" ? navigator.userAgent : "browser",
+      });
+    } catch {}
+  };
+
   const handleInitiatePayment = async (userEmail: string) => {
     const cleanEmail = userEmail.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes("@") || !cleanEmail.includes(".")) {
@@ -283,6 +302,11 @@ export default function PricingPage() {
       localStorage.setItem("resumeroast_user_email", cleanEmail);
     } catch {}
 
+    const isRetry =
+      checkoutStatus === "error" ||
+      checkoutStatus === "failed" ||
+      checkoutStatus === "cancelled";
+
     clearTimers();
     setCheckoutStatus("creating_order");
     setCheckoutMessage(null);
@@ -291,7 +315,7 @@ export default function PricingPage() {
 
     const tStart = performance.now();
     console.info(
-      `[Razorpay PricingPage] 1. Initiating order for ${cleanEmail} (${annual ? "annual" : "monthly"})...`,
+      `[Razorpay PricingPage] 1. Initiating order for ${cleanEmail} (${annual ? "annual" : "monthly"}, retry=${isRetry})...`,
     );
 
     // Phase 2: After 3.2s, notify user that extra time is needed
@@ -307,14 +331,17 @@ export default function PricingPage() {
             "[Razorpay PricingPage] Order creation timed out after 12s.",
           );
           setLoadingStage("timeout");
-          setCheckoutMessage(
-            "Payment server connection timed out. Please check your network and try again.",
-          );
+          const msg =
+            "Payment server connection timed out. Please check your network and try again.";
+          setCheckoutMessage(msg);
+          reportPaymentFailure(cleanEmail, "order_creation_timeout", msg);
           return "error";
         }
         return current;
       });
     }, 12000);
+
+    let activeOrderId: string | undefined = undefined;
 
     try {
       // 1. Preload Razorpay Checkout JS SDK in background
@@ -327,8 +354,10 @@ export default function PricingPage() {
       const { data } = await axios.post("/api/create-order", {
         email: cleanEmail,
         plan: selectedPlan,
+        force_fresh: isRetry,
       });
 
+      activeOrderId = data.order_id;
       const tOrder = performance.now();
       console.info(
         `[Razorpay PricingPage] 2. Server order created in ${(tOrder - tStart).toFixed(0)}ms:`,
@@ -354,9 +383,15 @@ export default function PricingPage() {
       const isSdkLoaded = await loadRazorpaySDK();
       if (!isSdkLoaded || !window.Razorpay) {
         clearTimers();
-        throw new Error(
-          "Could not initialize Razorpay SDK. Please check your internet connection or ad-blocker.",
+        const sdkErr =
+          "Could not initialize Razorpay SDK. Please check your internet connection or ad-blocker.";
+        reportPaymentFailure(
+          cleanEmail,
+          "sdk_load_failed",
+          sdkErr,
+          activeOrderId,
         );
+        throw new Error(sdkErr);
       }
 
       const planName = annual
@@ -410,6 +445,7 @@ export default function PricingPage() {
         console.warn("[Razorpay PricingPage] Payment failed:", failResp);
         setCheckoutStatus("failed");
         setCheckoutMessage(`Payment failed: ${desc}. No amount was deducted.`);
+        reportPaymentFailure(cleanEmail, "payment_failed", desc, activeOrderId);
       });
 
       // Clear order-creation timers before invoking checkout overlay
@@ -425,8 +461,14 @@ export default function PricingPage() {
       } catch (openErr: any) {
         console.error("[Razorpay PricingPage] rzp.open() error:", openErr);
         setCheckoutStatus("error");
-        setCheckoutMessage(
-          "Payment checkout window could not open. Please disable any pop-up/ad blockers and try again.",
+        const openMsg =
+          "Payment checkout window could not open. Please disable any pop-up/ad blockers and try again.";
+        setCheckoutMessage(openMsg);
+        reportPaymentFailure(
+          cleanEmail,
+          "overlay_open_error",
+          openMsg,
+          activeOrderId,
         );
       }
     } catch (err: any) {
@@ -440,6 +482,12 @@ export default function PricingPage() {
             "Server issue initiating checkout. Please try again.";
       setCheckoutStatus("error");
       setCheckoutMessage(displayMsg);
+      reportPaymentFailure(
+        cleanEmail,
+        "order_creation_error",
+        displayMsg,
+        activeOrderId,
+      );
     }
   };
 
@@ -495,6 +543,12 @@ export default function PricingPage() {
         typeof detail === "string"
           ? detail
           : err?.message || "Verification failed. Please contact support.";
+      reportPaymentFailure(
+        userEmail,
+        "verification_failed",
+        msg,
+        paymentData.razorpay_order_id,
+      );
       setCheckoutStatus("error");
       setCheckoutMessage(`Verification Error: ${msg}`);
     }

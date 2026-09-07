@@ -4,6 +4,8 @@ Payment and Billing Router — supports India-first Razorpay in-page checkout
 """
 from __future__ import annotations
 
+import collections
+from datetime import datetime, timezone
 import hashlib
 import hmac
 import json
@@ -78,6 +80,7 @@ class CreateOrderRequest(BaseModel):
     amount: Optional[int] = None      # amount in paise (min 100)
     currency: Optional[str] = "INR"
     receipt: Optional[str] = None
+    force_fresh: Optional[bool] = False  # bypass cached active order on retry
 
 
 class VerifyPaymentRequest(BaseModel):
@@ -86,6 +89,15 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_signature: Optional[str] = None
     email: Optional[str] = None
     plan: Optional[str] = "monthly"
+
+
+class PaymentFailureLogRequest(BaseModel):
+    email: str
+    stage: str
+    error_message: str
+    order_id: Optional[str] = None
+    plan: Optional[str] = "monthly"
+    user_agent: Optional[str] = None
 
 
 class CheckoutRequest(BaseModel):
@@ -111,6 +123,9 @@ _active_orders_cache: dict[tuple[str, str], tuple[float, dict]] = {}
 
 # Order to Email binding map (IDOR and cross-user tampering protection)
 _order_email_map: dict[str, str] = {}
+
+# In-memory telemetry log for recent payment failures (viewable via /billing/diagnostics)
+_recent_payment_failures: collections.deque = collections.deque(maxlen=50)
 
 
 # ---------------------------------------------------------------------------
@@ -170,9 +185,43 @@ async def billing_diagnostics() -> JSONResponse:
                 for plan, paise in PLAN_PRICES.items()
             },
             "currency": "INR",
+            "recent_failures": list(_recent_payment_failures),
             "server_timestamp": int(time.time()),
         }
     )
+
+
+@router.post("/payment/log-failure")
+@router.post("/billing/log-failure")
+async def log_payment_failure(payload: PaymentFailureLogRequest, request: Request) -> JSONResponse:
+    """
+    Client-reported payment telemetry endpoint.
+    Logs checkout issues, modal timeouts, or declined transactions for real-time visibility.
+    """
+    clean_email = payload.email.strip().lower()
+    entry = {
+        "email": clean_email,
+        "stage": payload.stage,
+        "error_message": payload.error_message,
+        "order_id": payload.order_id,
+        "plan": payload.plan,
+        "user_agent": payload.user_agent or request.headers.get("user-agent", "unknown"),
+        "ip": request.client.host if request.client else "unknown",
+        "timestamp": int(time.time()),
+        "iso_time": datetime.now(timezone.utc).isoformat(),
+    }
+    _recent_payment_failures.append(entry)
+    logger.error(
+        f"[PAYMENT TELEMETRY FAILURE] {clean_email} | stage={payload.stage} | order_id={payload.order_id} | error={payload.error_message}"
+    )
+
+    # Invalidate active cached order so subsequent retries are completely fresh
+    for configured in (True, False):
+        k = (clean_email, (payload.plan or "monthly").lower(), configured)
+        if k in _active_orders_cache:
+            del _active_orders_cache[k]
+
+    return JSONResponse(content={"status": "logged", "timestamp": entry["timestamp"]})
 
 
 @router.get("/billing/config")
@@ -260,8 +309,11 @@ async def create_razorpay_order(payload: CreateOrderRequest) -> JSONResponse:
     now = time.time()
     cache_key = (email, plan, rzp["is_configured"])
 
-    # 0. Reuse active order if created within the last 180s (prevents duplicate orders on Razorpay)
-    if cache_key in _active_orders_cache:
+    # 0. Reuse active order if created within the last 180s (unless force_fresh requested on retry)
+    if payload.force_fresh and cache_key in _active_orders_cache:
+        logger.info(f"force_fresh requested by client on retry; evicting cached order for {email}")
+        del _active_orders_cache[cache_key]
+    elif cache_key in _active_orders_cache:
         cached_ts, cached_data = _active_orders_cache[cache_key]
         if now - cached_ts < 180:
             logger.info(

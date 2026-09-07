@@ -113,6 +113,25 @@ export default function CheckoutModal({
     onClose();
   };
 
+  const reportPaymentFailure = async (
+    userEmail: string,
+    stage: string,
+    errorMessage: string,
+    orderId?: string,
+  ) => {
+    try {
+      await axios.post("/api/payment/log-failure", {
+        email: userEmail,
+        stage,
+        error_message: errorMessage,
+        order_id: orderId,
+        plan: annual ? "annual" : "monthly",
+        user_agent:
+          typeof navigator !== "undefined" ? navigator.userAgent : "browser",
+      });
+    } catch {}
+  };
+
   const handleInitiatePayment = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
@@ -131,6 +150,11 @@ export default function CheckoutModal({
       localStorage.setItem("resumeroast_user_email", cleanEmail);
     } catch {}
 
+    const isRetry =
+      checkoutStatus === "error" ||
+      checkoutStatus === "failed" ||
+      checkoutStatus === "cancelled";
+
     clearTimers();
     setCheckoutStatus("creating_order");
     setCheckoutMessage(null);
@@ -139,7 +163,7 @@ export default function CheckoutModal({
 
     const tStart = performance.now();
     console.info(
-      `[Razorpay Checkout] 1. Initiating order creation for ${cleanEmail} (${annual ? "annual" : "monthly"})...`,
+      `[Razorpay Checkout] 1. Initiating order creation for ${cleanEmail} (${annual ? "annual" : "monthly"}, retry=${isRetry})...`,
     );
 
     // Phase 2: After 3.2s, communicate that extra time is needed
@@ -155,16 +179,18 @@ export default function CheckoutModal({
             "[Razorpay Checkout] Order creation timed out after 12s.",
           );
           setLoadingStage("timeout");
-          setCheckoutMessage(
-            isHinglish
-              ? "Payment server se connect nahi ho paya. Kripya thodi der baad dubara koshish karein."
-              : "Payment checkout could not connect. Please check your connection and try again.",
-          );
+          const msg = isHinglish
+            ? "Payment server se connect nahi ho paya. Kripya thodi der baad dubara koshish karein."
+            : "Payment checkout could not connect. Please check your connection and try again.";
+          setCheckoutMessage(msg);
+          reportPaymentFailure(cleanEmail, "order_creation_timeout", msg);
           return "error";
         }
         return current;
       });
     }, 12000);
+
+    let activeOrderId: string | undefined = undefined;
 
     try {
       // 1. Preload Razorpay Checkout JS SDK in background
@@ -177,8 +203,10 @@ export default function CheckoutModal({
       const { data } = await axios.post("/api/create-order", {
         email: cleanEmail,
         plan: selectedPlan,
+        force_fresh: isRetry,
       });
 
+      activeOrderId = data.order_id;
       const tOrder = performance.now();
       console.info(
         `[Razorpay Checkout] 2. Server order created in ${(tOrder - tStart).toFixed(0)}ms:`,
@@ -204,11 +232,16 @@ export default function CheckoutModal({
       const isSdkLoaded = await loadRazorpaySDK();
       if (!isSdkLoaded || !window.Razorpay) {
         clearTimers();
-        throw new Error(
-          isHinglish
-            ? "Razorpay checkout SDK load nahi hua. Ad-blocker ya internet connection check karein."
-            : "Could not initialize Razorpay SDK. Please check your internet connection or ad-blocker.",
+        const sdkErr = isHinglish
+          ? "Razorpay checkout SDK load nahi hua. Ad-blocker ya internet connection check karein."
+          : "Could not initialize Razorpay SDK. Please check your internet connection or ad-blocker.";
+        reportPaymentFailure(
+          cleanEmail,
+          "sdk_load_failed",
+          sdkErr,
+          activeOrderId,
         );
+        throw new Error(sdkErr);
       }
 
       const planName = annual
@@ -268,6 +301,7 @@ export default function CheckoutModal({
             ? `Payment Fail Ho Gaya: ${desc}. Koi amount deduct nahi hua.`
             : `Payment failed: ${desc}. No amount was deducted.`,
         );
+        reportPaymentFailure(cleanEmail, "payment_failed", desc, activeOrderId);
       });
 
       // Crucial: Clear order-creation timers BEFORE opening Razorpay modal
@@ -283,10 +317,15 @@ export default function CheckoutModal({
       } catch (openErr: any) {
         console.error("[Razorpay Checkout] rzp.open() threw error:", openErr);
         setCheckoutStatus("error");
-        setCheckoutMessage(
-          isHinglish
-            ? "Payment popup block ho gaya. Kripya popup blocker disable karein aur dubara click karein."
-            : "Payment popup was blocked or could not open. Please disable any popup blockers and try again.",
+        const openMsg = isHinglish
+          ? "Payment popup block ho gaya. Kripya popup blocker disable karein aur dubara click karein."
+          : "Payment popup was blocked or could not open. Please disable any popup blockers and try again.";
+        setCheckoutMessage(openMsg);
+        reportPaymentFailure(
+          cleanEmail,
+          "overlay_open_error",
+          openMsg,
+          activeOrderId,
         );
       }
     } catch (err: any) {
@@ -300,6 +339,12 @@ export default function CheckoutModal({
             "Server issue initiating checkout. Please try again.";
       setCheckoutStatus("error");
       setCheckoutMessage(displayMsg);
+      reportPaymentFailure(
+        cleanEmail,
+        "order_creation_error",
+        displayMsg,
+        activeOrderId,
+      );
     }
   };
 
@@ -359,9 +404,15 @@ export default function CheckoutModal({
           ? errorDetail
           : errorDetail?.message ||
             err?.message ||
-            "Cryptographic signature verification failed.";
+            "Verification failed. Please contact support.";
+      reportPaymentFailure(
+        userEmail,
+        "verification_failed",
+        displayMsg,
+        paymentData.razorpay_order_id,
+      );
       setCheckoutStatus("error");
-      setCheckoutMessage(displayMsg);
+      setCheckoutMessage(`Verification Error: ${displayMsg}`);
     }
   };
 
