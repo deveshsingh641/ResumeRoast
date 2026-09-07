@@ -373,6 +373,31 @@ class TestPaymentRazorpay(unittest.TestCase):
         self.assertTrue(res.json()["is_pro"])
         self.assertEqual(database.get_user_subscription(email), "pro")
 
+    def test_verify_payment_idor_cross_user_rejected(self):
+        """If user B attempts to verify an order created for user A, request is rejected with 403."""
+        # 1. Create order for User A
+        create_resp = self.client.post(
+            "/api/create-order",
+            json={"email": "victim_a@example.com", "plan": "monthly"},
+        )
+        self.assertEqual(create_resp.status_code, 200)
+        order_id = create_resp.json()["order_id"]
+
+        # 2. User B attempts to claim the order
+        verify_resp = self.client.post(
+            "/api/verify-payment",
+            json={
+                "razorpay_order_id": order_id,
+                "razorpay_payment_id": "pay_sim_attacker_1",
+                "razorpay_signature": "mock_sig",
+                "email": "attacker_b@example.com",
+                "plan": "monthly",
+            },
+        )
+        self.assertEqual(verify_resp.status_code, 403)
+        self.assertIn("unauthorized payment verification", verify_resp.json()["detail"].lower())
+        self.assertEqual(database.get_user_subscription("attacker_b@example.com"), "free")
+
 
 if __name__ == "__main__":
     unittest.main()

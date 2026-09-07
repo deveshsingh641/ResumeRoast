@@ -106,6 +106,12 @@ class ReconcilePaymentRequest(BaseModel):
 # In-memory deduplication set for processed payments/webhooks (idempotency guard)
 _processed_payments: set[str] = set()
 
+# Deduplication cache for active orders: (email, plan) -> (timestamp, order_data)
+_active_orders_cache: dict[tuple[str, str], tuple[float, dict]] = {}
+
+# Order to Email binding map (IDOR and cross-user tampering protection)
+_order_email_map: dict[str, str] = {}
+
 
 # ---------------------------------------------------------------------------
 # Diagnostics & Public Config
@@ -251,6 +257,20 @@ async def create_razorpay_order(payload: CreateOrderRequest) -> JSONResponse:
         f"Initiating Razorpay order for {email} (amount={amount_paise} paise, currency={currency}, mode={rzp['mode']})"
     )
 
+    now = time.time()
+    cache_key = (email, plan, rzp["is_configured"])
+
+    # 0. Reuse active order if created within the last 180s (prevents duplicate orders on Razorpay)
+    if cache_key in _active_orders_cache:
+        cached_ts, cached_data = _active_orders_cache[cache_key]
+        if now - cached_ts < 180:
+            logger.info(
+                f"Reusing active uncompleted order {cached_data['order_id']} for {email} (idempotent cache hit)"
+            )
+            return JSONResponse(content=cached_data)
+        else:
+            del _active_orders_cache[cache_key]
+
     # Developer Simulation Mode (when keys not configured)
     if not rzp["is_configured"]:
         logger.warning(
@@ -258,22 +278,23 @@ async def create_razorpay_order(payload: CreateOrderRequest) -> JSONResponse:
             "Returning developer simulation order."
         )
         simulated_order_id = f"order_sim_{int(time.time())}_{hashlib.md5(email.encode()).hexdigest()[:8]}"
-        return JSONResponse(
-            content={
-                "status": "success",
-                "order_id": simulated_order_id,
-                "amount": amount_paise,
-                "currency": currency,
-                "key_id": "rzp_test_simulation",
-                "plan": plan,
-                "plan_name": plan_name,
-                "simulated": True,
-                "message": (
-                    "Running in developer simulation mode. "
-                    "Configure RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend/.env to run live/test transactions."
-                ),
-            }
-        )
+        resp_payload = {
+            "status": "success",
+            "order_id": simulated_order_id,
+            "amount": amount_paise,
+            "currency": currency,
+            "key_id": "rzp_test_simulation",
+            "plan": plan,
+            "plan_name": plan_name,
+            "simulated": True,
+            "message": (
+                "Running in developer simulation mode. "
+                "Configure RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend/.env to run live/test transactions."
+            ),
+        }
+        _active_orders_cache[cache_key] = (now, resp_payload)
+        _order_email_map[simulated_order_id] = email
+        return JSONResponse(content=resp_payload)
 
     # Real Razorpay Order Creation via official SDK (POST https://api.razorpay.com/v1/orders)
     try:
@@ -303,18 +324,20 @@ async def create_razorpay_order(payload: CreateOrderRequest) -> JSONResponse:
         order = client.order.create(data=order_data)
         logger.info(f"Razorpay order created successfully: {order.get('id')} for {email}")
 
-        return JSONResponse(
-            content={
-                "status": "success",
-                "order_id": order["id"],
-                "amount": order["amount"],
-                "currency": order["currency"],
-                "key_id": rzp["key_id"],
-                "plan": plan,
-                "plan_name": plan_name,
-                "simulated": False,
-            }
-        )
+        resp_payload = {
+            "status": "success",
+            "order_id": order["id"],
+            "amount": order["amount"],
+            "currency": order["currency"],
+            "key_id": rzp["key_id"],
+            "plan": plan,
+            "plan_name": plan_name,
+            "simulated": False,
+        }
+        _active_orders_cache[cache_key] = (now, resp_payload)
+        _order_email_map[order["id"]] = email
+
+        return JSONResponse(content=resp_payload)
     except Exception as e:
         logger.exception(f"Razorpay order creation failed for {email}: {e}")
         error_msg = str(e)
@@ -357,8 +380,23 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest) -> JSONResponse
             detail="Missing required payment verification fields (razorpay_order_id, razorpay_payment_id, razorpay_signature).",
         )
 
+    # Authorization guard: ensure order belongs to the claiming email (IDOR protection)
+    mapped_email = _order_email_map.get(order_id)
+    if mapped_email and mapped_email != email:
+        logger.warning(
+            f"Unauthorized payment verification: order {order_id} belongs to {mapped_email}, but {email} attempted verification."
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized payment verification: order does not belong to the claiming user.",
+        )
+
     rzp = get_razorpay_config()
     logger.info(f"Verifying payment: order={order_id}, payment={payment_id} for {email}")
+
+    # Evict from active orders cache
+    _active_orders_cache.pop((email, payload.plan or "monthly", True), None)
+    _active_orders_cache.pop((email, payload.plan or "monthly", False), None)
 
     # Idempotency check: if payment_id already verified, return immediate success
     if payment_id and payment_id in _processed_payments:

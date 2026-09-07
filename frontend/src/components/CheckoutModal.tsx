@@ -49,6 +49,9 @@ export default function CheckoutModal({
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
   const [simulatedOrder, setSimulatedOrder] =
     useState<SimulatedOrderData | null>(null);
+  const [loadingStage, setLoadingStage] = useState<
+    "immediate" | "waiting" | "timeout"
+  >("immediate");
 
   // Sync defaultPlan when prop changes
   useEffect(() => {
@@ -67,6 +70,7 @@ export default function CheckoutModal({
       setCheckoutStatus("idle");
       setCheckoutMessage(null);
       setSimulatedOrder(null);
+      setLoadingStage("immediate");
     }
   }, [isOpen]);
 
@@ -104,23 +108,30 @@ export default function CheckoutModal({
     setCheckoutStatus("creating_order");
     setCheckoutMessage(null);
     setSimulatedOrder(null);
+    setLoadingStage("immediate");
 
     const tStart = performance.now();
     console.info(
       `[Razorpay Checkout] 1. Initiating order creation for ${cleanEmail} (${annual ? "annual" : "monthly"})...`,
     );
 
-    // Client-side 8.5s timeout guard to prevent indefinite spinning
+    // Phase 2: After 3.2s, communicate that extra time is needed
+    const slowNoticeTimer = window.setTimeout(() => {
+      setLoadingStage("waiting");
+    }, 3200);
+
+    // Phase 3: Client-side 8.5s timeout guard to prevent indefinite spinning
     const timeoutTimer = window.setTimeout(() => {
       setCheckoutStatus((current) => {
         if (current === "creating_order" || current === "modal_open") {
           console.warn(
             "[Razorpay Checkout] Modal opening timed out after 8.5s.",
           );
+          setLoadingStage("timeout");
           setCheckoutMessage(
             isHinglish
-              ? "Payment gateway khulne me samay lag raha hai. Kripya connection check karein ya refresh karke dobara try karein."
-              : "Payment is taking longer than usual. Please check your internet connection or ad-blocker, or try again.",
+              ? "Payment checkout load nahi ho paya. Please try again."
+              : "Payment checkout could not load. Please try again.",
           );
           return "error";
         }
@@ -430,12 +441,14 @@ export default function CheckoutModal({
             <div className="flex items-center gap-2 text-emerald-300 font-display text-lg font-bold">
               <span>🎉</span>
               <span>
-                {isHinglish ? "Pro Subscription Active!" : "Pro Activated!"}
+                {isHinglish ? "Payment ho gaya 🎉" : "Payment Successful 🎉"}
               </span>
             </div>
             <p className="font-mono text-xs text-tan-dim leading-relaxed">
               {checkoutMessage ||
-                "Your Pro pass is active. Unlimited submissions and all unlocked bullet rewrites are ready."}
+                (isHinglish
+                  ? "Pro unlock ho gaya. Ab full power mein resume roast karo."
+                  : "Pro access is active. Unlimited submissions & bullet rewrites unlocked.")}
             </p>
             <div className="pt-2 flex flex-col gap-2">
               <button
@@ -530,15 +543,17 @@ export default function CheckoutModal({
               }
               className="btn-primary w-full justify-center text-sm py-3.5 font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
             >
-              {checkoutStatus === "creating_order" ? (
+              {checkoutStatus === "creating_order" ||
+              checkoutStatus === "modal_open" ? (
                 <span className="flex items-center gap-2 font-mono text-xs">
                   <span className="animate-spin inline-block">⚡</span>
-                  Connecting to Razorpay…
-                </span>
-              ) : checkoutStatus === "modal_open" ? (
-                <span className="flex items-center gap-2 font-mono text-xs">
-                  <span className="animate-spin inline-block">⚡</span>
-                  Opening Razorpay Gateway…
+                  {loadingStage === "waiting"
+                    ? isHinglish
+                      ? "Checkout load hone mein thoda extra time lag raha hai. Please wait…"
+                      : "Checkout is taking extra time to load. Please wait…"
+                    : isHinglish
+                      ? "Payment secure checkout khul raha hai…"
+                      : "Opening secure payment checkout…"}
                 </span>
               ) : checkoutStatus === "verifying" ? (
                 <span className="flex items-center gap-2 font-mono text-xs">

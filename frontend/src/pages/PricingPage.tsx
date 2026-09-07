@@ -75,6 +75,9 @@ export default function PricingPage() {
   const [manualSubmitted, setManualSubmitted] = useState(false);
   const [manualLoading, setManualLoading] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
+  const [loadingStage, setLoadingStage] = useState<
+    "immediate" | "waiting" | "timeout"
+  >("immediate");
 
   // Escape key closes modals
   useEffect(() => {
@@ -262,21 +265,28 @@ export default function PricingPage() {
     setCheckoutStatus("creating_order");
     setCheckoutMessage(null);
     setSimulatedOrder(null);
+    setLoadingStage("immediate");
 
     const tStart = performance.now();
     console.info(
       `[Razorpay PricingPage] 1. Initiating order for ${cleanEmail} (${annual ? "annual" : "monthly"})...`,
     );
 
-    // Client-side 8.5s timeout guard
+    // Phase 2: After 3.2s, notify user that extra time is needed
+    const slowNoticeTimer = window.setTimeout(() => {
+      setLoadingStage("waiting");
+    }, 3200);
+
+    // Phase 3: Client-side 8.5s timeout guard
     const timeoutTimer = window.setTimeout(() => {
       setCheckoutStatus((current) => {
         if (current === "creating_order" || current === "modal_open") {
           console.warn(
             "[Razorpay PricingPage] Modal opening timed out after 8.5s.",
           );
+          setLoadingStage("timeout");
           setCheckoutMessage(
-            "Payment is taking longer than usual. Please check your connection, ad-blocker, or try again.",
+            "Payment checkout load nahi ho paya. Please try again.",
           );
           return "error";
         }
@@ -1031,15 +1041,13 @@ export default function PricingPage() {
                       onClick={() => handleInitiatePayment(email)}
                       className="btn-primary flex-1 justify-center py-2.5 font-medium"
                     >
-                      {checkoutStatus === "creating_order" ? (
+                      {checkoutStatus === "creating_order" ||
+                      checkoutStatus === "modal_open" ? (
                         <span className="flex items-center gap-2">
                           <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Creating Order…
-                        </span>
-                      ) : checkoutStatus === "modal_open" ? (
-                        <span className="flex items-center gap-2">
-                          <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Opening Razorpay Gateway…
+                          {loadingStage === "waiting"
+                            ? "Checkout load hone mein thoda extra time lag raha hai. Please wait…"
+                            : "Payment secure checkout khul raha hai…"}
                         </span>
                       ) : checkoutStatus === "verifying" ? (
                         <span className="flex items-center gap-2">
