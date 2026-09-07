@@ -320,9 +320,60 @@ class TestPaymentRazorpay(unittest.TestCase):
 
             # Confirm database has pro status
             self.assertEqual(database.get_user_subscription(webhook_email), "pro")
+
+            # Duplicate webhook with same payment_id should return idempotent already_processed
+            resp_duplicate = self.client.post(
+                "/api/billing/webhook",
+                content=body_bytes,
+                headers={"X-Razorpay-Signature": valid_sig},
+            )
+            self.assertEqual(resp_duplicate.status_code, 200)
+            self.assertEqual(resp_duplicate.json()["status"], "already_processed")
         finally:
             os.environ["RAZORPAY_WEBHOOK_SECRET"] = ""
+
+    def test_amount_tampering_rejected(self):
+        """If client sends an amount differing from server plan price, request is rejected with 400."""
+        # Attempt to buy annual plan (79900 paise) for 100 paise
+        response = self.client.post(
+            "/api/create-order",
+            json={"email": "tamper@example.com", "plan": "annual", "amount": 100},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("invalid order amount", response.json()["detail"].lower())
+
+    def test_verify_payment_idempotency(self):
+        """Calling verify-payment multiple times with same payment ID returns idempotent success."""
+        email = "idempotent_user@example.com"
+        payload = {
+            "razorpay_order_id": "order_sim_idem_1",
+            "razorpay_payment_id": "pay_sim_idem_99",
+            "razorpay_signature": "mock_sig",
+            "email": email,
+            "plan": "monthly",
+        }
+        res1 = self.client.post("/api/verify-payment", json=payload)
+        self.assertEqual(res1.status_code, 200)
+        self.assertTrue(res1.json()["is_pro"])
+
+        # Second call with same payment_id
+        res2 = self.client.post("/api/verify-payment", json=payload)
+        self.assertEqual(res2.status_code, 200)
+        self.assertTrue(res2.json()["is_pro"])
+        self.assertTrue(res2.json().get("idempotent", False))
+
+    def test_reconcile_payment_endpoint(self):
+        """Reconciliation endpoint rescues users if network blip occurred."""
+        email = "reconcile_user@example.com"
+        res = self.client.post(
+            "/api/payment/reconcile",
+            json={"email": email, "payment_id": "pay_sim_reconcile_123"},
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()["is_pro"])
+        self.assertEqual(database.get_user_subscription(email), "pro")
 
 
 if __name__ == "__main__":
     unittest.main()
+

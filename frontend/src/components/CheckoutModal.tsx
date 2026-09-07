@@ -105,6 +105,29 @@ export default function CheckoutModal({
     setCheckoutMessage(null);
     setSimulatedOrder(null);
 
+    const tStart = performance.now();
+    console.info(
+      `[Razorpay Checkout] 1. Initiating order creation for ${cleanEmail} (${annual ? "annual" : "monthly"})...`,
+    );
+
+    // Client-side 8.5s timeout guard to prevent indefinite spinning
+    const timeoutTimer = window.setTimeout(() => {
+      setCheckoutStatus((current) => {
+        if (current === "creating_order" || current === "modal_open") {
+          console.warn(
+            "[Razorpay Checkout] Modal opening timed out after 8.5s.",
+          );
+          setCheckoutMessage(
+            isHinglish
+              ? "Payment gateway khulne me samay lag raha hai. Kripya connection check karein ya refresh karke dobara try karein."
+              : "Payment is taking longer than usual. Please check your internet connection or ad-blocker, or try again.",
+          );
+          return "error";
+        }
+        return current;
+      });
+    }, 8500);
+
     try {
       // 1. Preload Razorpay Checkout JS SDK in background
       loadRazorpaySDK().catch((err) =>
@@ -118,8 +141,15 @@ export default function CheckoutModal({
         plan: selectedPlan,
       });
 
+      const tOrder = performance.now();
+      console.info(
+        `[Razorpay Checkout] 2. Server order created in ${(tOrder - tStart).toFixed(0)}ms:`,
+        data.order_id,
+      );
+
       // 3. Developer Simulation Mode (when keys not configured)
       if (data.simulated) {
+        window.clearTimeout(timeoutTimer);
         setSimulatedOrder({
           order_id: data.order_id,
           amount: data.amount,
@@ -135,6 +165,7 @@ export default function CheckoutModal({
       // 4. Real Razorpay In-Page Checkout
       const isSdkLoaded = await loadRazorpaySDK();
       if (!isSdkLoaded || !window.Razorpay) {
+        window.clearTimeout(timeoutTimer);
         throw new Error(
           isHinglish
             ? "Razorpay checkout SDK load nahi hua. Ad-blocker ya internet connection check karein."
@@ -163,6 +194,8 @@ export default function CheckoutModal({
         },
         modal: {
           ondismiss: () => {
+            window.clearTimeout(timeoutTimer);
+            console.info("[Razorpay Checkout] Modal dismissed by user.");
             setCheckoutStatus("cancelled");
             setCheckoutMessage(
               isHinglish
@@ -173,6 +206,11 @@ export default function CheckoutModal({
           confirm_close: true,
         },
         handler: async (response: RazorpaySuccessResponse) => {
+          window.clearTimeout(timeoutTimer);
+          const tPaid = performance.now();
+          console.info(
+            `[Razorpay Checkout] Payment authorized in ${(tPaid - tStart).toFixed(0)}ms total. Verifying signature...`,
+          );
           await verifyPaymentSuccess(response, cleanEmail, selectedPlan);
         },
       };
@@ -180,21 +218,28 @@ export default function CheckoutModal({
       const rzp = new window.Razorpay(options);
 
       rzp.on("payment.failed", (failResp: any) => {
+        window.clearTimeout(timeoutTimer);
         const desc =
           failResp?.error?.description ||
           failResp?.error?.reason ||
           "Transaction was declined by bank or UPI app.";
+        console.warn("[Razorpay Checkout] Payment failed event:", failResp);
         setCheckoutStatus("failed");
         setCheckoutMessage(
           isHinglish
-            ? `Payment Fail Ho Gaya: ${desc}`
-            : `Payment Failed: ${desc}`,
+            ? `Payment Fail Ho Gaya: ${desc}. Koi amount deduct nahi hua.`
+            : `Payment failed: ${desc}. No amount was deducted.`,
         );
       });
 
       setCheckoutStatus("modal_open");
+      const tOpen = performance.now();
+      console.info(
+        `[Razorpay Checkout] 3. Invoking rzp.open() at +${(tOpen - tStart).toFixed(0)}ms`,
+      );
       rzp.open();
     } catch (err: any) {
+      window.clearTimeout(timeoutTimer);
       const errorDetail = err?.response?.data?.detail;
       const displayMsg =
         typeof errorDetail === "string"

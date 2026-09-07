@@ -263,6 +263,27 @@ export default function PricingPage() {
     setCheckoutMessage(null);
     setSimulatedOrder(null);
 
+    const tStart = performance.now();
+    console.info(
+      `[Razorpay PricingPage] 1. Initiating order for ${cleanEmail} (${annual ? "annual" : "monthly"})...`,
+    );
+
+    // Client-side 8.5s timeout guard
+    const timeoutTimer = window.setTimeout(() => {
+      setCheckoutStatus((current) => {
+        if (current === "creating_order" || current === "modal_open") {
+          console.warn(
+            "[Razorpay PricingPage] Modal opening timed out after 8.5s.",
+          );
+          setCheckoutMessage(
+            "Payment is taking longer than usual. Please check your connection, ad-blocker, or try again.",
+          );
+          return "error";
+        }
+        return current;
+      });
+    }, 8500);
+
     try {
       // 1. Preload Razorpay Checkout JS SDK in background
       loadRazorpaySDK().catch((err) =>
@@ -276,8 +297,15 @@ export default function PricingPage() {
         plan: selectedPlan,
       });
 
+      const tOrder = performance.now();
+      console.info(
+        `[Razorpay PricingPage] 2. Server order created in ${(tOrder - tStart).toFixed(0)}ms:`,
+        data.order_id,
+      );
+
       // 3. Check if running in Developer Simulation Mode
       if (data.simulated) {
+        window.clearTimeout(timeoutTimer);
         setSimulatedOrder({
           order_id: data.order_id,
           amount: data.amount,
@@ -293,6 +321,7 @@ export default function PricingPage() {
       // 4. Real Razorpay In-Page Checkout
       const isSdkLoaded = await loadRazorpaySDK();
       if (!isSdkLoaded || !window.Razorpay) {
+        window.clearTimeout(timeoutTimer);
         throw new Error(
           "Could not initialize Razorpay SDK. Please check your internet connection or ad-blocker.",
         );
@@ -319,6 +348,8 @@ export default function PricingPage() {
         },
         modal: {
           ondismiss: () => {
+            window.clearTimeout(timeoutTimer);
+            console.info("[Razorpay PricingPage] Modal dismissed by user.");
             setCheckoutStatus("cancelled");
             setCheckoutMessage(
               "Payment window was dismissed. Click below to retry whenever you are ready.",
@@ -327,6 +358,11 @@ export default function PricingPage() {
           confirm_close: true,
         },
         handler: async (response: RazorpaySuccessResponse) => {
+          window.clearTimeout(timeoutTimer);
+          const tPaid = performance.now();
+          console.info(
+            `[Razorpay PricingPage] Payment authorized in ${(tPaid - tStart).toFixed(0)}ms total. Verifying signature...`,
+          );
           await verifyPaymentSuccess(response, cleanEmail, selectedPlan);
         },
       };
@@ -334,17 +370,24 @@ export default function PricingPage() {
       const rzp = new window.Razorpay(options);
 
       rzp.on("payment.failed", (failResp: any) => {
+        window.clearTimeout(timeoutTimer);
         const desc =
           failResp?.error?.description ||
           failResp?.error?.reason ||
           "Transaction was declined by bank or UPI app.";
+        console.warn("[Razorpay PricingPage] Payment failed:", failResp);
         setCheckoutStatus("failed");
-        setCheckoutMessage(`Payment Failed: ${desc}`);
+        setCheckoutMessage(`Payment failed: ${desc}. No amount was deducted.`);
       });
 
       setCheckoutStatus("modal_open");
+      const tOpen = performance.now();
+      console.info(
+        `[Razorpay PricingPage] 3. Invoking rzp.open() at +${(tOpen - tStart).toFixed(0)}ms`,
+      );
       rzp.open();
     } catch (err: any) {
+      window.clearTimeout(timeoutTimer);
       const errorDetail = err?.response?.data?.detail;
       const displayMsg =
         typeof errorDetail === "string"

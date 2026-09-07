@@ -97,6 +97,16 @@ class CancelRequest(BaseModel):
     email: str
 
 
+class ReconcilePaymentRequest(BaseModel):
+    email: str
+    order_id: Optional[str] = None
+    payment_id: Optional[str] = None
+
+
+# In-memory deduplication set for processed payments/webhooks (idempotency guard)
+_processed_payments: set[str] = set()
+
+
 # ---------------------------------------------------------------------------
 # Diagnostics & Public Config
 # ---------------------------------------------------------------------------
@@ -199,20 +209,30 @@ async def create_razorpay_order(payload: CreateOrderRequest) -> JSONResponse:
     Validates amount >= 100 paise.
     Returns: { status, order_id, amount, currency, key_id }
     """
-    # Amount validation
+    # Strict server-side plan & price resolution (Anti-Tampering)
+    plan = (payload.plan or "monthly").lower()
+    if plan not in PLAN_PRICES:
+        plan = "monthly"
+    server_price = PLAN_PRICES[plan]
+    plan_name = PLAN_NAMES[plan]
+
+    # Amount validation: enforce minimum and reject client price tampering
     if payload.amount is not None:
         if payload.amount < 100:
             raise HTTPException(
                 status_code=400,
                 detail="Minimum order amount is 100 paise (₹1.00).",
             )
-        amount_paise = payload.amount
-        plan = payload.plan or "custom"
-        plan_name = PLAN_NAMES.get(plan, "Resume Roast Pro")
-    else:
-        plan = payload.plan if payload.plan in PLAN_PRICES else "monthly"
-        amount_paise = PLAN_PRICES[plan]
-        plan_name = PLAN_NAMES[plan]
+        if payload.amount != server_price:
+            logger.warning(
+                f"Client amount tampering attempt rejected: received {payload.amount}, expected {server_price} for plan '{plan}'"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid order amount for plan '{plan}'. Expected {server_price} paise.",
+            )
+
+    amount_paise = server_price
 
     # Email validation
     if payload.email:
@@ -340,11 +360,29 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest) -> JSONResponse
     rzp = get_razorpay_config()
     logger.info(f"Verifying payment: order={order_id}, payment={payment_id} for {email}")
 
+    # Idempotency check: if payment_id already verified, return immediate success
+    if payment_id and payment_id in _processed_payments:
+        logger.info(f"Payment {payment_id} already verified (idempotent skip for {email}).")
+        database.create_or_get_user(email)
+        database.update_subscription(email, "pro", customer_id=payment_id)
+        return JSONResponse(
+            content={
+                "status": "success",
+                "is_pro": True,
+                "idempotent": True,
+                "message": "Payment already verified successfully. Pro access is active!",
+                "order_id": order_id,
+                "payment_id": payment_id,
+            }
+        )
+
     # 1. Developer Simulation Mode Approval
     if order_id.startswith("order_sim_") or not rzp["is_configured"]:
         logger.info(f"Approving developer simulation payment for {email}")
         database.create_or_get_user(email)
         database.update_subscription(email, "pro", customer_id=f"sim_{payment_id}")
+        if payment_id:
+            _processed_payments.add(payment_id)
         return JSONResponse(
             content={
                 "status": "success",
@@ -378,6 +416,8 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest) -> JSONResponse
         # Grant Pro access in database
         database.create_or_get_user(email)
         database.update_subscription(email, "pro", customer_id=payment_id)
+        if payment_id:
+            _processed_payments.add(payment_id)
         logger.info(f"Successfully verified Razorpay payment and upgraded {email} to Pro.")
 
         return JSONResponse(
@@ -401,7 +441,7 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest) -> JSONResponse
 
 
 # ---------------------------------------------------------------------------
-# 3. Razorpay Webhook Handler (2.2 Backend)
+# 3. Razorpay Webhook Handler (Idempotent & Signature-Verified)
 # ---------------------------------------------------------------------------
 @router.post("/billing/webhook")
 @router.post("/payment/webhook")
@@ -417,6 +457,13 @@ async def razorpay_webhook(
     rzp = get_razorpay_config()
 
     # Webhook signature verification
+    if rzp["mode"] == "live" and not rzp["webhook_secret"]:
+        logger.error("RAZORPAY_WEBHOOK_SECRET is not configured in live mode. Rejecting unauthenticated webhook.")
+        raise HTTPException(
+            status_code=500,
+            detail="RAZORPAY_WEBHOOK_SECRET is not configured on the server for live mode.",
+        )
+
     if rzp["webhook_secret"]:
         if not signature:
             logger.warning("Missing X-Razorpay-Signature header in webhook request.")
@@ -448,13 +495,116 @@ async def razorpay_webhook(
         )
         payment_id = payload_entity.get("id")
 
+        if payment_id and payment_id in _processed_payments:
+            logger.info(f"Webhook payment {payment_id} already processed (idempotent duplicate skip).")
+            return JSONResponse(content={"status": "already_processed", "event": event})
+
         if email:
             clean_email = email.strip().lower()
             logger.info(f"Webhook confirming Pro upgrade for {clean_email} via payment={payment_id}")
             database.create_or_get_user(clean_email)
             database.update_subscription(clean_email, "pro", customer_id=payment_id)
+            if payment_id:
+                _processed_payments.add(payment_id)
 
     return JSONResponse(content={"status": "received", "event": event})
+
+
+# ---------------------------------------------------------------------------
+# 3.1 Payment Reconciliation Endpoint (Safety Net for Network Blips)
+# ---------------------------------------------------------------------------
+@router.post("/reconcile")
+@router.post("/billing/reconcile")
+@router.post("/payment/reconcile")
+async def reconcile_payment(payload: ReconcilePaymentRequest) -> JSONResponse:
+    """
+    Fallback reconciliation endpoint:
+    If a network failure interrupted client-side verification,
+    this queries Razorpay Orders/Payments API directly and unlocks Pro if payment was captured.
+    """
+    email = payload.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=422, detail="Please provide a valid email address.")
+
+    order_id = (payload.order_id or "").strip()
+    payment_id = (payload.payment_id or "").strip()
+
+    if not order_id and not payment_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Please provide at least one of 'order_id' or 'payment_id' to reconcile.",
+        )
+
+    rzp = get_razorpay_config()
+    if not rzp["is_configured"] or (payment_id and payment_id.startswith("pay_sim_")) or (order_id and order_id.startswith("order_sim_")):
+        database.create_or_get_user(email)
+        database.update_subscription(email, "pro", customer_id=payment_id or order_id)
+        return JSONResponse(
+            content={
+                "status": "reconciled",
+                "is_pro": True,
+                "simulated": True,
+                "payment_id": payment_id,
+                "order_id": order_id,
+                "message": "Payment verified in simulation mode. Pro access unlocked!",
+            }
+        )
+
+    try:
+        import razorpay
+
+        client = razorpay.Client(auth=(rzp["key_id"], rzp["key_secret"]))
+        verified_payment = None
+
+        if payment_id:
+            try:
+                payment = client.payment.fetch(payment_id)
+                if payment.get("status") in ("captured", "authorized"):
+                    verified_payment = payment
+            except Exception as pe:
+                logger.warning(f"Could not fetch payment {payment_id} from Razorpay: {pe}")
+
+        if not verified_payment and order_id:
+            try:
+                payments = client.order.payments(order_id)
+                items = payments.get("items", [])
+                for p in items:
+                    if p.get("status") in ("captured", "authorized"):
+                        verified_payment = p
+                        payment_id = p.get("id")
+                        break
+            except Exception as oe:
+                logger.warning(f"Could not fetch order payments for {order_id}: {oe}")
+
+        if verified_payment:
+            database.create_or_get_user(email)
+            database.update_subscription(email, "pro", customer_id=payment_id)
+            if payment_id:
+                _processed_payments.add(payment_id)
+            logger.info(f"Reconciliation successfully upgraded {email} to Pro via {payment_id}.")
+            return JSONResponse(
+                content={
+                    "status": "reconciled",
+                    "is_pro": True,
+                    "payment_id": payment_id,
+                    "order_id": order_id,
+                    "message": "Payment verified with Razorpay. Pro access is active!",
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Payment not found or not yet captured by Razorpay. Please retry in a few moments or contact support.",
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Reconciliation error for {email}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to reconcile payment with Razorpay: {str(e)}",
+        )
+
 
 
 # ---------------------------------------------------------------------------
