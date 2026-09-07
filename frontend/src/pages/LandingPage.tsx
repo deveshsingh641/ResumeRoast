@@ -432,13 +432,12 @@ function PricingSection() {
               </ul>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowWaitlist(true)}
-              className="btn-primary w-full justify-center font-semibold"
+            <Link
+              to="/pricing"
+              className="btn-primary w-full justify-center font-semibold text-center"
             >
-              Pro launching soon 🔜
-            </button>
+              {isHinglish ? "Unlock Pro ₹99 →" : "Get Pro Access (₹99) →"}
+            </Link>
           </div>
         </div>
       </div>

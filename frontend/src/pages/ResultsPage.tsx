@@ -580,13 +580,16 @@ export default function ResultsPage() {
                     : "Upgrade to Pro to uncover all hidden flaws, full drop-in rewritten lines, and unlimited daily roasts."}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowWaitlistModal(true)}
-                className="btn-primary shrink-0 font-semibold flex items-center gap-1.5"
+              <Link
+                to="/pricing"
+                className="btn-primary shrink-0 font-semibold flex items-center gap-1.5 text-center"
               >
-                <span>Pro launching soon 🔜</span>
-              </button>
+                <span>
+                  {isHinglish
+                    ? "Unlock Pro ₹99 →"
+                    : "Unlock Pro ($1.20 / ₹99) →"}
+                </span>
+              </Link>
             </div>
           </section>
         )}

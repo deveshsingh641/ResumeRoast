@@ -101,20 +101,13 @@ export default function RoastPage() {
             </p>
             {uploadError.includes("limit") && (
               <div className="mt-2 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowWaitlist(true)}
+                <Link
+                  to="/pricing"
                   className="font-mono text-xs text-ember underline hover:text-amber-300"
                 >
                   {isHinglish
-                    ? "Pro launching soon 🔜 (Waitlist join karo →)"
-                    : "Pro launching soon 🔜 (Join Waitlist for Unlimited →)"}
-                </button>
-                <Link
-                  to="/pricing"
-                  className="font-mono text-[11px] text-tan-dim hover:text-tan"
-                >
-                  View pricing →
+                    ? "Get Pro for Unlimited Roasts (₹99) →"
+                    : "Get Pro for Unlimited Roasts ($1.20 / ₹99) →"}
                 </Link>
               </div>
             )}

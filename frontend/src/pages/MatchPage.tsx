@@ -944,13 +944,12 @@ export default function MatchPage() {
                       bullets, and full ATS pass guarantee.
                     </p>
                     <div className="pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowWaitlist(true)}
+                      <Link
+                        to="/pricing"
                         className="btn-primary !py-2.5 !px-6 text-xs font-mono tracking-wider uppercase inline-flex items-center gap-2"
                       >
-                        <span>Pro Launching Soon 🔜 (Join Waitlist →)</span>
-                      </button>
+                        <span>Unlock Pro for Full ATS Matrix (₹99) →</span>
+                      </Link>
                     </div>
                   </div>
                 )}

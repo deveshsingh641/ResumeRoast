@@ -243,13 +243,12 @@ export default function ResumeUploader() {
           </div>
           {(errorMessage.toLowerCase().includes("daily") ||
             errorMessage.toLowerCase().includes("limit")) && (
-            <button
-              type="button"
-              onClick={() => setShowWaitlist(true)}
+            <Link
+              to="/pricing"
               className="text-ember underline text-xs font-semibold hover:text-amber-300 ml-5 inline-block text-left"
             >
-              Pro launching soon 🔜 — Join waitlist for unlimited daily roasts →
-            </button>
+              Get Pro for unlimited daily roasts (₹99) →
+            </Link>
           )}
         </div>
       )}

@@ -102,13 +102,12 @@ export function IssueCard({
           <p className="font-mono text-xs text-tan">
             Issue #{rank} Free tier mein locked hai bhai 🔒
           </p>
-          <button
-            type="button"
-            onClick={() => setShowWaitlist(true)}
+          <Link
+            to="/pricing"
             className="btn-ghost btn-ghost-sm !border-stamp/40 text-paper hover:!border-stamp transition-colors flex items-center gap-1.5"
           >
-            <span>Pro launching soon 🔜</span>
-          </button>
+            <span>Unlock Pro ₹99 →</span>
+          </Link>
 
           <WaitlistModal
             isOpen={showWaitlist}

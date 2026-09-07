@@ -52,11 +52,13 @@ export default function PricingPage() {
     searchParams.get("test_checkout") === "true" ||
     (typeof window !== "undefined" &&
       window.location.pathname.includes("/admin/checkout-test"));
-  // Public visitors see "Pro Launching Soon" while Razorpay KYC is pending review
+  // Pro Checkout is active now that Razorpay KYC is approved (set VITE_PRO_LAUNCHING_SOON=true to re-enable waitlist)
   const isLaunchingSoon =
-    import.meta.env.VITE_PRO_LAUNCHING_SOON !== "false" && !isTestMode;
+    import.meta.env.VITE_PRO_LAUNCHING_SOON === "true" && !isTestMode;
 
   const { usage, setUsage } = useAppStore();
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const [annual, setAnnual] = useState(false);
   const [email, setEmail] = useState("");
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -616,11 +618,11 @@ export default function PricingPage() {
                   setCheckoutStatus("idle");
                   setCheckoutMessage(null);
                 }}
-                className="btn-primary w-full justify-center text-sm py-3 font-semibold"
+                className="btn-primary w-full justify-center text-sm py-3 font-semibold shadow-lg hover:shadow-xl transition-all"
               >
                 {isTestMode
                   ? `Test Razorpay Checkout (${annual ? "₹799" : "₹99"})`
-                  : `Unlock Pro Now (${annual ? "₹799" : "₹99"})`}
+                  : `Unlock Pro Now (${annual ? "₹799" : "₹99"}) →`}
               </button>
             )}
           </div>
