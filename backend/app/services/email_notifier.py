@@ -29,12 +29,14 @@ def send_suggestion_alert(
     Reads SMTP configuration from environment variables.
     """
     load_dotenv()
-    admin_recipient = os.getenv("ADMIN_NOTIFICATION_EMAIL", "deveshsingh20666@gmail.com").strip()
-    smtp_host = os.getenv("SMTP_HOST", "").strip()
+    admin_recipient = os.getenv("ADMIN_NOTIFICATION_EMAIL", "deveshsingh20666@gmail.com").strip().strip('"').strip("'")
+    smtp_host = os.getenv("SMTP_HOST", "").strip().strip('"').strip("'")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER", "").strip()
+    smtp_user = os.getenv("SMTP_USER", "").strip().strip('"').strip("'")
     smtp_password = os.getenv("SMTP_PASSWORD", "").strip()
-    smtp_from = os.getenv("SMTP_FROM", smtp_user or "noreply@resumeroast.app").strip()
+    if (smtp_password.startswith('"') and smtp_password.endswith('"')) or (smtp_password.startswith("'") and smtp_password.endswith("'")):
+        smtp_password = smtp_password[1:-1].strip()
+    smtp_from = os.getenv("SMTP_FROM", smtp_user or "noreply@resumeroast.app").strip().strip('"').strip("'")
 
     if not (smtp_host and smtp_user and smtp_password):
         logger.info(

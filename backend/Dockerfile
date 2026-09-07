@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p storage/voice_notes
+RUN mkdir -p storage/voice_notes storage/certificates storage/backups
 
 EXPOSE 8000
 

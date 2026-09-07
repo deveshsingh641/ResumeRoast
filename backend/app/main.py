@@ -17,9 +17,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("main")
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -137,10 +138,6 @@ app.include_router(waitlist.router)
 app.include_router(match.router)
 app.include_router(suggestion.router)
 
-
-from fastapi import FastAPI, HTTPException, Request
-from starlette.exceptions import HTTPException as StarletteHTTPException
-
 # ---------------------------------------------------------------------------
 # Global error handler — preserves HTTPExceptions, never leaks raw stack traces
 # ---------------------------------------------------------------------------
@@ -190,12 +187,22 @@ async def root() -> dict:
 @app.get("/health")
 @app.get("/api/health")
 async def health() -> dict:
+    db_status = "in-memory"
+    if database.DATABASE_URL:
+        try:
+            with database._get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1;")
+            db_status = "connected"
+        except Exception:
+            db_status = "disconnected"
+
     return {
-        "status": "ok",
+        "status": "ok" if db_status != "disconnected" else "degraded",
         "service": "resume-roast-api",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "environment": os.getenv("ENVIRONMENT", "development"),
-        "database": "connected",
+        "database": db_status,
         "ai_status": "ready",
         "version": "0.2.0",
     }
