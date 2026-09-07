@@ -11,6 +11,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
+from dotenv import load_dotenv
 
 logger = logging.getLogger("email_notifier")
 
@@ -27,6 +28,7 @@ def send_suggestion_alert(
     Send an email alert to the founder when a user submits a suggestion or feedback.
     Reads SMTP configuration from environment variables.
     """
+    load_dotenv()
     admin_recipient = os.getenv("ADMIN_NOTIFICATION_EMAIL", "deveshsingh20666@gmail.com").strip()
     smtp_host = os.getenv("SMTP_HOST", "").strip()
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
