@@ -1,18 +1,18 @@
-import { useState } from 'react'
+import { useState } from "react";
 
 export default function ReferralChallenge() {
-  const [copied, setCopied] = useState(false)
-  const challengeLink = 'https://resumeroast.app'
-  const shareMessage = `Bhai apna resume test karwa ke dikha, dekhein kiska score zyada bura hai 😂🔥: ${challengeLink}`
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`
+  const [copied, setCopied] = useState(false);
+  const challengeLink = "https://resumeroast.app";
+  const shareMessage = `Bhai apna resume test karwa ke dikha, dekhein kiska score zyada bura hai 😂🔥: ${challengeLink}`;
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
 
   const handleCopy = async () => {
     if (navigator.clipboard) {
-      await navigator.clipboard.writeText(shareMessage)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 3000)
+      await navigator.clipboard.writeText(shareMessage);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
     }
-  }
+  };
 
   return (
     <div className="w-full max-w-[640px] mx-auto bg-[#1A1612] border border-amber-500/20 rounded-sm p-6 text-left relative overflow-hidden">
@@ -22,10 +22,12 @@ export default function ReferralChallenge() {
             <span>🔥 DARE CHALLENGE</span>
           </div>
           <h4 className="font-display text-base sm:text-lg text-paper mb-1">
-            3 dosto ko roast karwao, apna next roast free mein full unlock ho jayega
+            3 dosto ko roast karwao, apna next roast free mein full unlock ho
+            jayega
           </h4>
           <p className="font-mono text-xs text-tan-dim leading-relaxed">
-            WhatsApp group mein link phenko aur dekho kiske resume ka band bajta hai.
+            WhatsApp group mein link phenko aur dekho kiske resume ka band bajta
+            hai.
           </p>
         </div>
 
@@ -44,10 +46,10 @@ export default function ReferralChallenge() {
             onClick={handleCopy}
             className="btn-ghost !py-2 !px-3 !text-xs"
           >
-            {copied ? '✓ Link Copied!' : 'Copy Link'}
+            {copied ? "✓ Link Copied!" : "Copy Link"}
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 }

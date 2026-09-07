@@ -1,96 +1,107 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 interface SuggestionModalProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-type CategoryType = 'feature' | 'bug' | 'feedback' | 'other'
+type CategoryType = "feature" | "bug" | "feedback" | "other";
 
 const CATEGORIES: { id: CategoryType; label: string; icon: string }[] = [
-  { id: 'feature', label: 'Feature Idea', icon: '💡' },
-  { id: 'bug', label: 'Bug Report', icon: '🐛' },
-  { id: 'feedback', label: 'Feedback', icon: '💬' },
-  { id: 'other', label: 'Something Else', icon: '✨' },
-]
+  { id: "feature", label: "Feature Idea", icon: "💡" },
+  { id: "bug", label: "Bug Report", icon: "🐛" },
+  { id: "feedback", label: "Feedback", icon: "💬" },
+  { id: "other", label: "Something Else", icon: "✨" },
+];
 
-export default function SuggestionModal({ isOpen, onClose }: SuggestionModalProps) {
-  const [text, setText] = useState('')
-  const [category, setCategory] = useState<CategoryType>('feature')
-  const [email, setEmail] = useState('')
-  const [website, setWebsite] = useState('') // Honeypot field for bot defense
-  const [loading, setLoading] = useState(false)
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [message, setMessage] = useState<string | null>(null)
+export default function SuggestionModal({
+  isOpen,
+  onClose,
+}: SuggestionModalProps) {
+  const [text, setText] = useState("");
+  const [category, setCategory] = useState<CategoryType>("feature");
+  const [email, setEmail] = useState("");
+  const [website, setWebsite] = useState(""); // Honeypot field for bot defense
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [message, setMessage] = useState<string | null>(null);
 
   // Pre-fill email from localStorage if available
   useEffect(() => {
     if (isOpen) {
       try {
-        const savedEmail = localStorage.getItem('resumeroast_user_email')
+        const savedEmail = localStorage.getItem("resumeroast_user_email");
         if (savedEmail && !email) {
-          setEmail(savedEmail)
+          setEmail(savedEmail);
         }
       } catch {}
-      setStatus('idle')
-      setMessage(null)
+      setStatus("idle");
+      setMessage(null);
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // ESC key to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
+      if (e.key === "Escape" && isOpen) {
+        onClose();
       }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const cleanText = text.trim()
+    e.preventDefault();
+    const cleanText = text.trim();
 
     if (cleanText.length < 3) {
-      setStatus('error')
-      setMessage('Please enter at least a few words so we understand your thought.')
-      return
+      setStatus("error");
+      setMessage(
+        "Please enter at least a few words so we understand your thought.",
+      );
+      return;
     }
 
     try {
-      setLoading(true)
-      setStatus('idle')
-      setMessage(null)
+      setLoading(true);
+      setStatus("idle");
+      setMessage(null);
 
       if (email.trim()) {
         try {
-          localStorage.setItem('resumeroast_user_email', email.trim().toLowerCase())
+          localStorage.setItem(
+            "resumeroast_user_email",
+            email.trim().toLowerCase(),
+          );
         } catch {}
       }
 
-      const { data } = await axios.post('/api/suggestions', {
+      const { data } = await axios.post("/api/suggestions", {
         text: cleanText,
         category,
         email: email.trim() || undefined,
         website: website.trim() || undefined, // Honeypot
-      })
+      });
 
-      setStatus('success')
-      setMessage(data.message || 'Got it, thanks! 🙌 We actually read these.')
-      setText('')
+      setStatus("success");
+      setMessage(data.message || "Got it, thanks! 🙌 We actually read these.");
+      setText("");
     } catch (err: any) {
-      const detail = err?.response?.data?.detail
-      const msg = typeof detail === 'string' ? detail : err?.message || 'Failed to submit. Please try again.'
-      setStatus('error')
-      setMessage(msg)
+      const detail = err?.response?.data?.detail;
+      const msg =
+        typeof detail === "string"
+          ? detail
+          : err?.message || "Failed to submit. Please try again.";
+      setStatus("error");
+      setMessage(msg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div
@@ -113,7 +124,7 @@ export default function SuggestionModal({ isOpen, onClose }: SuggestionModalProp
           ✕
         </button>
 
-        {status === 'success' ? (
+        {status === "success" ? (
           <div className="text-center py-6 space-y-4">
             <div className="text-4xl animate-bounce">🙌</div>
             <h3 className="font-display text-2xl text-paper tracking-tight">
@@ -146,7 +157,8 @@ export default function SuggestionModal({ isOpen, onClose }: SuggestionModalProp
               What's on your mind?
             </h3>
             <p className="font-mono text-xs text-tan-dim mb-5 leading-relaxed">
-              Feature ideas, feedback, edge-cases, or general thoughts. We read every single one to shape what gets built next.
+              Feature ideas, feedback, edge-cases, or general thoughts. We read
+              every single one to shape what gets built next.
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -163,8 +175,8 @@ export default function SuggestionModal({ isOpen, onClose }: SuggestionModalProp
                       onClick={() => setCategory(cat.id)}
                       className={`px-2.5 py-1.5 rounded text-xs font-mono flex items-center justify-center gap-1.5 border transition-all ${
                         category === cat.id
-                          ? 'bg-amber-400/20 border-amber-400 text-amber-300 font-bold'
-                          : 'bg-black/30 border-white/10 text-stone-400 hover:border-white/25 hover:text-tan'
+                          ? "bg-amber-400/20 border-amber-400 text-amber-300 font-bold"
+                          : "bg-black/30 border-white/10 text-stone-400 hover:border-white/25 hover:text-tan"
                       }`}
                     >
                       <span>{cat.icon}</span>
@@ -177,7 +189,10 @@ export default function SuggestionModal({ isOpen, onClose }: SuggestionModalProp
               {/* Main Textarea */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="suggestion-text" className="font-mono text-[11px] text-tan uppercase">
+                  <label
+                    htmlFor="suggestion-text"
+                    className="font-mono text-[11px] text-tan uppercase"
+                  >
                     Your Thought <span className="text-stamp">*</span>
                   </label>
                   <span className="font-mono text-[10px] text-stone-500">
@@ -198,8 +213,14 @@ export default function SuggestionModal({ isOpen, onClose }: SuggestionModalProp
 
               {/* Optional Email */}
               <div>
-                <label htmlFor="suggestion-email" className="block font-mono text-[11px] text-tan-dim uppercase mb-1">
-                  Your Email <span className="text-stone-500 lowercase">(optional — only if you'd like a follow-up)</span>
+                <label
+                  htmlFor="suggestion-email"
+                  className="block font-mono text-[11px] text-tan-dim uppercase mb-1"
+                >
+                  Your Email{" "}
+                  <span className="text-stone-500 lowercase">
+                    (optional — only if you'd like a follow-up)
+                  </span>
                 </label>
                 <input
                   id="suggestion-email"
@@ -224,7 +245,7 @@ export default function SuggestionModal({ isOpen, onClose }: SuggestionModalProp
               />
 
               {/* Error Alert */}
-              {status === 'error' && message && (
+              {status === "error" && message && (
                 <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-xs font-mono text-red-300">
                   ⚠️ {message}
                 </div>
@@ -262,5 +283,5 @@ export default function SuggestionModal({ isOpen, onClose }: SuggestionModalProp
         )}
       </div>
     </div>
-  )
+  );
 }

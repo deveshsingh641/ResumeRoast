@@ -1,72 +1,78 @@
-import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
-import type { Issue } from '@/store/useAppStore'
-import { getHinglishTag } from '@/utils/categoryTags'
-import WaitlistModal from '@/components/WaitlistModal'
+import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
+import type { Issue } from "@/store/useAppStore";
+import { getHinglishTag } from "@/utils/categoryTags";
+import WaitlistModal from "@/components/WaitlistModal";
 
 export function getCategoryColor(category: string): string {
   switch (category) {
-    case 'buzzword':
-    case 'no-metrics':
-    case 'typo':
-      return '#E8422D' // --stamp
-    case 'formatting':
-    case 'length':
-      return '#FFB93C' // --ember
+    case "buzzword":
+    case "no-metrics":
+    case "typo":
+      return "#E8422D"; // --stamp
+    case "formatting":
+    case "length":
+      return "#FFB93C"; // --ember
     default:
-      return '#8A8168' // --tan-dim
+      return "#8A8168"; // --tan-dim
   }
 }
 
 interface IssueCardProps {
-  issue: Issue
-  rank: number
-  locked?: boolean
-  roastId?: string
+  issue: Issue;
+  rank: number;
+  locked?: boolean;
+  roastId?: string;
 }
 
-export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: IssueCardProps) {
-  const [showFix, setShowFix] = useState(false)
-  const [showWaitlist, setShowWaitlist] = useState(false)
-  const categoryColor = getCategoryColor(issue.category)
-  const tagLabel = issue.badge_label?.trim() || getHinglishTag(issue.category)
+export function IssueCard({
+  issue,
+  rank,
+  locked = false,
+  roastId = "default",
+}: IssueCardProps) {
+  const [showFix, setShowFix] = useState(false);
+  const [showWaitlist, setShowWaitlist] = useState(false);
+  const categoryColor = getCategoryColor(issue.category);
+  const tagLabel = issue.badge_label?.trim() || getHinglishTag(issue.category);
 
   // 1.2 WhatsApp "Typing..." Indicator State & Session Cache
-  const cardRef = useRef<HTMLDivElement>(null)
-  const cacheKey = `seen_roast_${roastId}_issue_${rank}_${issue.quoted_text.slice(0, 20)}`
-  const alreadySeen = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(cacheKey))
+  const cardRef = useRef<HTMLDivElement>(null);
+  const cacheKey = `seen_roast_${roastId}_issue_${rank}_${issue.quoted_text.slice(0, 20)}`;
+  const alreadySeen =
+    typeof window !== "undefined" && Boolean(sessionStorage.getItem(cacheKey));
 
-  const [isTyping, setIsTyping] = useState(false)
-  const [isRevealed, setIsRevealed] = useState(alreadySeen || locked)
+  const [isTyping, setIsTyping] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(alreadySeen || locked);
 
   useEffect(() => {
-    if (alreadySeen || locked || isRevealed) return
+    if (alreadySeen || locked || isRevealed) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const [entry] = entries
+        const [entry] = entries;
         if (entry.isIntersecting) {
-          setIsTyping(true)
+          setIsTyping(true);
           const timer = setTimeout(() => {
-            setIsTyping(false)
-            setIsRevealed(true)
+            setIsTyping(false);
+            setIsRevealed(true);
             try {
-              sessionStorage.setItem(cacheKey, 'true')
+              sessionStorage.setItem(cacheKey, "true");
             } catch {}
-          }, 650)
-          observer.disconnect()
-          return () => clearTimeout(timer)
+          }, 650);
+          observer.disconnect();
+          return () => clearTimeout(timer);
         }
       },
-      { threshold: 0.15 }
-    )
+      { threshold: 0.15 },
+    );
 
     if (cardRef.current) {
-      observer.observe(cardRef.current)
+      observer.observe(cardRef.current);
     }
 
-    return () => observer.disconnect()
-  }, [alreadySeen, locked, isRevealed, cacheKey])
+    return () => observer.disconnect();
+  }, [alreadySeen, locked, isRevealed, cacheKey]);
 
   return (
     <div
@@ -115,7 +121,7 @@ export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: 
       )}
 
       {/* Main card content */}
-      <div className={locked ? 'select-none pointer-events-none' : ''}>
+      <div className={locked ? "select-none pointer-events-none" : ""}>
         {/* Header Row */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <span
@@ -129,7 +135,7 @@ export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: 
             {tagLabel}
           </span>
           <span className="font-mono text-xs text-tan-dim">
-            #{String(rank).padStart(2, '0')}
+            #{String(rank).padStart(2, "0")}
           </span>
         </div>
 
@@ -147,11 +153,22 @@ export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: 
             aria-label="Roast line typing..."
             className="flex items-center gap-2 py-1 px-3 bg-white/[0.04] border border-white/[0.08] rounded-full w-fit mb-3 select-none"
           >
-            <span className="font-mono text-[10px] text-tan-dim tracking-wider">typing…</span>
+            <span className="font-mono text-[10px] text-tan-dim tracking-wider">
+              typing…
+            </span>
             <div className="flex items-center gap-1.5 py-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim typing-dot" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim typing-dot" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-tan-dim typing-dot" style={{ animationDelay: '300ms' }} />
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-tan-dim typing-dot"
+                style={{ animationDelay: "0ms" }}
+              />
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-tan-dim typing-dot"
+                style={{ animationDelay: "150ms" }}
+              />
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-tan-dim typing-dot"
+                style={{ animationDelay: "300ms" }}
+              />
             </div>
           </div>
         )}
@@ -172,8 +189,8 @@ export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: 
               className="font-mono text-xs text-ember hover:underline flex items-center gap-1.5 focus:outline-none"
               aria-expanded={showFix}
             >
-              <span className="select-none">{showFix ? '−' : '+'}</span>
-              <span>{showFix ? 'Fix chhupao (−)' : 'Fix dekh le (+)'}</span>
+              <span className="select-none">{showFix ? "−" : "+"}</span>
+              <span>{showFix ? "Fix chhupao (−)" : "Fix dekh le (+)"}</span>
             </button>
 
             {showFix && (
@@ -190,58 +207,82 @@ export function IssueCard({ issue, rank, locked = false, roastId = 'default' }: 
         )}
       </div>
     </div>
-  )
+  );
 }
 
 interface IssueListProps {
-  issues: Issue[]
-  totalIssues: number
-  isTruncated: boolean
-  roastId?: string
+  issues: Issue[];
+  totalIssues: number;
+  isTruncated: boolean;
+  roastId?: string;
 }
 
-export function IssueList({ issues, totalIssues, isTruncated, roastId }: IssueListProps) {
-  const lockedCount = isTruncated ? Math.max(0, totalIssues - issues.length) : 0
+export function IssueList({
+  issues,
+  totalIssues,
+  isTruncated,
+  roastId,
+}: IssueListProps) {
+  const lockedCount = isTruncated
+    ? Math.max(0, totalIssues - issues.length)
+    : 0;
 
   // Real placeholder locked cards for layout-shift-free preview
   const lockedCards: Issue[] = [
     {
-      quoted_text: 'Assisted team members with various ad-hoc engineering duties as needed.',
-      category: 'no-metrics',
-      roast: '"Assisted" likh ke credit kyu gawa rahe ho yaar? Exact metric batao na.',
+      quoted_text:
+        "Assisted team members with various ad-hoc engineering duties as needed.",
+      category: "no-metrics",
+      roast:
+        '"Assisted" likh ke credit kyu gawa rahe ho yaar? Exact metric batao na.',
       fix: 'Rewrite karo: "Resolved 45+ critical production bugs in PostgreSQL, reducing ticket backlog by 40%".',
       start_offset: null,
       end_offset: null,
       severity_rank: 4,
     },
     {
-      quoted_text: 'Passionate self-starter with deep enthusiasm for next-generation technology.',
-      category: 'buzzword',
-      roast: 'Pure buzzword filler hai bhai, recruiter eye-tracking mein instantly skip hota hai 🥱',
-      fix: 'Adjectives hatao aur shipped projects ke live stack aur metrics daalo.',
+      quoted_text:
+        "Passionate self-starter with deep enthusiasm for next-generation technology.",
+      category: "buzzword",
+      roast:
+        "Pure buzzword filler hai bhai, recruiter eye-tracking mein instantly skip hota hai 🥱",
+      fix: "Adjectives hatao aur shipped projects ke live stack aur metrics daalo.",
       start_offset: null,
       end_offset: null,
       severity_rank: 5,
     },
     {
-      quoted_text: 'Curriculum Vitae — References available upon request.',
-      category: 'formatting',
-      roast: 'Prime resume space waste ho raha hai bhai, standard baatein likh ke 💀',
-      fix: 'Ye line delete karke vertical whitespace ko project links ke liye use karo.',
+      quoted_text: "Curriculum Vitae — References available upon request.",
+      category: "formatting",
+      roast:
+        "Prime resume space waste ho raha hai bhai, standard baatein likh ke 💀",
+      fix: "Ye line delete karke vertical whitespace ko project links ke liye use karo.",
       start_offset: null,
       end_offset: null,
       severity_rank: 6,
     },
-  ].slice(0, lockedCount)
+  ].slice(0, lockedCount);
 
   return (
     <div className="space-y-3 w-full max-w-[640px] mx-auto text-left">
       {issues.map((issue, idx) => (
-        <IssueCard key={idx} issue={issue} rank={idx + 1} locked={false} roastId={roastId} />
+        <IssueCard
+          key={idx}
+          issue={issue}
+          rank={idx + 1}
+          locked={false}
+          roastId={roastId}
+        />
       ))}
       {lockedCards.map((issue, idx) => (
-        <IssueCard key={`locked-${idx}`} issue={issue} rank={issues.length + idx + 1} locked={true} roastId={roastId} />
+        <IssueCard
+          key={`locked-${idx}`}
+          issue={issue}
+          rank={issues.length + idx + 1}
+          locked={true}
+          roastId={roastId}
+        />
       ))}
     </div>
-  )
+  );
 }

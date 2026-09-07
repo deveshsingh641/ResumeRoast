@@ -1,51 +1,53 @@
-import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { normalizeLang } from '@/i18n/detector'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
-import axios from 'axios'
-import { useAppStore } from '@/store/useAppStore'
-import ScoreStamp from '@/components/ScoreStamp'
-import PaperMockup from '@/components/PaperMockup'
-import { IssueList } from '@/components/IssueCard'
-import ShareCardGenerator from '@/components/ShareCardGenerator'
-import VoiceNoteBubble from '@/components/VoiceNoteBubble'
-import DeskClutter from '@/components/DeskClutter'
-import PapaProudMeter from '@/components/PapaProudMeter'
-import WorstLineTrophy from '@/components/WorstLineTrophy'
-import ReferralChallenge from '@/components/ReferralChallenge'
-import ScoreJourney from '@/components/ScoreJourney'
-import ConfettiScraps from '@/components/ConfettiScraps'
-import SoundToggle from '@/components/SoundToggle'
-import RoastReactions from '@/components/RoastReactions'
-import PaperSkeleton from '@/components/PaperSkeleton'
-import StoryCardModal from '@/components/StoryCardModal'
-import RoastBackChat from '@/components/RoastBackChat'
-import Footer from '@/components/Footer'
-import WaitlistModal from '@/components/WaitlistModal'
-import { useCinematicReveal } from '@/hooks/useCinematicReveal'
-import { ExtendedRoastResult, getSampleRoastData } from '@/data/sampleRoast'
-import { usePageTitle } from '@/utils/usePageTitle'
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import axios from "axios";
+import { useAppStore } from "@/store/useAppStore";
+import ScoreStamp from "@/components/ScoreStamp";
+import PaperMockup from "@/components/PaperMockup";
+import { IssueList } from "@/components/IssueCard";
+import ShareCardGenerator from "@/components/ShareCardGenerator";
+import VoiceNoteBubble from "@/components/VoiceNoteBubble";
+import DeskClutter from "@/components/DeskClutter";
+import PapaProudMeter from "@/components/PapaProudMeter";
+import WorstLineTrophy from "@/components/WorstLineTrophy";
+import ReferralChallenge from "@/components/ReferralChallenge";
+import ScoreJourney from "@/components/ScoreJourney";
+import ConfettiScraps from "@/components/ConfettiScraps";
+import SoundToggle from "@/components/SoundToggle";
+import RoastReactions from "@/components/RoastReactions";
+import PaperSkeleton from "@/components/PaperSkeleton";
+import StoryCardModal from "@/components/StoryCardModal";
+import RoastBackChat from "@/components/RoastBackChat";
+import Footer from "@/components/Footer";
+import WaitlistModal from "@/components/WaitlistModal";
+import { useCinematicReveal } from "@/hooks/useCinematicReveal";
+import { ExtendedRoastResult, getSampleRoastData } from "@/data/sampleRoast";
+import { usePageTitle } from "@/utils/usePageTitle";
 
 export default function ResultsPage() {
-  const { id } = useParams<{ id: string }>()
-  usePageTitle(id ? `Roast Report #${id.slice(0, 6)}` : 'Roast Report')
-  const { i18n } = useTranslation()
-  const lang = normalizeLang(i18n.language)
-  const isHinglish = lang === 'hi-IN'
+  const { id } = useParams<{ id: string }>();
+  usePageTitle(id ? `Roast Report #${id.slice(0, 6)}` : "Roast Report");
+  const { i18n } = useTranslation();
+  const lang = normalizeLang(i18n.language);
+  const isHinglish = lang === "hi-IN";
 
-  const { result: storeResult, setResult } = useAppStore()
-  const [result, setLocalResult] = useState<ExtendedRoastResult | null>(storeResult)
-  const [loading, setLoading] = useState(!storeResult && id !== 'demo')
-  const [error, setError] = useState<string | null>(null)
-  const [downloadingCert, setDownloadingCert] = useState(false)
-  const [downloadingFixed, setDownloadingFixed] = useState(false)
-  const [xRayMode, setXRayMode] = useState(false)
-  const [showWaitlistModal, setShowWaitlistModal] = useState(false)
-  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
-  const [fixesCopied, setFixesCopied] = useState(false)
-  const [wallPublished, setWallPublished] = useState(false)
-  const [wallPublishing, setWallPublishing] = useState(false)
+  const { result: storeResult, setResult } = useAppStore();
+  const [result, setLocalResult] = useState<ExtendedRoastResult | null>(
+    storeResult,
+  );
+  const [loading, setLoading] = useState(!storeResult && id !== "demo");
+  const [error, setError] = useState<string | null>(null);
+  const [downloadingCert, setDownloadingCert] = useState(false);
+  const [downloadingFixed, setDownloadingFixed] = useState(false);
+  const [xRayMode, setXRayMode] = useState(false);
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+  const [fixesCopied, setFixesCopied] = useState(false);
+  const [wallPublished, setWallPublished] = useState(false);
+  const [wallPublishing, setWallPublishing] = useState(false);
 
   // 1.1 Cinematic Reveal Sequence Orchestrator
   const {
@@ -59,65 +61,65 @@ export default function ResultsPage() {
   } = useCinematicReveal({
     score: result ? result.overall_score : 0,
     enabled: true,
-  })
+  });
 
   // Track that user has seen a result for subtle sticky trigger activation
   useEffect(() => {
     if (result) {
       try {
-        localStorage.setItem('resumeroast_has_seen_result', 'true')
-        if (result.id) localStorage.setItem('resumeroast_last_id', result.id)
+        localStorage.setItem("resumeroast_has_seen_result", "true");
+        if (result.id) localStorage.setItem("resumeroast_last_id", result.id);
       } catch {}
     }
-  }, [result])
+  }, [result]);
 
   const handleDownloadCertificate = async () => {
-    if (!result) return
+    if (!result) return;
     try {
-      setDownloadingCert(true)
-      const downloadUrl = `/api/roast/${result.id}/certificate/download`
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = `ResumeRoast-Certificate-${result.id.slice(0, 8)}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      setDownloadingCert(true);
+      const downloadUrl = `/api/roast/${result.id}/certificate/download`;
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `ResumeRoast-Certificate-${result.id.slice(0, 8)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch {
-      window.open(`/api/roast/${result.id}/certificate/download`, '_blank')
+      window.open(`/api/roast/${result.id}/certificate/download`, "_blank");
     } finally {
-      setTimeout(() => setDownloadingCert(false), 2500)
+      setTimeout(() => setDownloadingCert(false), 2500);
     }
-  }
+  };
 
   const handleCopyAllFixes = async () => {
-    if (!result || !result.issues || result.issues.length === 0) return
+    if (!result || !result.issues || result.issues.length === 0) return;
     const lines = [
       `RESUME ROAST - RECOMMENDED FIXES (Score: ${result.overall_score}/100)`,
       `Verdict: "${result.one_line_verdict}"`,
-      '--------------------------------------------------',
+      "--------------------------------------------------",
       ...result.issues.map((iss, i) => {
         return (
           `[Issue #${i + 1}] Category: ${iss.category.toUpperCase()}\n` +
           `• Quoted Flaw: "${iss.quoted_text}"\n` +
           `• Critique: ${iss.roast}\n` +
           `• Actionable AI Fix: ${iss.fix}\n`
-        )
+        );
       }),
-      '--------------------------------------------------',
-      'Roast and fix your resume at https://resumeroast.app'
-    ]
+      "--------------------------------------------------",
+      "Roast and fix your resume at https://resumeroast.app",
+    ];
     try {
-      await navigator.clipboard.writeText(lines.join('\n'))
-      setFixesCopied(true)
-      setTimeout(() => setFixesCopied(false), 3000)
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setFixesCopied(true);
+      setTimeout(() => setFixesCopied(false), 3000);
     } catch {
       // fallback
     }
-  }
+  };
 
   const handleDownloadFixedResume = () => {
-    if (!result) return
-    setDownloadingFixed(true)
+    if (!result) return;
+    setDownloadingFixed(true);
     try {
       const fixedLines = [
         `# ATS-OPTIMIZED REWRITTEN RESUME`,
@@ -125,104 +127,118 @@ export default function ResultsPage() {
         `> Original Verdict: "${result.one_line_verdict}"`,
         ``,
         `## 🎯 KEY HIGHLIGHTS & STRENGTHS`,
-        ...(result.strengths || ['Demonstrated modern technical proficiency']).map((s) => `- ${s}`),
+        ...(
+          result.strengths || ["Demonstrated modern technical proficiency"]
+        ).map((s) => `- ${s}`),
         ``,
         `## 🛠️ REVISED BULLET POINTS & ACTIONABLE IMPACT`,
         ...(result.issues || []).map((iss, i) => {
-          const cat = (iss.category || 'flaw').toUpperCase()
-          const cleanFix = iss.fix || 'Actionable rewrite recommended'
-          const cleanQuote = iss.quoted_text || 'Flagged flaw'
-          return `### ${i + 1}. [${cat}] Recommended Rewrite:\n- **Clean Drop-In:** ${cleanFix}\n  *(Replaced flaw: "${cleanQuote}")*\n`
+          const cat = (iss.category || "flaw").toUpperCase();
+          const cleanFix = iss.fix || "Actionable rewrite recommended";
+          const cleanQuote = iss.quoted_text || "Flagged flaw";
+          return `### ${i + 1}. [${cat}] Recommended Rewrite:\n- **Clean Drop-In:** ${cleanFix}\n  *(Replaced flaw: "${cleanQuote}")*\n`;
         }),
         ``,
         `---`,
-        `Generated with Resume Roast AI (https://resumeroast.app)`
-      ].join('\n')
+        `Generated with Resume Roast AI (https://resumeroast.app)`,
+      ].join("\n");
 
-      const blob = new Blob([fixedLines], { type: 'text/markdown;charset=utf-8' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `Resume-Fixed-ATS-${result.overall_score}.md`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+      const blob = new Blob([fixedLines], {
+        type: "text/markdown;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Resume-Fixed-ATS-${result.overall_score}.md`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } finally {
-      setTimeout(() => setDownloadingFixed(false), 1500)
+      setTimeout(() => setDownloadingFixed(false), 1500);
     }
-  }
+  };
 
   useEffect(() => {
-    if (id === 'demo' || !id) {
-      setLocalResult(getSampleRoastData(lang))
-      setLoading(false)
-      return
+    if (id === "demo" || !id) {
+      setLocalResult(getSampleRoastData(lang));
+      setLoading(false);
+      return;
     }
 
     if (storeResult?.id === id) {
-      setLocalResult(storeResult)
-      return
+      setLocalResult(storeResult);
+      return;
     }
 
     // Fetch from backend API
     const fetchResult = async () => {
       try {
-        setLoading(true)
-        setError(null)
-        const savedEmail = typeof window !== 'undefined' ? localStorage.getItem('resumeroast_user_email') || '' : ''
+        setLoading(true);
+        setError(null);
+        const savedEmail =
+          typeof window !== "undefined"
+            ? localStorage.getItem("resumeroast_user_email") || ""
+            : "";
         const url = savedEmail
           ? `/api/roast/${id}?email=${encodeURIComponent(savedEmail)}`
-          : `/api/roast/${id}`
-        const { data } = await axios.get(url, { timeout: 35000 })
-        setLocalResult(data)
-        setResult(data)
+          : `/api/roast/${id}`;
+        const { data } = await axios.get(url, { timeout: 35000 });
+        setLocalResult(data);
+        setResult(data);
       } catch (err: any) {
-        const msg = err?.response?.data?.detail
+        const msg = err?.response?.data?.detail;
         if (err?.response?.status === 404) {
           setError(
-            typeof msg === 'string'
+            typeof msg === "string"
               ? msg
-              : (isHinglish
-                  ? 'Ye roast link expire ho gaya hai ya galat hai (anonymous reports 7 din mein expunge ho jaati hain).'
-                  : 'This roast link has expired or does not exist (anonymous reports are purged after 7 days).')
-          )
-        } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
+              : isHinglish
+                ? "Ye roast link expire ho gaya hai ya galat hai (anonymous reports 7 din mein expunge ho jaati hain)."
+                : "This roast link has expired or does not exist (anonymous reports are purged after 7 days).",
+          );
+        } else if (
+          err?.code === "ECONNABORTED" ||
+          err?.message?.includes("timeout")
+        ) {
           setError(
             isHinglish
-              ? 'Request timeout ho gayi. Server se report load nahi ho saki — dubara try karo.'
-              : 'The request timed out while loading the roast report. Please try again.'
-          )
+              ? "Request timeout ho gayi. Server se report load nahi ho saki — dubara try karo."
+              : "The request timed out while loading the roast report. Please try again.",
+          );
         } else {
           setError(
-            typeof msg === 'string'
+            typeof msg === "string"
               ? msg
-              : (isHinglish
-                  ? 'Server se roast fetch karne mein dikkat aayi. Kripya thodi der mein dubara prayas karein.'
-                  : 'Unable to load roast report. Please check your connection and try again.')
-          )
+              : isHinglish
+                ? "Server se roast fetch karne mein dikkat aayi. Kripya thodi der mein dubara prayas karein."
+                : "Unable to load roast report. Please check your connection and try again.",
+          );
         }
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchResult()
-  }, [id, lang, storeResult, setResult, isHinglish])
+    fetchResult();
+  }, [id, lang, storeResult, setResult, isHinglish]);
 
   const handleRetry = () => {
     if (id) {
-      window.location.reload()
+      window.location.reload();
     }
-  }
+  };
 
   // 2.4 Themed Loading Skeleton with paper & stamp branding
   if (loading) {
     return (
       <PaperSkeleton
-        label={isHinglish ? 'Desk pe report taiyyar ho rahi hai…' : 'Preparing roast on the desk…'}
+        label={
+          isHinglish
+            ? "Desk pe report taiyyar ho rahi hai…"
+            : "Preparing roast on the desk…"
+        }
       />
-    )
+    );
   }
 
   if (error || !result) {
@@ -231,28 +247,38 @@ export default function ResultsPage() {
         <div className="max-w-[480px]">
           <p className="section-label mb-2">ERROR / NOT FOUND</p>
           <h1 className="font-display text-3xl text-paper mb-3">
-            {isHinglish ? 'Ye roast desk pe load nahi hua.' : 'Could not load roast report.'}
+            {isHinglish
+              ? "Ye roast desk pe load nahi hua."
+              : "Could not load roast report."}
           </h1>
           <p className="font-mono text-xs text-tan-dim mb-8 leading-relaxed">
-            {error || (isHinglish ? 'Report load karne mein asafal rahe.' : 'Failed to load report from server.')}
+            {error ||
+              (isHinglish
+                ? "Report load karne mein asafal rahe."
+                : "Failed to load report from server.")}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button onClick={handleRetry} className="btn-primary w-full sm:w-auto">
-              {isHinglish ? 'Dubara try karo 🔄' : 'Try Again 🔄'}
+            <button
+              onClick={handleRetry}
+              className="btn-primary w-full sm:w-auto"
+            >
+              {isHinglish ? "Dubara try karo 🔄" : "Try Again 🔄"}
             </button>
             <Link to="/roast" className="btn-secondary w-full sm:w-auto">
-              {isHinglish ? 'Naya resume daalo' : 'Upload New Resume'}
+              {isHinglish ? "Naya resume daalo" : "Upload New Resume"}
             </Link>
           </div>
         </div>
       </main>
-    )
+    );
   }
 
   const worstIssue =
     result.issues && result.issues.length > 0
-      ? [...result.issues].sort((a, b) => (a.severity_rank ?? 99) - (b.severity_rank ?? 99))[0]
-      : null
+      ? [...result.issues].sort(
+          (a, b) => (a.severity_rank ?? 99) - (b.severity_rank ?? 99),
+        )[0]
+      : null;
 
   return (
     <main className="min-h-screen pb-24 desk-cursor relative overflow-hidden">
@@ -262,20 +288,32 @@ export default function ResultsPage() {
       )}
 
       {/* Tactile Desk Clutter (A.5) */}
-      <DeskClutter stickyText="friday se pehle fix kar le yaar!! 😭" stickyRotation={-5} />
+      <DeskClutter
+        stickyText="friday se pehle fix kar le yaar!! 😭"
+        stickyRotation={-5}
+      />
 
       {/* Top Bar Header */}
       <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6 mb-6 sm:mb-12 relative z-10">
         <div className="max-w-[960px] mx-auto flex items-center justify-between gap-2">
-          <Link to="/" className="font-display text-base sm:text-lg tracking-tight text-paper select-none shrink-0">
+          <Link
+            to="/"
+            className="font-display text-base sm:text-lg tracking-tight text-paper select-none shrink-0"
+          >
             RESUME<span className="text-stamp">ROAST</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-4">
             <SoundToggle compact={true} />
-            <Link to="/battle" className="font-mono text-[11px] sm:text-xs text-amber-400 hover:text-amber-300 transition-colors whitespace-nowrap">
+            <Link
+              to="/battle"
+              className="font-mono text-[11px] sm:text-xs text-amber-400 hover:text-amber-300 transition-colors whitespace-nowrap"
+            >
               ⚔️ <span className="hidden sm:inline">Battle</span>
             </Link>
-            <Link to="/roast" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+            <Link
+              to="/roast"
+              className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap"
+            >
               {isHinglish ? (
                 <>
                   <span className="hidden sm:inline">Dusra resume →</span>
@@ -300,10 +338,14 @@ export default function ResultsPage() {
           tabIndex={0}
           aria-label="Skip animation sequence"
           onClick={skip}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') skip() }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") skip();
+          }}
           className="fixed bottom-6 right-6 z-40 bg-bg/95 border border-white/[0.18] px-3.5 py-2 rounded-sm shadow-2xl cursor-pointer hover:border-amber-400 hover:text-amber-300 transition-all flex items-center gap-2 font-mono text-xs text-tan select-none animate-pulse"
         >
-          <span>{isHinglish ? 'Tap anywhere to skip' : 'Tap anywhere to skip'}</span>
+          <span>
+            {isHinglish ? "Tap anywhere to skip" : "Tap anywhere to skip"}
+          </span>
           <span>⏩</span>
         </aside>
       )}
@@ -312,13 +354,15 @@ export default function ResultsPage() {
         {/* ── 1. Top Verdict Banner (A.6) ── */}
         <section aria-label="Roast Verdict">
           <p className="section-label mb-2 sm:mb-3 text-[11px] sm:text-xs">
-            {isHinglish ? 'DESK KA OFFICIAL VERDICT' : 'DESK OFFICIAL VERDICT'}
+            {isHinglish ? "DESK KA OFFICIAL VERDICT" : "DESK OFFICIAL VERDICT"}
           </p>
           <h1 className="font-display text-[clamp(1.5rem,4.5vw+0.25rem,2.75rem)] text-paper tracking-tight leading-tight max-w-[780px] mx-auto mb-4">
             "{result.one_line_verdict}"
           </h1>
           <p className="font-mono text-xs text-tan-dim">
-            {isHinglish ? 'Red pen se poori marking neeche dekho' : 'See full red-pen annotations below'}
+            {isHinglish
+              ? "Red pen se poori marking neeche dekho"
+              : "See full red-pen annotations below"}
           </p>
 
           {/* 1.5 Emoji Reactions Component */}
@@ -330,8 +374,8 @@ export default function ResultsPage() {
           {result.was_document_truncated && (
             <div className="mt-4 inline-block bg-white/[0.04] border border-white/[0.08] rounded-sm px-4 py-2 text-xs font-mono text-amber-200/80">
               {isHinglish
-                ? 'Note: Unusually lamba resume tha (10+ pages) — sirf pehla part analyze hua hai.'
-                : 'Note: Unusually long resume (10+ pages) — only the first section was analyzed.'}
+                ? "Note: Unusually lamba resume tha (10+ pages) — sirf pehla part analyze hua hai."
+                : "Note: Unusually long resume (10+ pages) — only the first section was analyzed."}
             </div>
           )}
         </section>
@@ -346,22 +390,22 @@ export default function ResultsPage() {
                 onClick={() => setXRayMode(false)}
                 className={`font-mono text-xs px-2.5 py-1 rounded-xs transition-all ${
                   !xRayMode
-                    ? 'bg-stamp/20 text-stamp font-semibold border border-stamp/40'
-                    : 'text-tan-dim hover:text-paper'
+                    ? "bg-stamp/20 text-stamp font-semibold border border-stamp/40"
+                    : "text-tan-dim hover:text-paper"
                 }`}
               >
-                📝 {isHinglish ? 'Red Pen Marking' : 'Red Pen Marks'}
+                📝 {isHinglish ? "Red Pen Marking" : "Red Pen Marks"}
               </button>
               <button
                 type="button"
                 onClick={() => setXRayMode(true)}
                 className={`font-mono text-xs px-2.5 py-1 rounded-xs transition-all ${
                   xRayMode
-                    ? 'bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40'
-                    : 'text-tan-dim hover:text-paper'
+                    ? "bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40"
+                    : "text-tan-dim hover:text-paper"
                 }`}
               >
-                🩻 {isHinglish ? 'X-Ray Heatmap' : 'X-Ray Heatmap'}
+                🩻 {isHinglish ? "X-Ray Heatmap" : "X-Ray Heatmap"}
               </button>
             </div>
 
@@ -413,7 +457,10 @@ export default function ResultsPage() {
 
         {/* ── 2.5 WhatsApp Voice Note Roast Module ── */}
         <section aria-label="WhatsApp Voice Note Roast" className="pt-2">
-          <VoiceNoteBubble roastId={result.id} oneLineVerdict={result.one_line_verdict} />
+          <VoiceNoteBubble
+            roastId={result.id}
+            oneLineVerdict={result.one_line_verdict}
+          />
         </section>
 
         {/* ── 2.7 B.7 Meme-able Worst-Line Badge ── */}
@@ -440,12 +487,15 @@ export default function ResultsPage() {
           >
             <p className="section-label mb-3 text-tan">
               {isHinglish
-                ? 'Red pen se bach gayi ye cheezein (kuch toh accha tha 👍)'
-                : 'Spared by the red pen (some bright spots 👍)'}
+                ? "Red pen se bach gayi ye cheezein (kuch toh accha tha 👍)"
+                : "Spared by the red pen (some bright spots 👍)"}
             </p>
             <ul className="space-y-2">
               {result.strengths.map((strength, idx) => (
-                <li key={idx} className="font-mono text-xs text-paper flex items-start gap-2">
+                <li
+                  key={idx}
+                  className="font-mono text-xs text-paper flex items-start gap-2"
+                >
                   <span className="text-tan-dim select-none">•</span>
                   <span>{strength}</span>
                 </li>
@@ -459,7 +509,9 @@ export default function ResultsPage() {
           <div className="max-w-[640px] mx-auto text-left flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
             <div>
               <p className="section-label mb-1">
-                {isHinglish ? 'LINE-BY-LINE PAKAD MEIN AAYA' : 'LINE-BY-LINE CRITIQUE'}
+                {isHinglish
+                  ? "LINE-BY-LINE PAKAD MEIN AAYA"
+                  : "LINE-BY-LINE CRITIQUE"}
               </p>
               <h2 className="font-display text-xl text-paper">
                 {isHinglish
@@ -481,7 +533,9 @@ export default function ResultsPage() {
                 className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1.5 text-amber-400 border-amber-500/40 hover:bg-amber-500/10 font-mono"
                 title="Copy all AI recommendations to clipboard"
               >
-                <span>{fixesCopied ? '✓ Copied All!' : '📋 Copy All Fixes'}</span>
+                <span>
+                  {fixesCopied ? "✓ Copied All!" : "📋 Copy All Fixes"}
+                </span>
               </button>
               <button
                 type="button"
@@ -490,7 +544,11 @@ export default function ResultsPage() {
                 className="btn-primary !text-xs !py-1.5 !px-3 flex items-center gap-1.5 !bg-emerald-600 hover:!bg-emerald-500 font-mono font-bold"
                 title="Download ATS formatted markdown file with all rewrites"
               >
-                <span>{downloadingFixed ? 'Preparing…' : '📥 Download Fixed ATS (.md)'}</span>
+                <span>
+                  {downloadingFixed
+                    ? "Preparing…"
+                    : "📥 Download Fixed ATS (.md)"}
+                </span>
               </button>
             </div>
           </div>
@@ -518,8 +576,8 @@ export default function ResultsPage() {
                 </p>
                 <p className="font-mono text-xs text-tan leading-relaxed">
                   {isHinglish
-                    ? 'Pro plan mein saari chhipi galtiyaan, exact rewritten lines, aur unlimited daily roasts khul jayenge.'
-                    : 'Upgrade to Pro to uncover all hidden flaws, full drop-in rewritten lines, and unlimited daily roasts.'}
+                    ? "Pro plan mein saari chhipi galtiyaan, exact rewritten lines, aur unlimited daily roasts khul jayenge."
+                    : "Upgrade to Pro to uncover all hidden flaws, full drop-in rewritten lines, and unlimited daily roasts."}
                 </p>
               </div>
               <button
@@ -557,13 +615,13 @@ export default function ResultsPage() {
               </div>
               <h3 className="font-display text-lg sm:text-xl text-paper">
                 {isHinglish
-                  ? 'Official Parody Certificate Download Karo'
-                  : 'Download Official Parody Certificate'}
+                  ? "Official Parody Certificate Download Karo"
+                  : "Download Official Parody Certificate"}
               </h3>
               <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
                 {isHinglish
-                  ? 'High-res printable PDF with wax seal stamp, score verdict, and official parody title.'
-                  : 'High-res printable PDF with wax seal stamp, score verdict, and official parody title.'}
+                  ? "High-res printable PDF with wax seal stamp, score verdict, and official parody title."
+                  : "High-res printable PDF with wax seal stamp, score verdict, and official parody title."}
               </p>
             </div>
             <button
@@ -572,7 +630,15 @@ export default function ResultsPage() {
               disabled={downloadingCert}
               className="btn-primary shrink-0 !text-xs !py-2.5 !px-4 flex items-center gap-1.5 font-bold whitespace-nowrap"
             >
-              <span>{downloadingCert ? (isHinglish ? 'Generating PDF…' : 'Generating PDF…') : (isHinglish ? 'Download Certificate (PDF)' : 'Download Certificate (PDF)')}</span>
+              <span>
+                {downloadingCert
+                  ? isHinglish
+                    ? "Generating PDF…"
+                    : "Generating PDF…"
+                  : isHinglish
+                    ? "Download Certificate (PDF)"
+                    : "Download Certificate (PDF)"}
+              </span>
               <span>📥</span>
             </button>
           </div>
@@ -588,7 +654,9 @@ export default function ResultsPage() {
               <div className="flex items-center gap-2 mb-1.5">
                 <span className="text-xl">🎯</span>
                 <span className="font-mono text-[10px] text-stamp uppercase tracking-widest font-bold">
-                  {isHinglish ? 'ROLE TAILORING // ATS REALITY CHECK' : 'ROLE TAILORING // ATS REALITY CHECK'}
+                  {isHinglish
+                    ? "ROLE TAILORING // ATS REALITY CHECK"
+                    : "ROLE TAILORING // ATS REALITY CHECK"}
                 </span>
                 <span className="font-mono text-[9px] bg-stamp/20 text-paper border border-stamp/40 px-1.5 py-0.2 rounded-xs">
                   NEW
@@ -596,20 +664,24 @@ export default function ResultsPage() {
               </div>
               <h3 className="font-display text-lg sm:text-xl text-paper">
                 {isHinglish
-                  ? 'Kisi specific company mein apply kar rahe ho?'
-                  : 'Applying to a specific company or role?'}
+                  ? "Kisi specific company mein apply kar rahe ho?"
+                  : "Applying to a specific company or role?"}
               </h3>
               <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
                 {isHinglish
-                  ? 'Isi resume ko unke exact Job Description ke saath match karo bina re-upload kiye. Pata lagao kaunse keywords missing hain.'
-                  : 'Match this roasted resume against their exact Job Description without re-uploading. Detect missing ATS keyword traps and get tailored rewrites.'}
+                  ? "Isi resume ko unke exact Job Description ke saath match karo bina re-upload kiye. Pata lagao kaunse keywords missing hain."
+                  : "Match this roasted resume against their exact Job Description without re-uploading. Detect missing ATS keyword traps and get tailored rewrites."}
               </p>
             </div>
             <Link
               to={`/match?roast_id=${result.id}`}
               className="btn-primary shrink-0 !text-xs !py-3 !px-5 flex items-center gap-2 font-display tracking-wider uppercase whitespace-nowrap shadow-lg shadow-stamp/20 hover:scale-[1.02] active:scale-[0.98] transition-transform"
             >
-              <span>{isHinglish ? 'JD Se Match Karo →' : 'Match With Job Description →'}</span>
+              <span>
+                {isHinglish
+                  ? "JD Se Match Karo →"
+                  : "Match With Job Description →"}
+              </span>
             </Link>
           </div>
         </section>
@@ -618,19 +690,22 @@ export default function ResultsPage() {
         <section aria-label="Share score card" className="pt-6">
           <div className="max-w-[640px] mx-auto text-left mb-6">
             <p className="section-label mb-1">
-              {isHinglish ? 'DAMAGE SHARE KARO' : 'SHARE THE DAMAGE'}
+              {isHinglish ? "DAMAGE SHARE KARO" : "SHARE THE DAMAGE"}
             </p>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-xl text-paper">
-                {isHinglish ? 'Shareable Grade Card' : 'Shareable Grade Card'}
+                {isHinglish ? "Shareable Grade Card" : "Shareable Grade Card"}
               </h2>
               {/* Quick 1-Click Viral Share Suite */}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
-                    const shareText = `My resume scored ${result.overall_score}/100 on Resume Roast 💀🔥!\n\nVerdict: "${result.one_line_verdict}"\n\nFind out how brutal yours is: https://resumeroast.app`
-                    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank')
+                    const shareText = `My resume scored ${result.overall_score}/100 on Resume Roast 💀🔥!\n\nVerdict: "${result.one_line_verdict}"\n\nFind out how brutal yours is: https://resumeroast.app`;
+                    window.open(
+                      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
+                      "_blank",
+                    );
                   }}
                   className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1.5 hover:!border-sky-500 hover:text-sky-400 font-mono"
                   title="Share roast on X"
@@ -658,16 +733,23 @@ export default function ResultsPage() {
         </section>
 
         {/* ── 6.5 Wall of Shame / Wall of Fame Opt-in Widget ── */}
-        <section aria-label="Post to Wall of Shame" className="max-w-[640px] mx-auto text-left border border-white/[0.08] bg-white/[0.02] rounded-lg p-6">
+        <section
+          aria-label="Post to Wall of Shame"
+          className="max-w-[640px] mx-auto text-left border border-white/[0.08] bg-white/[0.02] rounded-lg p-6"
+        >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <p className="font-display text-base text-paper flex items-center gap-2">
-                <span>{isHinglish ? '📢 Public Wall pe anonymously daal do' : '📢 Post anonymously to Public Wall'}</span>
+                <span>
+                  {isHinglish
+                    ? "📢 Public Wall pe anonymously daal do"
+                    : "📢 Post anonymously to Public Wall"}
+                </span>
               </p>
               <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
                 {isHinglish
-                  ? 'Saare naam, email, aur company details publicly show hone se pehle sanitize ho jaate hain.'
-                  : 'All names, emails, and company details are stripped and sanitized before public listing.'}
+                  ? "Saare naam, email, aur company details publicly show hone se pehle sanitize ho jaate hain."
+                  : "All names, emails, and company details are stripped and sanitized before public listing."}
               </p>
             </div>
 
@@ -675,25 +757,33 @@ export default function ResultsPage() {
               type="button"
               disabled={wallPublishing || wallPublished}
               onClick={async () => {
-                if (wallPublished || wallPublishing) return
+                if (wallPublished || wallPublishing) return;
                 try {
-                  setWallPublishing(true)
-                  await axios.post('/api/wall/publish', { roast_id: result.id })
-                  setWallPublished(true)
+                  setWallPublishing(true);
+                  await axios.post("/api/wall/publish", {
+                    roast_id: result.id,
+                  });
+                  setWallPublished(true);
                 } catch (err) {
-                  console.error('Failed to post to wall:', err)
-                  setWallPublished(true)
+                  console.error("Failed to post to wall:", err);
+                  setWallPublished(true);
                 } finally {
-                  setWallPublishing(false)
+                  setWallPublishing(false);
                 }
               }}
               className="btn-ghost shrink-0 text-xs text-amber-400 hover:border-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {wallPublishing
-                ? (isHinglish ? 'Publishing…' : 'Publishing…')
+                ? isHinglish
+                  ? "Publishing…"
+                  : "Publishing…"
                 : wallPublished
-                ? (isHinglish ? '✓ Wall pe post ho gaya!' : '✓ Added to Wall!')
-                : (isHinglish ? 'Wall pe daal do' : 'Post to Wall')}
+                  ? isHinglish
+                    ? "✓ Wall pe post ho gaya!"
+                    : "✓ Added to Wall!"
+                  : isHinglish
+                    ? "Wall pe daal do"
+                    : "Post to Wall"}
             </button>
           </div>
         </section>
@@ -704,16 +794,20 @@ export default function ResultsPage() {
             to={`/match?roast_id=${result.id}`}
             className="btn-ghost !border-stamp/50 text-paper hover:bg-stamp/10 font-mono"
           >
-            {isHinglish ? '🎯 JD Match Mode Try Karo' : '🎯 Match with Job Description'}
+            {isHinglish
+              ? "🎯 JD Match Mode Try Karo"
+              : "🎯 Match with Job Description"}
           </Link>
           <Link to="/battle" className="btn-ghost">
-            {isHinglish ? '⚔️ 1-on-1 Battle Try Karo' : '⚔️ Try 1-on-1 Battle'}
+            {isHinglish ? "⚔️ 1-on-1 Battle Try Karo" : "⚔️ Try 1-on-1 Battle"}
           </Link>
           <Link to="/wall" className="btn-ghost">
-            {isHinglish ? '🔥 Wall of Shame/Fame Dekho' : '🔥 View Wall of Shame/Fame'}
+            {isHinglish
+              ? "🔥 Wall of Shame/Fame Dekho"
+              : "🔥 View Wall of Shame/Fame"}
           </Link>
           <Link to="/roast" className="btn-ghost">
-            {isHinglish ? 'Dusra resume roast karo' : 'Roast Another Resume'}
+            {isHinglish ? "Dusra resume roast karo" : "Roast Another Resume"}
           </Link>
         </div>
       </div>
@@ -738,5 +832,5 @@ export default function ResultsPage() {
         subheadline="All hidden flaws, drop-in bullet rewrites, and uncensored deep roasts unlock the moment Pro goes live. Join the waitlist for launch priority and early-bird perks."
       />
     </main>
-  )
+  );
 }

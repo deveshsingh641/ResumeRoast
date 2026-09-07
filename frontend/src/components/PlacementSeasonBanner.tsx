@@ -1,30 +1,30 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function PlacementSeasonBanner() {
-  const currentMonth = new Date().getMonth() // 0 = Jan, 7 = Aug, 11 = Dec
-  const isPlacementSeason = currentMonth >= 7 && currentMonth <= 11 // Aug-Dec
+  const currentMonth = new Date().getMonth(); // 0 = Jan, 7 = Aug, 11 = Dec
+  const isPlacementSeason = currentMonth >= 7 && currentMonth <= 11; // Aug-Dec
 
   const [dismissed, setDismissed] = useState(() => {
     try {
-      return sessionStorage.getItem('dismiss_placement_banner') === 'true'
+      return sessionStorage.getItem("dismiss_placement_banner") === "true";
     } catch {
-      return false
+      return false;
     }
-  })
+  });
 
   if (!isPlacementSeason || dismissed) {
-    return null
+    return null;
   }
 
   const handleDismiss = () => {
-    setDismissed(true)
+    setDismissed(true);
     try {
-      sessionStorage.setItem('dismiss_placement_banner', 'true')
+      sessionStorage.setItem("dismiss_placement_banner", "true");
     } catch {
       // Ignore
     }
-  }
+  };
 
   return (
     <aside
@@ -33,9 +33,13 @@ export default function PlacementSeasonBanner() {
     >
       <div className="max-w-[960px] mx-auto flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2 text-paper text-left flex-1 min-w-0">
-          <span className="text-amber-400 font-bold animate-pulse shrink-0">🎯</span>
+          <span className="text-amber-400 font-bold animate-pulse shrink-0">
+            🎯
+          </span>
           <p className="font-mono leading-tight text-xs">
-            <strong className="text-amber-300">Placement season chal raha hai</strong>{' '}
+            <strong className="text-amber-300">
+              Placement season chal raha hai
+            </strong>{" "}
             — resume ready hai ya jugaad se chal raha hai? 👀
           </p>
         </div>
@@ -58,5 +62,5 @@ export default function PlacementSeasonBanner() {
         </div>
       </div>
     </aside>
-  )
+  );
 }

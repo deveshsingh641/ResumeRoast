@@ -1,21 +1,20 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import { PageTracker } from "@/components/PageTracker";
+import LandingPage from "@/pages/LandingPage";
+import RoastPage from "@/pages/RoastPage";
+import MatchPage from "@/pages/MatchPage";
+import ResultsPage from "@/pages/ResultsPage";
+import BattlePage from "@/pages/BattlePage";
+import WallPage from "@/pages/WallPage";
+import PricingPage from "@/pages/PricingPage";
+import PrivacyPage from "@/pages/PrivacyPage";
+import TermsPage from "@/pages/TermsPage";
+import NotFoundPage from "@/pages/NotFoundPage";
+import FounderDashboardPage from "@/pages/FounderDashboardPage";
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { Analytics } from '@vercel/analytics/react'
-import { SpeedInsights } from '@vercel/speed-insights/react'
-import { PageTracker } from '@/components/PageTracker'
-import LandingPage from '@/pages/LandingPage'
-import RoastPage from '@/pages/RoastPage'
-import MatchPage from '@/pages/MatchPage'
-import ResultsPage from '@/pages/ResultsPage'
-import BattlePage from '@/pages/BattlePage'
-import WallPage from '@/pages/WallPage'
-import PricingPage from '@/pages/PricingPage'
-import PrivacyPage from '@/pages/PrivacyPage'
-import TermsPage from '@/pages/TermsPage'
-import NotFoundPage from '@/pages/NotFoundPage'
-import FounderDashboardPage from '@/pages/FounderDashboardPage'
-
-import SuggestionStickyTrigger from '@/components/SuggestionStickyTrigger'
+import SuggestionStickyTrigger from "@/components/SuggestionStickyTrigger";
 
 export default function App() {
   return (
@@ -44,5 +43,5 @@ export default function App() {
       <Analytics />
       <SpeedInsights />
     </BrowserRouter>
-  )
+  );
 }

@@ -25,6 +25,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+from app.db import database
 from app.db.database import init_db, cleanup_expired_roasts
 from app.routers import analytics, battle, i18n, match, payment, roast, suggestion, usage, voice, waitlist, wall
 

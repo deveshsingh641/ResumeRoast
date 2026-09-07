@@ -1,100 +1,111 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 interface WaitlistModalProps {
-  isOpen: boolean
-  onClose: () => void
-  source?: string
-  headline?: string
-  subheadline?: string
+  isOpen: boolean;
+  onClose: () => void;
+  source?: string;
+  headline?: string;
+  subheadline?: string;
 }
 
 export default function WaitlistModal({
   isOpen,
   onClose,
-  source = 'generic_pro_cta',
-  headline = 'Pro is Launching Soon 🔜',
+  source = "generic_pro_cta",
+  headline = "Pro is Launching Soon 🔜",
   subheadline = "We're finishing the last payment gateway checks. Drop your email to get instant access the second Pro goes live, plus an early-bird launch perk.",
 }: WaitlistModalProps) {
-  const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [status, setStatus] = useState<'idle' | 'success' | 'already_joined' | 'error'>('idle')
-  const [message, setMessage] = useState<string | null>(null)
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<
+    "idle" | "success" | "already_joined" | "error"
+  >("idle");
+  const [message, setMessage] = useState<string | null>(null);
 
   // Pre-fill email from localStorage if user previously entered it
   useEffect(() => {
     if (isOpen) {
       try {
-        const savedEmail = localStorage.getItem('resumeroast_user_email')
+        const savedEmail = localStorage.getItem("resumeroast_user_email");
         if (savedEmail && !email) {
-          setEmail(savedEmail)
+          setEmail(savedEmail);
         }
       } catch {}
-      setStatus('idle')
-      setMessage(null)
+      setStatus("idle");
+      setMessage(null);
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // ESC key to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
+      if (e.key === "Escape" && isOpen) {
+        onClose();
       }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const cleanEmail = email.trim().toLowerCase()
+    e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
 
-    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-      setStatus('error')
-      setMessage('Please enter a valid email address.')
-      return
+    if (!cleanEmail || !cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+      setStatus("error");
+      setMessage("Please enter a valid email address.");
+      return;
     }
 
     try {
-      setLoading(true)
-      setStatus('idle')
-      setMessage(null)
+      setLoading(true);
+      setStatus("idle");
+      setMessage(null);
 
       try {
-        localStorage.setItem('resumeroast_user_email', cleanEmail)
+        localStorage.setItem("resumeroast_user_email", cleanEmail);
       } catch {}
 
-      let userId: string | undefined = undefined
+      let userId: string | undefined = undefined;
       try {
-        const storedId = localStorage.getItem('resumeroast_user_id')
-        if (storedId) userId = storedId
+        const storedId = localStorage.getItem("resumeroast_user_id");
+        if (storedId) userId = storedId;
       } catch {}
 
-      const { data } = await axios.post('/api/waitlist/join', {
+      const { data } = await axios.post("/api/waitlist/join", {
         email: cleanEmail,
         source: source,
         user_id: userId,
-      })
+      });
 
-      if (data.is_already_on_list || data.status === 'already_joined') {
-        setStatus('already_joined')
-        setMessage(data.message || "You're already on the list! We'll email you the second Pro is live 🎉")
+      if (data.is_already_on_list || data.status === "already_joined") {
+        setStatus("already_joined");
+        setMessage(
+          data.message ||
+            "You're already on the list! We'll email you the second Pro is live 🎉",
+        );
       } else {
-        setStatus('success')
-        setMessage(data.message || "You're on the list — we'll email you the second Pro is live 🎉")
+        setStatus("success");
+        setMessage(
+          data.message ||
+            "You're on the list — we'll email you the second Pro is live 🎉",
+        );
       }
     } catch (err: any) {
-      const detail = err?.response?.data?.detail
-      const msg = typeof detail === 'string' ? detail : err?.message || 'Could not join waitlist. Please try again.'
-      setStatus('error')
-      setMessage(msg)
+      const detail = err?.response?.data?.detail;
+      const msg =
+        typeof detail === "string"
+          ? detail
+          : err?.message || "Could not join waitlist. Please try again.";
+      setStatus("error");
+      setMessage(msg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div
@@ -103,7 +114,7 @@ export default function WaitlistModal({
       aria-labelledby="waitlist-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget) onClose();
       }}
     >
       <div className="bg-[#14110E] border border-white/[0.14] rounded-sm p-6 sm:p-8 max-w-md w-full text-left space-y-5 relative shadow-2xl">
@@ -127,7 +138,10 @@ export default function WaitlistModal({
 
         {/* Title */}
         <div>
-          <h2 id="waitlist-title" className="font-display text-2xl text-paper tracking-tight">
+          <h2
+            id="waitlist-title"
+            className="font-display text-2xl text-paper tracking-tight"
+          >
             {headline}
           </h2>
           <p className="font-body text-xs text-tan mt-2 leading-relaxed">
@@ -136,18 +150,27 @@ export default function WaitlistModal({
         </div>
 
         {/* Success / Already Joined Banner */}
-        {status === 'success' || status === 'already_joined' ? (
+        {status === "success" || status === "already_joined" ? (
           <div className="bg-emerald-950/40 border border-emerald-500/50 rounded-sm p-5 space-y-3 animate-fadeIn">
             <div className="flex items-center gap-2 text-emerald-300 font-display text-lg font-bold">
-              <span>{status === 'success' ? '🎉' : '✓'}</span>
-              <span>{status === 'success' ? 'You’re on the VIP Waitlist!' : 'Already Reserved!'}</span>
+              <span>{status === "success" ? "🎉" : "✓"}</span>
+              <span>
+                {status === "success"
+                  ? "You’re on the VIP Waitlist!"
+                  : "Already Reserved!"}
+              </span>
             </div>
             <p className="font-mono text-xs text-tan-dim leading-relaxed">
               {message}
             </p>
             <div className="pt-2 border-t border-white/[0.08] space-y-1 text-tan font-mono text-[11px]">
-              <p className="text-amber-400 font-semibold">🎁 Early-adopter perk locked in:</p>
-              <p className="text-tan-dim">Launch discount + 1 extra complimentary deep roast credited to your email.</p>
+              <p className="text-amber-400 font-semibold">
+                🎁 Early-adopter perk locked in:
+              </p>
+              <p className="text-tan-dim">
+                Launch discount + 1 extra complimentary deep roast credited to
+                your email.
+              </p>
             </div>
             <div className="pt-3">
               <button
@@ -163,7 +186,10 @@ export default function WaitlistModal({
           /* Input & Capture Form */
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="waitlist-email-input" className="block font-mono text-[11px] text-tan-dim mb-1 uppercase tracking-wider">
+              <label
+                htmlFor="waitlist-email-input"
+                className="block font-mono text-[11px] text-tan-dim mb-1 uppercase tracking-wider"
+              >
                 Where should we notify you?
               </label>
               <input
@@ -180,7 +206,7 @@ export default function WaitlistModal({
             </div>
 
             {/* Error banner */}
-            {status === 'error' && message && (
+            {status === "error" && message && (
               <div
                 role="alert"
                 className="p-3 bg-[#E8422D]/[0.1] border border-[#E8422D]/40 text-[#ff8170] rounded-sm text-left font-mono text-xs leading-relaxed"
@@ -191,7 +217,11 @@ export default function WaitlistModal({
 
             {/* Early bird perk highlight */}
             <div className="p-3 bg-white/[0.03] border border-white/[0.06] rounded-sm font-mono text-[11px] text-tan-dim leading-relaxed">
-              <span className="text-amber-300 font-semibold">⚡ Early Bird Bonus:</span> Waitlist signups receive a special launch discount + first queue priority the instant payments open.
+              <span className="text-amber-300 font-semibold">
+                ⚡ Early Bird Bonus:
+              </span>{" "}
+              Waitlist signups receive a special launch discount + first queue
+              priority the instant payments open.
             </div>
 
             {/* Actions */}
@@ -207,7 +237,7 @@ export default function WaitlistModal({
                     Adding…
                   </span>
                 ) : (
-                  'Notify Me at Launch 🔜'
+                  "Notify Me at Launch 🔜"
                 )}
               </button>
               <button
@@ -222,5 +252,5 @@ export default function WaitlistModal({
         )}
       </div>
     </div>
-  )
+  );
 }

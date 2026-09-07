@@ -1,136 +1,148 @@
-import React, { useCallback, useRef, useState } from 'react'
-import axios from 'axios'
-import { useNavigate, Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { normalizeLang } from '@/i18n/detector'
-import { useAppStore } from '@/store/useAppStore'
-import ProcessingState from './ProcessingState'
-import WaitlistModal from './WaitlistModal'
+import React, { useCallback, useRef, useState } from "react";
+import axios from "axios";
+import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
+import { useAppStore } from "@/store/useAppStore";
+import ProcessingState from "./ProcessingState";
+import WaitlistModal from "./WaitlistModal";
 
-const MAX_SIZE = 5 * 1024 * 1024 // 5MB
-const ALLOWED_EXTENSIONS = ['.pdf', '.docx']
+const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_EXTENSIONS = [".pdf", ".docx"];
 
 function validateFile(file: File, isHinglish = false): string | null {
   if (!file) {
-    return isHinglish ? 'Kripya upload karne ke liye file chunein.' : 'Please select a file to upload.'
+    return isHinglish
+      ? "Kripya upload karne ke liye file chunein."
+      : "Please select a file to upload.";
   }
   if (file.size === 0) {
     return isHinglish
-      ? 'Ye file empty hai (0 bytes). Kripya poora resume document upload karein.'
-      : 'That file is empty (0 bytes). Please upload a complete resume document.'
+      ? "Ye file empty hai (0 bytes). Kripya poora resume document upload karein."
+      : "That file is empty (0 bytes). Please upload a complete resume document.";
   }
-  const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+  const ext = "." + file.name.split(".").pop()?.toLowerCase();
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     return isHinglish
-      ? 'Sirf PDF aur DOCX formats supported hain. Text-based documents upload karein.'
-      : 'Only PDF and DOCX files are supported. Please ensure your file has selectable text.'
+      ? "Sirf PDF aur DOCX formats supported hain. Text-based documents upload karein."
+      : "Only PDF and DOCX files are supported. Please ensure your file has selectable text.";
   }
   if (file.size > MAX_SIZE) {
     return isHinglish
-      ? 'File size 5MB se chhota hona chahiye.'
-      : 'File size exceeds 5MB limit. Please upload a smaller resume document.'
+      ? "File size 5MB se chhota hona chahiye."
+      : "File size exceeds 5MB limit. Please upload a smaller resume document.";
   }
-  return null
+  return null;
 }
 
 export default function ResumeUploader() {
-  const navigate = useNavigate()
-  const { i18n } = useTranslation()
-  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
-  const { setUploadStatus, setUploadError, setResult, uploadStatus } = useAppStore()
-  const [isDragOver, setIsDragOver] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [showWaitlist, setShowWaitlist] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
+  const { setUploadStatus, setUploadError, setResult, uploadStatus } =
+    useAppStore();
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showWaitlist, setShowWaitlist] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isProcessing = isSubmitting || uploadStatus === 'uploading' || uploadStatus === 'analyzing'
+  const isProcessing =
+    isSubmitting ||
+    uploadStatus === "uploading" ||
+    uploadStatus === "analyzing";
 
   const processFile = useCallback(
     async (file: File) => {
-      if (isProcessing) return // Prevent double-submit
+      if (isProcessing) return; // Prevent double-submit
 
-      const valError = validateFile(file, isHinglish)
+      const valError = validateFile(file, isHinglish);
       if (valError) {
-        setErrorMessage(valError)
-        return
+        setErrorMessage(valError);
+        return;
       }
 
-      setIsSubmitting(true)
-      setErrorMessage(null)
-      setUploadError(null)
-      setUploadStatus('uploading')
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      setUploadError(null);
+      setUploadStatus("uploading");
 
-      const formData = new FormData()
-      formData.append('file', file)
+      const formData = new FormData();
+      formData.append("file", file);
 
       try {
-        setUploadStatus('analyzing')
-        const { data } = await axios.post('/api/roast', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        setUploadStatus("analyzing");
+        const { data } = await axios.post("/api/roast", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
           timeout: 65000,
-        })
-        setResult(data)
-        setUploadStatus('done')
-        navigate(`/roast/${data.id}`)
+        });
+        setResult(data);
+        setUploadStatus("done");
+        navigate(`/roast/${data.id}`);
       } catch (err: any) {
-        setUploadStatus('idle')
-        setIsSubmitting(false)
+        setUploadStatus("idle");
+        setIsSubmitting(false);
 
-        let msg: string
-        const detail = err?.response?.data?.detail
+        let msg: string;
+        const detail = err?.response?.data?.detail;
 
-        if (typeof detail === 'object' && detail?.error === 'daily_limit_reached') {
-          msg = detail.message
-        } else if (typeof detail === 'string') {
-          msg = detail
-        } else if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
+        if (
+          typeof detail === "object" &&
+          detail?.error === "daily_limit_reached"
+        ) {
+          msg = detail.message;
+        } else if (typeof detail === "string") {
+          msg = detail;
+        } else if (
+          err?.code === "ECONNABORTED" ||
+          err?.message?.includes("timeout")
+        ) {
           msg = isHinglish
-            ? 'Grading process time out ho gaya. Dobara try karein — aam taur par ~15 seconds lagte hain.'
-            : 'The grading process timed out. Try again — it usually finishes in ~15 seconds.'
+            ? "Grading process time out ho gaya. Dobara try karein — aam taur par ~15 seconds lagte hain."
+            : "The grading process timed out. Try again — it usually finishes in ~15 seconds.";
         } else if (!err?.response) {
           msg = isHinglish
-            ? 'Grading server se connect nahi ho pa rahe hain. Internet check karein aur dobara try karein.'
-            : 'Unable to reach the grading server. Please check your internet connection and try again.'
+            ? "Grading server se connect nahi ho pa rahe hain. Internet check karein aur dobara try karein."
+            : "Unable to reach the grading server. Please check your internet connection and try again.";
         } else {
           msg = isHinglish
-            ? 'Resume analyze karne mein dikkat aayi. Kripya fresh text PDF ya standard DOCX export karke upload karein.'
-            : 'Failed to analyze resume. Please try exporting fresh as a PDF or standard DOCX.'
+            ? "Resume analyze karne mein dikkat aayi. Kripya fresh text PDF ya standard DOCX export karke upload karein."
+            : "Failed to analyze resume. Please try exporting fresh as a PDF or standard DOCX.";
         }
 
-        setUploadError(msg)
-        setErrorMessage(msg)
+        setUploadError(msg);
+        setErrorMessage(msg);
       } finally {
-        setIsSubmitting(false)
+        setIsSubmitting(false);
       }
     },
-    [isProcessing, navigate, setResult, setUploadError, setUploadStatus]
-  )
+    [isProcessing, navigate, setResult, setUploadError, setUploadStatus],
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragOver(false)
-      if (isProcessing) return
-      const file = e.dataTransfer.files[0]
+      e.preventDefault();
+      setIsDragOver(false);
+      if (isProcessing) return;
+      const file = e.dataTransfer.files[0];
       if (file) {
-        processFile(file)
+        processFile(file);
       }
     },
-    [isProcessing, processFile]
-  )
+    [isProcessing, processFile],
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isProcessing) return
-    const file = e.target.files?.[0]
+    if (isProcessing) return;
+    const file = e.target.files?.[0];
     if (file) {
-      processFile(file)
+      processFile(file);
     }
-  }
+  };
 
   // Morph into slim horizontal state when processing
   if (isProcessing) {
-    return <ProcessingState />
+    return <ProcessingState />;
   }
 
   return (
@@ -141,22 +153,22 @@ export default function ResumeUploader() {
         tabIndex={0}
         aria-label="Upload resume: drag and drop or press Enter to browse"
         onDragOver={(e) => {
-          e.preventDefault()
-          if (!isProcessing) setIsDragOver(true)
+          e.preventDefault();
+          if (!isProcessing) setIsDragOver(true);
         }}
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
         onClick={() => !isProcessing && fileInputRef.current?.click()}
         onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === ' ') && !isProcessing) {
-            e.preventDefault()
-            fileInputRef.current?.click()
+          if ((e.key === "Enter" || e.key === " ") && !isProcessing) {
+            e.preventDefault();
+            fileInputRef.current?.click();
           }
         }}
         className={`w-full text-center px-6 py-12 sm:py-16 select-none cursor-pointer transition-all duration-120 ${
           isDragOver
-            ? 'border border-dashed border-stamp bg-[#E8422D]/[0.08]'
-            : 'border border-dashed border-tan-dim bg-[#F5EFE0]/[0.04] hover:border-tan hover:bg-[#F5EFE0]/[0.07]'
+            ? "border border-dashed border-stamp bg-[#E8422D]/[0.08]"
+            : "border border-dashed border-tan-dim bg-[#F5EFE0]/[0.04] hover:border-tan hover:bg-[#F5EFE0]/[0.07]"
         } rounded-sm`}
       >
         {/* Document Icon */}
@@ -166,7 +178,7 @@ export default function ResumeUploader() {
             height="36"
             viewBox="0 0 24 24"
             fill="none"
-            stroke={isDragOver ? '#E8422D' : '#8A8168'}
+            stroke={isDragOver ? "#E8422D" : "#8A8168"}
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -181,11 +193,17 @@ export default function ResumeUploader() {
 
         <p className="font-mono text-sm text-paper mb-1">
           {isDragOver
-            ? (isHinglish ? 'Abhi chhod do desk pe!' : 'Drop it on the desk now!')
-            : (isHinglish ? 'Apna resume yahan drop karo' : 'Drop your resume here')}
+            ? isHinglish
+              ? "Abhi chhod do desk pe!"
+              : "Drop it on the desk now!"
+            : isHinglish
+              ? "Apna resume yahan drop karo"
+              : "Drop your resume here"}
         </p>
         <p className="font-mono text-xs text-tan-dim mb-6">
-          {isHinglish ? 'PDF ya DOCX format · Max 5MB' : 'PDF or DOCX format · Max 5MB'}
+          {isHinglish
+            ? "PDF ya DOCX format · Max 5MB"
+            : "PDF or DOCX format · Max 5MB"}
         </p>
 
         {/* Primary verb-first button */}
@@ -195,11 +213,11 @@ export default function ResumeUploader() {
           disabled={isProcessing}
           className="btn-primary"
           onClick={(e) => {
-            e.stopPropagation()
-            if (!isProcessing) fileInputRef.current?.click()
+            e.stopPropagation();
+            if (!isProcessing) fileInputRef.current?.click();
           }}
         >
-          {isHinglish ? 'File choose karo' : 'Choose File'}
+          {isHinglish ? "File choose karo" : "Choose File"}
         </button>
 
         <input
@@ -223,7 +241,8 @@ export default function ResumeUploader() {
             <span aria-hidden="true">⚠</span>
             <span>{errorMessage}</span>
           </div>
-          {(errorMessage.toLowerCase().includes('daily') || errorMessage.toLowerCase().includes('limit')) && (
+          {(errorMessage.toLowerCase().includes("daily") ||
+            errorMessage.toLowerCase().includes("limit")) && (
             <button
               type="button"
               onClick={() => setShowWaitlist(true)}
@@ -243,5 +262,5 @@ export default function ResumeUploader() {
         subheadline="Unlimited daily submissions will unlock the instant Pro is live. Join the waitlist for launch priority and early-bird perks."
       />
     </div>
-  )
+  );
 }

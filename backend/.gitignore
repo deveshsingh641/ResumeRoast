@@ -40,6 +40,10 @@ env/
 *.db
 storage/voice_notes/*
 !storage/voice_notes/.gitkeep
+storage/certificates/*
+!storage/certificates/.gitkeep
+storage/backups/*
+!storage/backups/.gitkeep
 
 # Pytest
 .pytest_cache/

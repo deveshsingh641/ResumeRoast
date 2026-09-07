@@ -1,80 +1,89 @@
-import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import axios from 'axios'
-import { usePageTitle } from '@/utils/usePageTitle'
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import axios from "axios";
+import { usePageTitle } from "@/utils/usePageTitle";
 
 interface MetricsSummary {
-  total_roasts_all_time: number
-  total_battles_all_time: number
-  unique_visitors_today: number
-  pageviews_today: number
-  waitlist_signups: number
-  pro_subscribers: number
-  estimated_mrr_inr: number
+  total_roasts_all_time: number;
+  total_battles_all_time: number;
+  unique_visitors_today: number;
+  pageviews_today: number;
+  waitlist_signups: number;
+  pro_subscribers: number;
+  estimated_mrr_inr: number;
 }
 
 interface RoastItem {
-  id: string
-  overall_score: number
-  band: string
-  one_line_verdict: string
-  resume_text?: string
-  created_at: string
-  upload_count?: number
-  first_created_at?: string
+  id: string;
+  overall_score: number;
+  band: string;
+  one_line_verdict: string;
+  resume_text?: string;
+  created_at: string;
+  upload_count?: number;
+  first_created_at?: string;
 }
 
 interface SuggestionItem {
-  id: string
-  text: string
-  category: string
-  status: string
-  email?: string | null
-  created_at: string
+  id: string;
+  text: string;
+  category: string;
+  status: string;
+  email?: string | null;
+  created_at: string;
 }
 
 interface TrafficDay {
-  date: string
-  unique_visitors: number
-  pageviews: number
+  date: string;
+  unique_visitors: number;
+  pageviews: number;
 }
 
 export default function FounderDashboardPage() {
-  usePageTitle('Founder Executive Desk')
+  usePageTitle("Founder Executive Desk");
 
-  const [searchParams] = useSearchParams()
+  const [searchParams] = useSearchParams();
   const [adminKey, setAdminKey] = useState<string>(() => {
-    return searchParams.get('key') || sessionStorage.getItem('rr_admin_key') || ''
-  })
-  const [inputKey, setInputKey] = useState('')
-  const [authError, setAuthError] = useState('')
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+    return (
+      searchParams.get("key") || sessionStorage.getItem("rr_admin_key") || ""
+    );
+  });
+  const [inputKey, setInputKey] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Dashboard state
-  const [loading, setLoading] = useState(true)
-  const [metrics, setMetrics] = useState<MetricsSummary | null>(null)
-  const [trafficHistory, setTrafficHistory] = useState<TrafficDay[]>([])
-  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
-  const [topPaths, setTopPaths] = useState<Array<{ path: string; views: number }>>([])
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
+  const [trafficHistory, setTrafficHistory] = useState<TrafficDay[]>([]);
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
+  const [topPaths, setTopPaths] = useState<
+    Array<{ path: string; views: number }>
+  >([]);
 
   // Paginated Roasts Explorer State
-  const [recentRoasts, setRecentRoasts] = useState<RoastItem[]>([])
-  const [totalRoastsCount, setTotalRoastsCount] = useState(0)
-  const [totalUniqueCount, setTotalUniqueCount] = useState(0)
-  const [totalAllCount, setTotalAllCount] = useState(0)
-  const [roastsUniqueOnly, setRoastsUniqueOnly] = useState(true)
-  const [roastsLimit, setRoastsLimit] = useState(25)
-  const [roastsOffset, setRoastsOffset] = useState(0)
-  const [roastsSearch, setRoastsSearch] = useState('')
-  const [roastsBand, setRoastsBand] = useState('all')
-  const [roastsLoading, setRoastsLoading] = useState(false)
+  const [recentRoasts, setRecentRoasts] = useState<RoastItem[]>([]);
+  const [totalRoastsCount, setTotalRoastsCount] = useState(0);
+  const [totalUniqueCount, setTotalUniqueCount] = useState(0);
+  const [totalAllCount, setTotalAllCount] = useState(0);
+  const [roastsUniqueOnly, setRoastsUniqueOnly] = useState(true);
+  const [roastsLimit, setRoastsLimit] = useState(25);
+  const [roastsOffset, setRoastsOffset] = useState(0);
+  const [roastsSearch, setRoastsSearch] = useState("");
+  const [roastsBand, setRoastsBand] = useState("all");
+  const [roastsLoading, setRoastsLoading] = useState(false);
 
   // Support Override Tool State
-  const [overrideEmail, setOverrideEmail] = useState('')
-  const [overrideAction, setOverrideAction] = useState<'grant_pro' | 'revoke_pro'>('grant_pro')
-  const [overrideReason, setOverrideReason] = useState('')
-  const [overrideMsg, setOverrideMsg] = useState<{ text: string; ok: boolean } | null>(null)
-  const [overrideLoading, setOverrideLoading] = useState(false)
+  const [overrideEmail, setOverrideEmail] = useState("");
+  const [overrideAction, setOverrideAction] = useState<
+    "grant_pro" | "revoke_pro"
+  >("grant_pro");
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideMsg, setOverrideMsg] = useState<{
+    text: string;
+    ok: boolean;
+  } | null>(null);
+  const [overrideLoading, setOverrideLoading] = useState(false);
 
   // Load paginated roasts
   const loadRoasts = async (
@@ -83,161 +92,174 @@ export default function FounderDashboardPage() {
     limit: number = roastsLimit,
     search: string = roastsSearch,
     band: string = roastsBand,
-    uniqueOnly: boolean = roastsUniqueOnly
+    uniqueOnly: boolean = roastsUniqueOnly,
   ) => {
-    setRoastsLoading(true)
+    setRoastsLoading(true);
     try {
-      const headers = { 'X-Admin-Key': keyToUse }
-      const params = new URLSearchParams()
-      params.set('limit', String(limit))
-      params.set('offset', String(offset))
-      params.set('unique', String(uniqueOnly))
-      if (search.trim()) params.set('search', search.trim())
-      if (band && band !== 'all') params.set('band', band)
+      const headers = { "X-Admin-Key": keyToUse };
+      const params = new URLSearchParams();
+      params.set("limit", String(limit));
+      params.set("offset", String(offset));
+      params.set("unique", String(uniqueOnly));
+      if (search.trim()) params.set("search", search.trim());
+      if (band && band !== "all") params.set("band", band);
 
-      const { data } = await axios.get(`/api/admin/roasts?${params.toString()}`, { headers })
+      const { data } = await axios.get(
+        `/api/admin/roasts?${params.toString()}`,
+        { headers },
+      );
       if (data && data.ok) {
-        setRecentRoasts(data.roasts || [])
-        setTotalRoastsCount(data.total || 0)
-        setTotalUniqueCount(data.total_unique || data.total || 0)
-        setTotalAllCount(data.total_all || 0)
+        setRecentRoasts(data.roasts || []);
+        setTotalRoastsCount(data.total || 0);
+        setTotalUniqueCount(data.total_unique || data.total || 0);
+        setTotalAllCount(data.total_all || 0);
       }
     } catch (err) {
-      console.warn('Failed to load roasts:', err)
+      console.warn("Failed to load roasts:", err);
     } finally {
-      setRoastsLoading(false)
+      setRoastsLoading(false);
     }
-  }
+  };
 
   // Validate admin key and load dashboard
   const fetchDashboardData = async (keyToUse: string) => {
-    setLoading(true)
-    setAuthError('')
+    setLoading(true);
+    setAuthError("");
     try {
-      const headers = { 'X-Admin-Key': keyToUse }
+      const headers = { "X-Admin-Key": keyToUse };
 
       // 1. Fetch metrics
-      const { data: metricsData } = await axios.get('/api/admin/metrics', { headers })
+      const { data: metricsData } = await axios.get("/api/admin/metrics", {
+        headers,
+      });
       if (metricsData && metricsData.ok) {
-        setMetrics(metricsData.summary)
-        setTrafficHistory(metricsData.traffic_7d || [])
+        setMetrics(metricsData.summary);
+        setTrafficHistory(metricsData.traffic_7d || []);
       }
 
       // 2. Fetch paginated roasts
-      await loadRoasts(keyToUse, 0, roastsLimit, roastsSearch, roastsBand)
-      setRoastsOffset(0)
+      await loadRoasts(keyToUse, 0, roastsLimit, roastsSearch, roastsBand);
+      setRoastsOffset(0);
 
       // 3. Fetch user suggestions
-      const { data: suggData } = await axios.get('/api/admin/suggestions?limit=100', { headers })
+      const { data: suggData } = await axios.get(
+        "/api/admin/suggestions?limit=100",
+        { headers },
+      );
       if (suggData && suggData.ok) {
-        setSuggestions(suggData.suggestions || [])
+        setSuggestions(suggData.suggestions || []);
       }
 
       // 4. Fetch path stats
       try {
-        const { data: statsData } = await axios.get('/api/stats', { headers })
+        const { data: statsData } = await axios.get("/api/stats", { headers });
         if (statsData && statsData.top_paths_today) {
-          setTopPaths(statsData.top_paths_today)
+          setTopPaths(statsData.top_paths_today);
         }
       } catch {
         // non-blocking
       }
 
       // Success: store strictly in temporary browser session
-      setIsAuthenticated(true)
-      sessionStorage.setItem('rr_admin_key', keyToUse)
+      setIsAuthenticated(true);
+      sessionStorage.setItem("rr_admin_key", keyToUse);
     } catch (err: any) {
-      console.warn('Founder auth check:', err.response?.status)
-      setIsAuthenticated(false)
-      sessionStorage.removeItem('rr_admin_key')
+      console.warn("Founder auth check:", err.response?.status);
+      setIsAuthenticated(false);
+      sessionStorage.removeItem("rr_admin_key");
 
       if (err.response?.status === 429) {
         setAuthError(
           err.response?.data?.detail ||
-            'Security Lockout: Too many failed founder authentication attempts. Try again in 15 minutes.'
-        )
+            "Security Lockout: Too many failed founder authentication attempts. Try again in 15 minutes.",
+        );
       } else if (err.response?.status === 401) {
-        setAuthError('Invalid founder secret key. Access denied.')
+        setAuthError("Invalid founder secret key. Access denied.");
       } else {
-        setAuthError('Failed to connect to backend server. Please make sure backend is running.')
+        setAuthError(
+          "Failed to connect to backend server. Please make sure backend is running.",
+        );
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Attempt auto-login if key is already present
   useEffect(() => {
     if (adminKey) {
-      fetchDashboardData(adminKey)
+      fetchDashboardData(adminKey);
     } else {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    const clean = inputKey.trim()
-    if (!clean) return
-    setAdminKey(clean)
-    fetchDashboardData(clean)
-  }
+    e.preventDefault();
+    const clean = inputKey.trim();
+    if (!clean) return;
+    setAdminKey(clean);
+    fetchDashboardData(clean);
+  };
 
   const handleLogout = () => {
-    setIsAuthenticated(false)
-    setAdminKey('')
-    setInputKey('')
-    sessionStorage.removeItem('rr_admin_key')
-  }
+    setIsAuthenticated(false);
+    setAdminKey("");
+    setInputKey("");
+    sessionStorage.removeItem("rr_admin_key");
+  };
 
   const handleOverrideSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!overrideEmail.trim()) return
-    setOverrideLoading(true)
-    setOverrideMsg(null)
+    e.preventDefault();
+    if (!overrideEmail.trim()) return;
+    setOverrideLoading(true);
+    setOverrideMsg(null);
     try {
       const { data } = await axios.post(
-        '/api/admin/user/override-pro',
+        "/api/admin/user/override-pro",
         {
           email: overrideEmail.trim(),
           action: overrideAction,
-          reason: overrideReason.trim() || 'Founder manual override',
+          reason: overrideReason.trim() || "Founder manual override",
         },
-        { headers: { 'X-Admin-Key': adminKey } }
-      )
+        { headers: { "X-Admin-Key": adminKey } },
+      );
       if (data && data.ok) {
-        setOverrideMsg({ text: `✓ ${data.message}`, ok: true })
-        setOverrideEmail('')
-        setOverrideReason('')
+        setOverrideMsg({ text: `✓ ${data.message}`, ok: true });
+        setOverrideEmail("");
+        setOverrideReason("");
         // Refresh metrics
-        fetchDashboardData(adminKey)
+        fetchDashboardData(adminKey);
       } else {
-        throw new Error(data.detail || 'Failed to update')
+        throw new Error(data.detail || "Failed to update");
       }
     } catch (err: any) {
       setOverrideMsg({
-        text: `✗ ${err.response?.data?.detail || err.message || 'Error occurred'}`,
+        text: `✗ ${err.response?.data?.detail || err.message || "Error occurred"}`,
         ok: false,
-      })
+      });
     } finally {
-      setOverrideLoading(false)
+      setOverrideLoading(false);
     }
-  }
+  };
 
-  const handleUpdateSuggestionStatus = async (id: string, newStatus: string) => {
+  const handleUpdateSuggestionStatus = async (
+    id: string,
+    newStatus: string,
+  ) => {
     try {
       await axios.patch(
         `/api/admin/suggestions/${id}`,
         { status: newStatus },
-        { headers: { 'X-Admin-Key': adminKey } }
-      )
+        { headers: { "X-Admin-Key": adminKey } },
+      );
       setSuggestions((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, status: newStatus } : s))
-      )
+        prev.map((s) => (s.id === id ? { ...s, status: newStatus } : s)),
+      );
     } catch (err) {
-      console.error('Failed to update suggestion status:', err)
+      console.error("Failed to update suggestion status:", err);
     }
-  }
+  };
 
   // 1. Render Login Screen if not authenticated
   if (!isAuthenticated) {
@@ -252,7 +274,8 @@ export default function FounderDashboardPage() {
               Founder Access Only
             </h1>
             <p className="text-xs text-tan-dim font-mono mt-1.5 leading-relaxed">
-              Enter secret founder key to access live metrics, visitor stats & feedback.
+              Enter secret founder key to access live metrics, visitor stats &
+              feedback.
             </p>
           </div>
 
@@ -282,18 +305,21 @@ export default function FounderDashboardPage() {
               disabled={loading}
               className="w-full py-2.5 rounded-lg bg-[#E8422D] hover:bg-[#D43723] text-white font-mono font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-red-900/30 cursor-pointer disabled:opacity-50"
             >
-              {loading ? 'Verifying...' : 'Unlock Dashboard ⚡'}
+              {loading ? "Verifying..." : "Unlock Dashboard ⚡"}
             </button>
           </form>
 
           <div className="mt-6 pt-5 border-t border-white/[0.08] text-center">
-            <Link to="/" className="text-xs font-mono text-tan-dim hover:text-amber-400 transition">
+            <Link
+              to="/"
+              className="text-xs font-mono text-tan-dim hover:text-amber-400 transition"
+            >
               ← Return to Public Homepage
             </Link>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // 2. Render Full Executive Dashboard
@@ -306,7 +332,9 @@ export default function FounderDashboardPage() {
             <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
               🔒 Founder Executive Desk
             </span>
-            <span className="text-xs text-tan-dim font-mono">Devesh Singh (Creator)</span>
+            <span className="text-xs text-tan-dim font-mono">
+              Devesh Singh (Creator)
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight mt-1 text-white font-display">
             RESUME<span className="text-stamp">ROAST</span> FOUNDER METRICS
@@ -320,7 +348,7 @@ export default function FounderDashboardPage() {
             disabled={loading}
             className="px-3 py-1.5 rounded text-xs font-mono font-bold bg-white/10 hover:bg-white/20 text-stone-200 border border-white/10 transition cursor-pointer"
           >
-            {loading ? 'Refreshing...' : '↻ Refresh Data'}
+            {loading ? "Refreshing..." : "↻ Refresh Data"}
           </button>
           <button
             type="button"
@@ -336,7 +364,9 @@ export default function FounderDashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         {/* Visitors Today */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
-          <div className="text-[11px] font-mono text-tan-dim uppercase">Unique Visitors Today</div>
+          <div className="text-[11px] font-mono text-tan-dim uppercase">
+            Unique Visitors Today
+          </div>
           <div className="text-3xl font-extrabold text-white mt-1 font-display">
             {metrics?.unique_visitors_today ?? 0}
           </div>
@@ -348,29 +378,41 @@ export default function FounderDashboardPage() {
 
         {/* Pageviews Today */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
-          <div className="text-[11px] font-mono text-tan-dim uppercase">Total Page Views Today</div>
+          <div className="text-[11px] font-mono text-tan-dim uppercase">
+            Total Page Views Today
+          </div>
           <div className="text-3xl font-extrabold text-amber-400 mt-1 font-display">
             {metrics?.pageviews_today ?? 0}
           </div>
-          <div className="text-[11px] text-tan-dim font-mono mt-2">First-party hit beacon</div>
+          <div className="text-[11px] text-tan-dim font-mono mt-2">
+            First-party hit beacon
+          </div>
         </div>
 
         {/* Roasts in DB */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
-          <div className="text-[11px] font-mono text-tan-dim uppercase">Total Roasts Created</div>
+          <div className="text-[11px] font-mono text-tan-dim uppercase">
+            Total Roasts Created
+          </div>
           <div className="text-3xl font-extrabold text-stamp mt-1 font-display">
             {metrics?.total_roasts_all_time ?? 0}
           </div>
-          <div className="text-[11px] text-tan-dim font-mono mt-2">Stored in Supabase DB</div>
+          <div className="text-[11px] text-tan-dim font-mono mt-2">
+            Stored in Supabase DB
+          </div>
         </div>
 
         {/* Live User Suggestions */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
-          <div className="text-[11px] font-mono text-tan-dim uppercase">Live User Suggestions</div>
+          <div className="text-[11px] font-mono text-tan-dim uppercase">
+            Live User Suggestions
+          </div>
           <div className="text-3xl font-extrabold text-sky-400 mt-1 font-display">
             {suggestions.length}
           </div>
-          <div className="text-[11px] text-tan-dim font-mono mt-2">Ideas & feedback received</div>
+          <div className="text-[11px] text-tan-dim font-mono mt-2">
+            Ideas & feedback received
+          </div>
         </div>
       </div>
 
@@ -378,35 +420,55 @@ export default function FounderDashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {/* VIP Pro Waitlist */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
-          <div className="text-[11px] font-mono text-tan-dim uppercase">VIP Pro Waitlist</div>
+          <div className="text-[11px] font-mono text-tan-dim uppercase">
+            VIP Pro Waitlist
+          </div>
           <div className="text-3xl font-extrabold text-amber-300 mt-1 font-display">
             {metrics?.waitlist_signups ?? 0}
           </div>
-          <div className="text-[11px] text-amber-400 font-mono mt-2">● Warmed launch leads</div>
+          <div className="text-[11px] text-amber-400 font-mono mt-2">
+            ● Warmed launch leads
+          </div>
         </div>
 
         {/* AI Provider & Cost */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
-          <div className="text-[11px] font-mono text-tan-dim uppercase">AI Provider & Cost</div>
-          <div className="text-base font-bold text-sky-400 mt-1 font-mono">Gemini 2.5 Flash</div>
-          <div className="text-[11px] text-emerald-400 font-mono mt-2">Free API Tier ($0.00 spend)</div>
+          <div className="text-[11px] font-mono text-tan-dim uppercase">
+            AI Provider & Cost
+          </div>
+          <div className="text-base font-bold text-sky-400 mt-1 font-mono">
+            Gemini 2.5 Flash
+          </div>
+          <div className="text-[11px] text-emerald-400 font-mono mt-2">
+            Free API Tier ($0.00 spend)
+          </div>
         </div>
 
         {/* Database Status */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
-          <div className="text-[11px] font-mono text-tan-dim uppercase">Database Status</div>
+          <div className="text-[11px] font-mono text-tan-dim uppercase">
+            Database Status
+          </div>
           <div className="text-base font-bold text-emerald-400 mt-1 font-mono flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             Supabase Active
           </div>
-          <div className="text-[11px] text-tan-dim font-mono mt-2 truncate">aws-0-ap-northeast-1</div>
+          <div className="text-[11px] text-tan-dim font-mono mt-2 truncate">
+            aws-0-ap-northeast-1
+          </div>
         </div>
 
         {/* Pro Plan Commercial Status */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
-          <div className="text-[11px] font-mono text-tan-dim uppercase">Pro Commercial Tier</div>
-          <div className="text-base font-bold text-amber-400 mt-1 font-mono">Launching Soon</div>
-          <div className="text-[11px] text-tan-dim font-mono mt-2">Razorpay KYC in review</div>
+          <div className="text-[11px] font-mono text-tan-dim uppercase">
+            Pro Commercial Tier
+          </div>
+          <div className="text-base font-bold text-amber-400 mt-1 font-mono">
+            Launching Soon
+          </div>
+          <div className="text-[11px] text-tan-dim font-mono mt-2">
+            Razorpay KYC in review
+          </div>
         </div>
       </div>
 
@@ -418,7 +480,8 @@ export default function FounderDashboardPage() {
               🛠️ Customer Support Instant Pro Override
             </h2>
             <p className="text-xs text-tan-dim font-mono mt-0.5">
-              Manually grant or revoke Pro pass for a user email (bypasses payment delays)
+              Manually grant or revoke Pro pass for a user email (bypasses
+              payment delays)
             </p>
           </div>
           <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">
@@ -426,7 +489,10 @@ export default function FounderDashboardPage() {
           </span>
         </div>
 
-        <form onSubmit={handleOverrideSubmit} className="flex flex-col sm:flex-row gap-3">
+        <form
+          onSubmit={handleOverrideSubmit}
+          className="flex flex-col sm:flex-row gap-3"
+        >
           <input
             type="email"
             required
@@ -455,7 +521,7 @@ export default function FounderDashboardPage() {
             disabled={overrideLoading}
             className="px-4 py-2 rounded text-xs font-mono font-bold bg-amber-500 hover:bg-amber-400 text-stone-950 transition shrink-0 cursor-pointer disabled:opacity-50"
           >
-            {overrideLoading ? 'Processing...' : 'Execute Override ⚡'}
+            {overrideLoading ? "Processing..." : "Execute Override ⚡"}
           </button>
         </form>
 
@@ -463,8 +529,8 @@ export default function FounderDashboardPage() {
           <div
             className={`mt-3 text-xs font-mono p-2.5 rounded border ${
               overrideMsg.ok
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                : 'bg-red-500/10 text-red-400 border-red-500/30'
+                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                : "bg-red-500/10 text-red-400 border-red-500/30"
             }`}
           >
             {overrideMsg.text}
@@ -496,13 +562,13 @@ export default function FounderDashboardPage() {
           ) : (
             suggestions.map((s) => {
               const statusColor =
-                s.status === 'new'
-                  ? '#38BDF8'
-                  : s.status === 'reviewed'
-                  ? '#FBBF24'
-                  : s.status === 'done' || s.status === 'planned'
-                  ? '#10B981'
-                  : '#94A3B8'
+                s.status === "new"
+                  ? "#38BDF8"
+                  : s.status === "reviewed"
+                    ? "#FBBF24"
+                    : s.status === "done" || s.status === "planned"
+                      ? "#10B981"
+                      : "#94A3B8";
 
               return (
                 <div
@@ -525,14 +591,16 @@ export default function FounderDashboardPage() {
                         {s.status}
                       </span>
                       <span className="text-[11px] font-mono text-tan-dim">
-                        {s.created_at?.slice(0, 19).replace('T', ' ')} UTC
+                        {s.created_at?.slice(0, 19).replace("T", " ")} UTC
                         {s.email ? (
                           <>
-                            {' · '}
-                            <span className="text-amber-400 font-bold">{s.email}</span>
+                            {" · "}
+                            <span className="text-amber-400 font-bold">
+                              {s.email}
+                            </span>
                           </>
                         ) : (
-                          ' · Anonymous'
+                          " · Anonymous"
                         )}
                       </span>
                     </div>
@@ -540,7 +608,9 @@ export default function FounderDashboardPage() {
                     {/* Quick status triage dropdown */}
                     <select
                       value={s.status}
-                      onChange={(e) => handleUpdateSuggestionStatus(s.id, e.target.value)}
+                      onChange={(e) =>
+                        handleUpdateSuggestionStatus(s.id, e.target.value)
+                      }
                       className="bg-black/60 border border-white/20 rounded px-2 py-1 text-[11px] font-mono text-stone-300 focus:outline-none"
                     >
                       <option value="new">Mark New</option>
@@ -555,7 +625,7 @@ export default function FounderDashboardPage() {
                     "{s.text}"
                   </p>
                 </div>
-              )
+              );
             })
           )}
         </div>
@@ -568,11 +638,16 @@ export default function FounderDashboardPage() {
             <h2 className="font-bold text-sm tracking-wide text-white font-mono uppercase flex items-center gap-2">
               <span>📄 Uploaded Resumes Explorer</span>
               <span className="text-xs px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                {roastsUniqueOnly ? `${totalUniqueCount} Unique Resumes` : `${totalAllCount} Total Uploads`}
+                {roastsUniqueOnly
+                  ? `${totalUniqueCount} Unique Resumes`
+                  : `${totalAllCount} Total Uploads`}
               </span>
             </h2>
             <p className="text-xs text-tan-dim font-mono mt-0.5">
-              Candidate resumes submitted for roasting · {roastsUniqueOnly ? 'Deduplicated (1 display per unique candidate resume)' : 'Raw upload log (all attempts)'}
+              Candidate resumes submitted for roasting ·{" "}
+              {roastsUniqueOnly
+                ? "Deduplicated (1 display per unique candidate resume)"
+                : "Raw upload log (all attempts)"}
             </p>
           </div>
 
@@ -582,14 +657,21 @@ export default function FounderDashboardPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setRoastsUniqueOnly(true)
-                  setRoastsOffset(0)
-                  loadRoasts(adminKey, 0, roastsLimit, roastsSearch, roastsBand, true)
+                  setRoastsUniqueOnly(true);
+                  setRoastsOffset(0);
+                  loadRoasts(
+                    adminKey,
+                    0,
+                    roastsLimit,
+                    roastsSearch,
+                    roastsBand,
+                    true,
+                  );
                 }}
                 className={`px-3 py-1 rounded transition cursor-pointer ${
                   roastsUniqueOnly
-                    ? 'bg-amber-500 text-black font-bold shadow-sm'
-                    : 'text-stone-400 hover:text-white'
+                    ? "bg-amber-500 text-black font-bold shadow-sm"
+                    : "text-stone-400 hover:text-white"
                 }`}
                 title="Group multiple uploads of the same resume so each unique candidate displays only once"
               >
@@ -598,14 +680,21 @@ export default function FounderDashboardPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setRoastsUniqueOnly(false)
-                  setRoastsOffset(0)
-                  loadRoasts(adminKey, 0, roastsLimit, roastsSearch, roastsBand, false)
+                  setRoastsUniqueOnly(false);
+                  setRoastsOffset(0);
+                  loadRoasts(
+                    adminKey,
+                    0,
+                    roastsLimit,
+                    roastsSearch,
+                    roastsBand,
+                    false,
+                  );
                 }}
                 className={`px-3 py-1 rounded transition cursor-pointer ${
                   !roastsUniqueOnly
-                    ? 'bg-amber-500 text-black font-bold shadow-sm'
-                    : 'text-stone-400 hover:text-white'
+                    ? "bg-amber-500 text-black font-bold shadow-sm"
+                    : "text-stone-400 hover:text-white"
                 }`}
                 title="View every single upload attempt including repeat uploads"
               >
@@ -627,10 +716,17 @@ export default function FounderDashboardPage() {
               type="text"
               value={roastsSearch}
               onChange={(e) => {
-                const val = e.target.value
-                setRoastsSearch(val)
-                setRoastsOffset(0)
-                loadRoasts(adminKey, 0, roastsLimit, val, roastsBand, roastsUniqueOnly)
+                const val = e.target.value;
+                setRoastsSearch(val);
+                setRoastsOffset(0);
+                loadRoasts(
+                  adminKey,
+                  0,
+                  roastsLimit,
+                  val,
+                  roastsBand,
+                  roastsUniqueOnly,
+                );
               }}
               placeholder="🔍 Search candidate skills, text, or verdicts..."
               className="w-full bg-black/50 border border-white/20 rounded px-3 py-1.5 text-xs font-mono text-white placeholder:text-stone-600 focus:outline-none focus:border-amber-400"
@@ -641,10 +737,17 @@ export default function FounderDashboardPage() {
           <select
             value={roastsBand}
             onChange={(e) => {
-              const val = e.target.value
-              setRoastsBand(val)
-              setRoastsOffset(0)
-              loadRoasts(adminKey, 0, roastsLimit, roastsSearch, val, roastsUniqueOnly)
+              const val = e.target.value;
+              setRoastsBand(val);
+              setRoastsOffset(0);
+              loadRoasts(
+                adminKey,
+                0,
+                roastsLimit,
+                roastsSearch,
+                val,
+                roastsUniqueOnly,
+              );
             }}
             className="bg-black/50 border border-white/20 rounded px-3 py-1.5 text-xs font-mono text-stone-300 focus:outline-none"
           >
@@ -658,10 +761,17 @@ export default function FounderDashboardPage() {
           <select
             value={roastsLimit}
             onChange={(e) => {
-              const val = Number(e.target.value)
-              setRoastsLimit(val)
-              setRoastsOffset(0)
-              loadRoasts(adminKey, 0, val, roastsSearch, roastsBand, roastsUniqueOnly)
+              const val = Number(e.target.value);
+              setRoastsLimit(val);
+              setRoastsOffset(0);
+              loadRoasts(
+                adminKey,
+                0,
+                val,
+                roastsSearch,
+                roastsBand,
+                roastsUniqueOnly,
+              );
             }}
             className="bg-black/50 border border-white/20 rounded px-3 py-1.5 text-xs font-mono text-stone-300 focus:outline-none"
           >
@@ -680,15 +790,18 @@ export default function FounderDashboardPage() {
             </div>
           ) : recentRoasts.length === 0 ? (
             <div className="py-8 text-center text-xs text-tan-dim font-mono">
-              {roastsSearch ? 'No resumes matching your search filter.' : 'No candidate resumes found.'}
+              {roastsSearch
+                ? "No resumes matching your search filter."
+                : "No candidate resumes found."}
             </div>
           ) : (
             recentRoasts.map((r) => {
-              const score = r.overall_score || 0
-              const scoreColor = score <= 40 ? '#E8422D' : score <= 70 ? '#FFB93C' : '#10B981'
-              const resText = r.resume_text || 'No text content preserved.'
-              const uploadCount = r.upload_count || 1
-              const hasMultiple = uploadCount > 1
+              const score = r.overall_score || 0;
+              const scoreColor =
+                score <= 40 ? "#E8422D" : score <= 70 ? "#FFB93C" : "#10B981";
+              const resText = r.resume_text || "No text content preserved.";
+              const uploadCount = r.upload_count || 1;
+              const hasMultiple = uploadCount > 1;
 
               return (
                 <div
@@ -705,7 +818,7 @@ export default function FounderDashboardPage() {
                           border: `1px solid ${scoreColor}55`,
                         }}
                       >
-                        {score}/100 · {(r.band || 'weak').toUpperCase()}
+                        {score}/100 · {(r.band || "weak").toUpperCase()}
                       </span>
 
                       {/* Repeat Upload Badge */}
@@ -720,12 +833,14 @@ export default function FounderDashboardPage() {
                       )}
 
                       <span className="text-xs font-mono text-tan-dim">
-                        {r.created_at?.slice(0, 19).replace('T', ' ')} UTC
-                        {hasMultiple && r.first_created_at && r.first_created_at !== r.created_at && (
-                          <span className="text-stone-500 ml-1.5">
-                            (First: {r.first_created_at.slice(0, 10)})
-                          </span>
-                        )}
+                        {r.created_at?.slice(0, 19).replace("T", " ")} UTC
+                        {hasMultiple &&
+                          r.first_created_at &&
+                          r.first_created_at !== r.created_at && (
+                            <span className="text-stone-500 ml-1.5">
+                              (First: {r.first_created_at.slice(0, 10)})
+                            </span>
+                          )}
                       </span>
                     </div>
 
@@ -738,7 +853,9 @@ export default function FounderDashboardPage() {
                     </Link>
                   </div>
 
-                  <p className="font-bold text-sm text-stone-200 mb-2">"{r.one_line_verdict}"</p>
+                  <p className="font-bold text-sm text-stone-200 mb-2">
+                    "{r.one_line_verdict}"
+                  </p>
 
                   <details className="text-xs font-mono text-tan-dim bg-black/40 p-2.5 rounded border border-white/5 cursor-pointer">
                     <summary className="hover:text-amber-300 select-none">
@@ -749,7 +866,7 @@ export default function FounderDashboardPage() {
                     </pre>
                   </details>
                 </div>
-              )
+              );
             })
           )}
         </div>
@@ -758,9 +875,12 @@ export default function FounderDashboardPage() {
         {totalRoastsCount > 0 && (
           <div className="px-5 py-3.5 bg-white/[0.02] border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono text-tan-dim">
             <div>
-              Showing {roastsOffset + 1} - {Math.min(roastsOffset + roastsLimit, totalRoastsCount)} of{' '}
-              <span className="text-white font-bold">{totalRoastsCount}</span>{' '}
-              {roastsUniqueOnly ? 'unique candidate resumes' : 'total upload entries'}
+              Showing {roastsOffset + 1} -{" "}
+              {Math.min(roastsOffset + roastsLimit, totalRoastsCount)} of{" "}
+              <span className="text-white font-bold">{totalRoastsCount}</span>{" "}
+              {roastsUniqueOnly
+                ? "unique candidate resumes"
+                : "total upload entries"}
             </div>
 
             <div className="flex items-center gap-2">
@@ -768,9 +888,16 @@ export default function FounderDashboardPage() {
                 type="button"
                 disabled={roastsOffset === 0 || roastsLoading}
                 onClick={() => {
-                  const newOffset = Math.max(0, roastsOffset - roastsLimit)
-                  setRoastsOffset(newOffset)
-                  loadRoasts(adminKey, newOffset, roastsLimit, roastsSearch, roastsBand, roastsUniqueOnly)
+                  const newOffset = Math.max(0, roastsOffset - roastsLimit);
+                  setRoastsOffset(newOffset);
+                  loadRoasts(
+                    adminKey,
+                    newOffset,
+                    roastsLimit,
+                    roastsSearch,
+                    roastsBand,
+                    roastsUniqueOnly,
+                  );
                 }}
                 className="px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-stone-200 border border-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
@@ -778,17 +905,27 @@ export default function FounderDashboardPage() {
               </button>
 
               <span className="px-2 font-bold text-amber-400">
-                Page {Math.floor(roastsOffset / roastsLimit) + 1} /{' '}
+                Page {Math.floor(roastsOffset / roastsLimit) + 1} /{" "}
                 {Math.max(1, Math.ceil(totalRoastsCount / roastsLimit))}
               </span>
 
               <button
                 type="button"
-                disabled={roastsOffset + roastsLimit >= totalRoastsCount || roastsLoading}
+                disabled={
+                  roastsOffset + roastsLimit >= totalRoastsCount ||
+                  roastsLoading
+                }
                 onClick={() => {
-                  const newOffset = roastsOffset + roastsLimit
-                  setRoastsOffset(newOffset)
-                  loadRoasts(adminKey, newOffset, roastsLimit, roastsSearch, roastsBand, roastsUniqueOnly)
+                  const newOffset = roastsOffset + roastsLimit;
+                  setRoastsOffset(newOffset);
+                  loadRoasts(
+                    adminKey,
+                    newOffset,
+                    roastsLimit,
+                    roastsSearch,
+                    roastsBand,
+                    roastsUniqueOnly,
+                  );
                 }}
                 className="px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-stone-200 border border-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
@@ -807,7 +944,9 @@ export default function FounderDashboardPage() {
             <h2 className="font-bold text-sm tracking-wide text-white font-mono uppercase">
               Past 7 Days Traffic
             </h2>
-            <span className="text-xs text-tan-dim font-mono">Deduplicated per day</span>
+            <span className="text-xs text-tan-dim font-mono">
+              Deduplicated per day
+            </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -821,8 +960,13 @@ export default function FounderDashboardPage() {
               </thead>
               <tbody>
                 {trafficHistory.map((d) => (
-                  <tr key={d.date} className="border-b border-white/[0.06] hover:bg-white/[0.02]">
-                    <td className="py-2.5 px-4 font-mono text-xs text-amber-200/80">{d.date}</td>
+                  <tr
+                    key={d.date}
+                    className="border-b border-white/[0.06] hover:bg-white/[0.02]"
+                  >
+                    <td className="py-2.5 px-4 font-mono text-xs text-amber-200/80">
+                      {d.date}
+                    </td>
                     <td className="py-2.5 px-4 font-mono text-sm font-bold text-white">
                       {d.unique_visitors}
                     </td>
@@ -832,7 +976,7 @@ export default function FounderDashboardPage() {
                     <td className="py-2.5 px-4 font-mono text-xs text-tan-dim">
                       {d.unique_visitors > 0
                         ? `${(d.pageviews / d.unique_visitors).toFixed(1)}x`
-                        : '—'}
+                        : "—"}
                     </td>
                   </tr>
                 ))}
@@ -874,8 +1018,9 @@ export default function FounderDashboardPage() {
 
       {/* ── Footer ── */}
       <footer className="mt-12 text-center text-xs text-tan-dim font-mono">
-        Resume Roast Founder Executive Desk · Authenticated Session Active · Zero 3rd-Party Trackers
+        Resume Roast Founder Executive Desk · Authenticated Session Active ·
+        Zero 3rd-Party Trackers
       </footer>
     </div>
-  )
+  );
 }

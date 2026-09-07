@@ -1,30 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #17140F;
-  --paper: #F5EFE0;
-  --ink: #2B2620;
-  --stamp: #E8422D;
-  --stamp-hover: #D43723;
-  --ember: #FFB93C;
-  --tan: #C9BFA6;
-  --tan-dim: #8A8168;
-  --success: #7FA65C;
+  --bg: #17140f;
+  --paper: #f5efe0;
+  --ink: #2b2620;
+  --stamp: #e8422d;
+  --stamp-hover: #d43723;
+  --ember: #ffb93c;
+  --tan: #c9bfa6;
+  --tan-dim: #8a8168;
+  --success: #7fa65c;
   --border-dark: rgba(255, 255, 255, 0.08);
   --border-paper: rgba(0, 0, 0, 0.1);
 }
 
 @layer base {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
     border-color: var(--border-dark);
   }
 
-  html, body {
+  html,
+  body {
     overflow-x: hidden;
     max-width: 100%;
   }
@@ -34,7 +37,7 @@
     -moz-osx-font-smoothing: grayscale;
     background-color: var(--bg);
     color: var(--tan);
-    font-family: 'Inter', sans-serif;
+    font-family: "Inter", sans-serif;
   }
 
   body {
@@ -68,7 +71,7 @@
     gap: 8px;
     background-color: var(--stamp);
     color: var(--paper);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: "IBM Plex Mono", monospace;
     font-size: 14px;
     font-weight: 500;
     line-height: 1;
@@ -77,19 +80,28 @@
     border: 1px solid transparent;
     cursor: pointer;
     text-decoration: none;
-    transition: background-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+    transition:
+      background-color 120ms ease,
+      transform 120ms ease,
+      box-shadow 120ms ease;
     user-select: none;
   }
 
   /* 2.2 Ink Bleed effect on hover */
   .btn-primary::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 50% 50%, rgba(160, 24, 14, 0.45) 0%, transparent 75%);
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgba(160, 24, 14, 0.45) 0%,
+      transparent 75%
+    );
     opacity: 0;
     transform: scale(0.85);
-    transition: opacity 80ms ease, transform 120ms ease;
+    transition:
+      opacity 80ms ease,
+      transform 120ms ease;
     pointer-events: none;
   }
 
@@ -120,7 +132,7 @@
     gap: 8px;
     background-color: transparent;
     color: var(--tan);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: "IBM Plex Mono", monospace;
     font-size: 14px;
     font-weight: 500;
     line-height: 1;
@@ -129,7 +141,11 @@
     border: 1px solid var(--tan-dim);
     cursor: pointer;
     text-decoration: none;
-    transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    transition:
+      border-color 120ms ease,
+      background-color 120ms ease,
+      color 120ms ease,
+      transform 120ms ease;
     user-select: none;
   }
 
@@ -156,7 +172,7 @@
 
   /* ---- Section Eyebrows & Labels ---- */
   .section-label {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: "IBM Plex Mono", monospace;
     font-size: 12px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -183,7 +199,7 @@
   }
 
   .red-pen-strike::after {
-    content: '';
+    content: "";
     position: absolute;
     left: -4%;
     right: -4%;
@@ -202,7 +218,7 @@
   }
 
   .red-pen-underline::after {
-    content: '';
+    content: "";
     position: absolute;
     left: 0;
     right: 0;
@@ -218,7 +234,9 @@
     border: 1px dashed var(--tan-dim);
     background-color: rgba(245, 239, 224, 0.04);
     border-radius: 2px;
-    transition: border-color 120ms ease, background-color 120ms ease;
+    transition:
+      border-color 120ms ease,
+      background-color 120ms ease;
   }
 
   .dropzone-slot.drag-over,
@@ -241,7 +259,10 @@
 /* ---- Red Pen Custom Cursor (Desktop only on grading desk) ---- */
 @media (hover: hover) and (pointer: fine) {
   .desk-cursor {
-    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M18.5 2.5a2.121 2.121 0 0 1 3 3L7 19.5 2 21l1.5-5L18.5 2.5z' stroke='%23E8422D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='%23E8422D' fill-opacity='0.25'/%3E%3Ccircle cx='2' cy='22' r='1.5' fill='%23E8422D'/%3E%3C/svg%3E") 2 22, auto;
+    cursor:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M18.5 2.5a2.121 2.121 0 0 1 3 3L7 19.5 2 21l1.5-5L18.5 2.5z' stroke='%23E8422D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='%23E8422D' fill-opacity='0.25'/%3E%3Ccircle cx='2' cy='22' r='1.5' fill='%23E8422D'/%3E%3C/svg%3E")
+        2 22,
+      auto;
   }
 
   .desk-cursor input,
@@ -262,7 +283,10 @@
 
 /* On touch/mobile devices, strictly enforce standard cursor: auto */
 @media (hover: none), (pointer: coarse), (max-width: 768px) {
-  html, body, .desk-cursor, * {
+  html,
+  body,
+  .desk-cursor,
+  * {
     cursor: auto !important;
   }
 }
@@ -297,7 +321,8 @@
 
 /* 1.2 WhatsApp Typing Pulse Animation */
 @keyframes whatsapp-typing-dot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.25;
     transform: scale(0.85);
   }
@@ -387,11 +412,11 @@ textarea:-webkit-autofill:focus,
 select:-webkit-autofill,
 select:-webkit-autofill:hover,
 select:-webkit-autofill:focus {
-  -webkit-text-fill-color: #F5EFE0 !important;
-  -webkit-box-shadow: 0 0 0px 1000px #1A1612 inset !important;
-  box-shadow: 0 0 0px 1000px #1A1612 inset !important;
+  -webkit-text-fill-color: #f5efe0 !important;
+  -webkit-box-shadow: 0 0 0px 1000px #1a1612 inset !important;
+  box-shadow: 0 0 0px 1000px #1a1612 inset !important;
   transition: background-color 5000s ease-in-out 0s;
-  caret-color: #F5EFE0;
+  caret-color: #f5efe0;
 }
 
 /* ── Safari Backdrop Filter Fallback ── */
@@ -400,4 +425,3 @@ select:-webkit-autofill:focus {
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
-

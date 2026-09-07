@@ -1,91 +1,111 @@
-import { useState, useRef, useEffect } from 'react'
-import axios from 'axios'
+import { useState, useRef, useEffect } from "react";
+import axios from "axios";
 
 interface Message {
-  id: string
-  sender: 'ai' | 'user'
-  text: string
-  timestamp: string
+  id: string;
+  sender: "ai" | "user";
+  text: string;
+  timestamp: string;
 }
 
 interface RoastBackChatProps {
-  roastId: string
-  overallScore: number
-  verdict: string
+  roastId: string;
+  overallScore: number;
+  verdict: string;
 }
 
-export default function RoastBackChat({ roastId, overallScore, verdict }: RoastBackChatProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+export default function RoastBackChat({
+  roastId,
+  overallScore,
+  verdict,
+}: RoastBackChatProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: 'init-1',
-      sender: 'ai',
+      id: "init-1",
+      sender: "ai",
       text: `Score ${overallScore}/100 dekh kar bura laga? "${verdict}" — agar lagta hai tera resume FAANG level tha toh defend kar le khud ko. Bol kya bolna hai? 😈🔥`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     },
-  ])
+  ]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
     if (isOpen) {
-      scrollToBottom()
+      scrollToBottom();
     }
-  }, [messages, isOpen])
+  }, [messages, isOpen]);
 
   const quickPills = [
-    'Ab aur kya badlu isme?',
-    'Maine sach mein 40% optimize kiya tha!',
-    'Mai aur score badhane ki koshish karunga',
-    'Ye buzzword nahi industry standard hai!',
-  ]
+    "Ab aur kya badlu isme?",
+    "Maine sach mein 40% optimize kiya tha!",
+    "Mai aur score badhane ki koshish karunga",
+    "Ye buzzword nahi industry standard hai!",
+  ];
 
   const handleSend = async (textToSend?: string) => {
-    const msg = (textToSend ?? input).trim()
-    if (!msg || loading) return
+    const msg = (textToSend ?? input).trim();
+    if (!msg || loading) return;
 
     const userMsg: Message = {
       id: `user-${Date.now()}`,
-      sender: 'user',
+      sender: "user",
       text: msg,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
 
-    setMessages((prev) => [...prev, userMsg])
-    setInput('')
-    setLoading(true)
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setLoading(true);
 
     try {
-      const historyPayload = messages.slice(-8).map((m) => ({ sender: m.sender, text: m.text }))
+      const historyPayload = messages
+        .slice(-8)
+        .map((m) => ({ sender: m.sender, text: m.text }));
       const { data } = await axios.post(`/api/roast/${roastId}/comeback`, {
         message: msg,
         history: historyPayload,
-      })
+      });
       const aiReply: Message = {
         id: `ai-${Date.now()}`,
-        sender: 'ai',
-        text: data.reply || 'Defense accha tha bhai, par score fir bhi wahi rahega 💀',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }
-      setMessages((prev) => [...prev, aiReply])
+        sender: "ai",
+        text:
+          data.reply ||
+          "Defense accha tha bhai, par score fir bhi wahi rahega 💀",
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages((prev) => [...prev, aiReply]);
     } catch {
       const fallbackReply: Message = {
         id: `ai-${Date.now()}`,
-        sender: 'ai',
-        text: 'Bhai itna bura defense tha ki server bhi crash hone laga! Resume fix karo, debate nahi 😂📉',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }
-      setMessages((prev) => [...prev, fallbackReply])
+        sender: "ai",
+        text: "Bhai itna bura defense tha ki server bhi crash hone laga! Resume fix karo, debate nahi 😂📉",
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages((prev) => [...prev, fallbackReply]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="max-w-[640px] mx-auto text-left border border-white/[0.08] bg-[#14110E] rounded-lg overflow-hidden shadow-xl transition-all">
@@ -112,7 +132,7 @@ export default function RoastBackChat({ roastId, overallScore, verdict }: RoastB
           </div>
         </div>
         <span className="text-tan-dim font-mono text-xs px-2.5 py-1 bg-white/[0.04] rounded">
-          {isOpen ? 'Minimize ▴' : 'Argue Now ▾'}
+          {isOpen ? "Minimize ▴" : "Argue Now ▾"}
         </span>
       </button>
 
@@ -124,19 +144,21 @@ export default function RoastBackChat({ roastId, overallScore, verdict }: RoastB
             {messages.map((m) => (
               <div
                 key={m.id}
-                className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
+                className={`flex flex-col ${m.sender === "user" ? "items-end" : "items-start"}`}
               >
                 <div
                   className={`max-w-[85%] rounded-lg p-3 text-xs leading-relaxed ${
-                    m.sender === 'user'
-                      ? 'bg-amber-500/15 border border-amber-500/30 text-paper rounded-br-none font-mono'
-                      : 'bg-[#1C1814] border border-stamp/30 text-stone-200 rounded-bl-none font-body shadow'
+                    m.sender === "user"
+                      ? "bg-amber-500/15 border border-amber-500/30 text-paper rounded-br-none font-mono"
+                      : "bg-[#1C1814] border border-stamp/30 text-stone-200 rounded-bl-none font-body shadow"
                   }`}
                 >
                   <p>{m.text}</p>
                   <span
                     className={`block text-[9px] font-mono mt-1 ${
-                      m.sender === 'user' ? 'text-amber-400/60 text-right' : 'text-stone-500'
+                      m.sender === "user"
+                        ? "text-amber-400/60 text-right"
+                        : "text-stone-500"
                     }`}
                   >
                     {m.timestamp}
@@ -172,8 +194,8 @@ export default function RoastBackChat({ roastId, overallScore, verdict }: RoastB
           {/* Input Row */}
           <form
             onSubmit={(e) => {
-              e.preventDefault()
-              handleSend()
+              e.preventDefault();
+              handleSend();
             }}
             className="flex gap-2"
           >
@@ -196,5 +218,5 @@ export default function RoastBackChat({ roastId, overallScore, verdict }: RoastB
         </div>
       )}
     </div>
-  )
+  );
 }

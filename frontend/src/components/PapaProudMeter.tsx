@@ -1,64 +1,68 @@
-import { useId } from 'react'
+import { useId } from "react";
 
 interface PapaProudMeterProps {
-  overallScore: number
+  overallScore: number;
 }
 
 export function getPapaScore(score: number): number {
   // Deterministic gag score calculation based on real score
-  if (score <= 20) return 14
-  if (score <= 40) return Math.round(score * 0.75)
-  if (score <= 65) return Math.min(68, Math.round(score * 0.85))
-  if (score <= 85) return Math.min(84, Math.round(score * 0.92))
-  return Math.min(95, score)
+  if (score <= 20) return 14;
+  if (score <= 40) return Math.round(score * 0.75);
+  if (score <= 65) return Math.min(68, Math.round(score * 0.85));
+  if (score <= 85) return Math.min(84, Math.round(score * 0.92));
+  return Math.min(95, score);
 }
 
-export function getPapaCommentary(papaScore: number): { comment: string; sub: string; emoji: string } {
+export function getPapaCommentary(papaScore: number): {
+  comment: string;
+  sub: string;
+  emoji: string;
+} {
   if (papaScore <= 25) {
     return {
-      comment: 'Sharma ji ka beta dekh ke has raha hai abhi 💀',
-      sub: 'Papa ko mat dikhana, seedha ghar se bahar nikal denge.',
-      emoji: '💀',
-    }
+      comment: "Sharma ji ka beta dekh ke has raha hai abhi 💀",
+      sub: "Papa ko mat dikhana, seedha ghar se bahar nikal denge.",
+      emoji: "💀",
+    };
   }
   if (papaScore <= 45) {
     return {
-      comment: 'Isse dikhake papa ko impress karna mushkil hai abhi 😭',
+      comment: "Isse dikhake papa ko impress karna mushkil hai abhi 😭",
       sub: 'Papa bolenge: "Itne saal padhayi karwai aur ye summary likhi hai?"',
-      emoji: '😭',
-    }
+      emoji: "😭",
+    };
   }
   if (papaScore <= 65) {
     return {
       comment: 'Papa bolenge: "Beta engineering karke yahi likha hai?" 🫠',
-      sub: 'Passable hai, lekin unka chehra fir bhi thoda disappointed rahega.',
-      emoji: '🫠',
-    }
+      sub: "Passable hai, lekin unka chehra fir bhi thoda disappointed rahega.",
+      emoji: "🫠",
+    };
   }
   if (papaScore <= 80) {
     return {
       comment: 'Thoda theek hai, par bolenge: "aur 10% aa sakte the" 🤨',
-      sub: 'Indian parents kabhi 100% khush nahi hote bhai, tu bhi jaanta hai.',
-      emoji: '🤨',
-    }
+      sub: "Indian parents kabhi 100% khush nahi hote bhai, tu bhi jaanta hai.",
+      emoji: "🤨",
+    };
   }
   return {
-    comment: 'Finally rishta pakka karne layak score aaya hai! 🎉',
-    sub: 'Chalo colony mein mithai baantne ki taiyyari shuru karo.',
-    emoji: '🎉',
-  }
+    comment: "Finally rishta pakka karne layak score aaya hai! 🎉",
+    sub: "Chalo colony mein mithai baantne ki taiyyari shuru karo.",
+    emoji: "🎉",
+  };
 }
 
 export default function PapaProudMeter({ overallScore }: PapaProudMeterProps) {
-  const meterId = useId()
-  const papaScore = getPapaScore(overallScore)
-  const { comment, sub, emoji } = getPapaCommentary(papaScore)
+  const meterId = useId();
+  const papaScore = getPapaScore(overallScore);
+  const { comment, sub, emoji } = getPapaCommentary(papaScore);
 
   const meterColor =
-    papaScore < 40 ? '#E8422D' : papaScore < 70 ? '#FFB93C' : '#7FA65C'
+    papaScore < 40 ? "#E8422D" : papaScore < 70 ? "#FFB93C" : "#7FA65C";
 
-  const shareText = `Bhai mera Papa Proud Meter score sirf ${papaScore}% aaya hai ${emoji}!\n"${comment}"\nApna bhi check karwa: https://resumeroast.app`
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`
+  const shareText = `Bhai mera Papa Proud Meter score sirf ${papaScore}% aaya hai ${emoji}!\n"${comment}"\nApna bhi check karwa: https://resumeroast.app`;
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
   return (
     <div className="w-full max-w-[640px] mx-auto bg-[#1A1612] border border-amber-500/20 rounded-sm p-6 text-left relative overflow-hidden shadow-lg">
@@ -91,7 +95,9 @@ export default function PapaProudMeter({ overallScore }: PapaProudMeterProps) {
           >
             {papaScore}%
           </span>
-          <span className="font-mono text-[10px] text-tan-dim uppercase">PROUD</span>
+          <span className="font-mono text-[10px] text-tan-dim uppercase">
+            PROUD
+          </span>
         </div>
       </div>
 
@@ -112,9 +118,7 @@ export default function PapaProudMeter({ overallScore }: PapaProudMeterProps) {
         <p className="font-body text-sm font-semibold text-paper leading-snug">
           "{comment}"
         </p>
-        <p className="font-mono text-xs text-tan-dim leading-relaxed">
-          {sub}
-        </p>
+        <p className="font-mono text-xs text-tan-dim leading-relaxed">{sub}</p>
       </div>
 
       {/* WhatsApp mini share CTA */}
@@ -133,5 +137,5 @@ export default function PapaProudMeter({ overallScore }: PapaProudMeterProps) {
         </a>
       </div>
     </div>
-  )
+  );
 }

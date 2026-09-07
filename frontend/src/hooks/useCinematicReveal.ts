@@ -1,10 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { playPaperRustle, playStampThud, playConfettiPop } from '@/utils/soundEffects'
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  playPaperRustle,
+  playStampThud,
+  playConfettiPop,
+} from "@/utils/soundEffects";
 
 interface UseCinematicRevealOptions {
-  score: number
-  enabled?: boolean
-  onComplete?: () => void
+  score: number;
+  enabled?: boolean;
+  onComplete?: () => void;
 }
 
 export function useCinematicReveal({
@@ -14,48 +18,48 @@ export function useCinematicReveal({
 }: UseCinematicRevealOptions) {
   // Check prefers-reduced-motion
   const prefersReduced =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const shouldAnimate = enabled && !prefersReduced
+  const shouldAnimate = enabled && !prefersReduced;
 
-  const [paperSettled, setPaperSettled] = useState(!shouldAnimate)
-  const [markStep, setMarkStep] = useState(shouldAnimate ? 0 : 3)
-  const [stampVisible, setStampVisible] = useState(!shouldAnimate)
-  const [showConfetti, setShowConfetti] = useState(false)
-  const [isCompleted, setIsCompleted] = useState(!shouldAnimate)
+  const [paperSettled, setPaperSettled] = useState(!shouldAnimate);
+  const [markStep, setMarkStep] = useState(shouldAnimate ? 0 : 3);
+  const [stampVisible, setStampVisible] = useState(!shouldAnimate);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(!shouldAnimate);
 
-  const timersRef = useRef<number[]>([])
+  const timersRef = useRef<number[]>([]);
 
   const clearAllTimers = useCallback(() => {
-    timersRef.current.forEach((t) => clearTimeout(t))
-    timersRef.current = []
-  }, [])
+    timersRef.current.forEach((t) => clearTimeout(t));
+    timersRef.current = [];
+  }, []);
 
   const skip = useCallback(() => {
-    clearAllTimers()
-    setPaperSettled(true)
-    setMarkStep(3)
-    setStampVisible(true)
-    setIsCompleted(true)
+    clearAllTimers();
+    setPaperSettled(true);
+    setMarkStep(3);
+    setStampVisible(true);
+    setIsCompleted(true);
     if (score >= 70) {
-      setShowConfetti(true)
+      setShowConfetti(true);
     }
     if (onComplete) {
-      onComplete()
+      onComplete();
     }
-  }, [clearAllTimers, onComplete, score])
+  }, [clearAllTimers, onComplete, score]);
 
   useEffect(() => {
     if (!shouldAnimate) {
-      setIsCompleted(true)
+      setIsCompleted(true);
       if (score >= 70) {
-        setShowConfetti(true)
+        setShowConfetti(true);
       }
-      return
+      return;
     }
 
-    clearAllTimers()
+    clearAllTimers();
 
     // Explicit Centralized Timeline Array: [delayInMs, actionCallback]
     const timeline: Array<{ delay: number; run: () => void }> = [
@@ -63,8 +67,8 @@ export function useCinematicReveal({
       {
         delay: 50,
         run: () => {
-          setPaperSettled(true)
-          playPaperRustle()
+          setPaperSettled(true);
+          playPaperRustle();
         },
       },
       // 2. Pause (350ms) - intentional breath before marks start
@@ -86,8 +90,8 @@ export function useCinematicReveal({
       {
         delay: 2450,
         run: () => {
-          setStampVisible(true)
-          playStampThud()
+          setStampVisible(true);
+          playStampThud();
         },
       },
       // 6. Confetti burst for high scores (70+) immediately after stamp settles
@@ -95,8 +99,8 @@ export function useCinematicReveal({
         delay: 3000,
         run: () => {
           if (score >= 70) {
-            setShowConfetti(true)
-            playConfettiPop()
+            setShowConfetti(true);
+            playConfettiPop();
           }
         },
       },
@@ -104,46 +108,51 @@ export function useCinematicReveal({
       {
         delay: 3500,
         run: () => {
-          setIsCompleted(true)
-          if (onComplete) onComplete()
+          setIsCompleted(true);
+          if (onComplete) onComplete();
         },
       },
-    ]
+    ];
 
     // Schedule all timeline steps
     timeline.forEach(({ delay, run }) => {
-      const timer = window.setTimeout(run, delay)
-      timersRef.current.push(timer)
-    })
+      const timer = window.setTimeout(run, delay);
+      timersRef.current.push(timer);
+    });
 
     return () => {
-      clearAllTimers()
-    }
-  }, [shouldAnimate, score, onComplete, clearAllTimers])
+      clearAllTimers();
+    };
+  }, [shouldAnimate, score, onComplete, clearAllTimers]);
 
   // Global click/tap or keydown to skip while sequence is running
   useEffect(() => {
-    if (isCompleted || !shouldAnimate) return
+    if (isCompleted || !shouldAnimate) return;
 
     const handleSkipEvent = (e: MouseEvent | KeyboardEvent | TouchEvent) => {
       // Don't intercept clicks inside buttons or links
-      const target = e.target as HTMLElement | null
-      if (target && (target.closest('button') || target.closest('a') || target.closest('input'))) {
-        return
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.closest("button") ||
+          target.closest("a") ||
+          target.closest("input"))
+      ) {
+        return;
       }
-      skip()
-    }
+      skip();
+    };
 
-    window.addEventListener('click', handleSkipEvent)
-    window.addEventListener('keydown', handleSkipEvent)
-    window.addEventListener('touchstart', handleSkipEvent, { passive: true })
+    window.addEventListener("click", handleSkipEvent);
+    window.addEventListener("keydown", handleSkipEvent);
+    window.addEventListener("touchstart", handleSkipEvent, { passive: true });
 
     return () => {
-      window.removeEventListener('click', handleSkipEvent)
-      window.removeEventListener('keydown', handleSkipEvent)
-      window.removeEventListener('touchstart', handleSkipEvent)
-    }
-  }, [isCompleted, shouldAnimate, skip])
+      window.removeEventListener("click", handleSkipEvent);
+      window.removeEventListener("keydown", handleSkipEvent);
+      window.removeEventListener("touchstart", handleSkipEvent);
+    };
+  }, [isCompleted, shouldAnimate, skip]);
 
   return {
     paperSettled,
@@ -154,5 +163,5 @@ export function useCinematicReveal({
     isCompleted,
     canSkip: !isCompleted && shouldAnimate,
     skip,
-  }
+  };
 }

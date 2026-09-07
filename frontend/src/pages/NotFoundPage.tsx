@@ -1,9 +1,9 @@
-import { Link } from 'react-router-dom'
-import { usePageTitle } from '@/utils/usePageTitle'
-import Footer from '@/components/Footer'
+import { Link } from "react-router-dom";
+import { usePageTitle } from "@/utils/usePageTitle";
+import Footer from "@/components/Footer";
 
 export default function NotFoundPage() {
-  usePageTitle('404 Page Not Found')
+  usePageTitle("404 Page Not Found");
 
   return (
     <main className="min-h-screen flex flex-col justify-between pt-12 pb-6 px-4 text-center">
@@ -38,23 +38,32 @@ export default function NotFoundPage() {
               Yeh page desk pe mila hi nahi bhai.
             </h1>
             <p className="font-mono text-xs text-tan-dim leading-relaxed">
-              Looks like this URL was filtered out by the ATS before it even reached the hiring manager. Your career doesn't have to share its fate.
+              Looks like this URL was filtered out by the ATS before it even
+              reached the hiring manager. Your career doesn't have to share its
+              fate.
             </p>
           </div>
 
           {/* Red-Pen Note */}
           <div className="mt-6 border-l-2 border-stamp pl-3 py-1 bg-stamp/5 rounded-r-sm">
             <p className="font-mono text-[11px] text-amber-300 italic">
-              "Recruiter note: 0 matches found for this route. Recommend heading back to active grading desk immediately."
+              "Recruiter note: 0 matches found for this route. Recommend heading
+              back to active grading desk immediately."
             </p>
           </div>
 
           {/* Action CTAs */}
           <div className="pt-6 border-t border-white/[0.08] flex flex-col sm:flex-row items-stretch gap-3">
-            <Link to="/roast" className="btn-primary justify-center text-xs py-2.5 font-medium flex-1">
+            <Link
+              to="/roast"
+              className="btn-primary justify-center text-xs py-2.5 font-medium flex-1"
+            >
               Roast My Resume →
             </Link>
-            <Link to="/" className="btn-ghost justify-center text-xs py-2.5 flex-1">
+            <Link
+              to="/"
+              className="btn-ghost justify-center text-xs py-2.5 flex-1"
+            >
               Back to Desk
             </Link>
           </div>
@@ -66,5 +75,5 @@ export default function NotFoundPage() {
         <Footer />
       </div>
     </main>
-  )
+  );
 }

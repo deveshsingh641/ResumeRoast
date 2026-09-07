@@ -1,16 +1,18 @@
 interface PaperSkeletonProps {
-  label?: string
+  label?: string;
 }
 
-export default function PaperSkeleton({ label = 'Desk pe report taiyyar ho rahi hai…' }: PaperSkeletonProps) {
+export default function PaperSkeleton({
+  label = "Desk pe report taiyyar ho rahi hai…",
+}: PaperSkeletonProps) {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6 text-center select-none relative overflow-hidden">
       {/* Tilted placeholder paper sheet */}
       <div
         className="w-full max-w-[540px] bg-paper/90 rounded-sm p-8 sm:p-10 shadow-2xl relative transition-all animate-pulse"
         style={{
-          transform: 'rotate(-1.5deg)',
-          border: '1px solid rgba(0,0,0,0.12)',
+          transform: "rotate(-1.5deg)",
+          border: "1px solid rgba(0,0,0,0.12)",
         }}
       >
         {/* Paper subtle lines */}
@@ -18,7 +20,7 @@ export default function PaperSkeleton({ label = 'Desk pe report taiyyar ho rahi 
           className="absolute inset-0 pointer-events-none opacity-[0.04]"
           style={{
             backgroundImage:
-              'repeating-linear-gradient(transparent, transparent 20px, #2B2620 20px, #2B2620 21px)',
+              "repeating-linear-gradient(transparent, transparent 20px, #2B2620 20px, #2B2620 21px)",
           }}
           aria-hidden="true"
         />
@@ -62,5 +64,5 @@ export default function PaperSkeleton({ label = 'Desk pe report taiyyar ho rahi 
         </p>
       </div>
     </main>
-  )
+  );
 }

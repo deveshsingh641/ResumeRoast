@@ -1,59 +1,59 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Link, useSearchParams, useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import axios from 'axios'
-import { normalizeLang } from '@/i18n/detector'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
-import Footer from '@/components/Footer'
-import WaitlistModal from '@/components/WaitlistModal'
-import { useAppStore } from '@/store/useAppStore'
-import { usePageTitle } from '@/utils/usePageTitle'
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import axios from "axios";
+import { normalizeLang } from "@/i18n/detector";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import Footer from "@/components/Footer";
+import WaitlistModal from "@/components/WaitlistModal";
+import { useAppStore } from "@/store/useAppStore";
+import { usePageTitle } from "@/utils/usePageTitle";
 
 interface MissingKeyword {
-  keyword: string
-  importance: 'critical' | 'high' | 'nice-to-have'
-  roast: string
+  keyword: string;
+  importance: "critical" | "high" | "nice-to-have";
+  roast: string;
 }
 
 interface IrrelevantClutter {
-  quoted_text: string
-  roast: string
+  quoted_text: string;
+  roast: string;
 }
 
 interface TailoredRewrite {
-  original: string
-  tailored_fix: string
-  target_jd_requirement: string
+  original: string;
+  tailored_fix: string;
+  target_jd_requirement: string;
 }
 
 interface MatchResultData {
-  match_score: number
-  ats_status: 'rejected' | 'borderline' | 'shortlisted'
-  verdict: string
-  job_title: string
-  company_name: string
-  matched_skills: string[]
-  missing_keywords: MissingKeyword[]
-  total_missing_keywords: number
-  irrelevant_clutter: IrrelevantClutter[]
-  tailored_bullet_rewrites: TailoredRewrite[]
-  total_tailored_rewrites: number
-  is_truncated: boolean
-  is_pro: boolean
+  match_score: number;
+  ats_status: "rejected" | "borderline" | "shortlisted";
+  verdict: string;
+  job_title: string;
+  company_name: string;
+  matched_skills: string[];
+  missing_keywords: MissingKeyword[];
+  total_missing_keywords: number;
+  irrelevant_clutter: IrrelevantClutter[];
+  tailored_bullet_rewrites: TailoredRewrite[];
+  total_tailored_rewrites: number;
+  is_truncated: boolean;
+  is_pro: boolean;
 }
 
 interface SampleJD {
-  id: string
-  title: string
-  company: string
-  description: string
+  id: string;
+  title: string;
+  company: string;
+  description: string;
 }
 
 const FALLBACK_SAMPLES: SampleJD[] = [
   {
-    id: 'swiggy-frontend',
-    title: 'Frontend Engineer (React / TypeScript)',
-    company: 'Swiggy',
+    id: "swiggy-frontend",
+    title: "Frontend Engineer (React / TypeScript)",
+    company: "Swiggy",
     description: `Role: Frontend Engineer II
 Location: Bengaluru / Remote
 About the role:
@@ -68,9 +68,9 @@ Key Requirements:
 - Excellent debugging skills with Chrome DevTools, Network profiling, and Sentry monitoring.`,
   },
   {
-    id: 'zerodha-backend',
-    title: 'Backend SDE (Go / PostgreSQL / Redis)',
-    company: 'Zerodha',
+    id: "zerodha-backend",
+    title: "Backend SDE (Go / PostgreSQL / Redis)",
+    company: "Zerodha",
     description: `Role: Software Development Engineer — Core Trading Backend
 Location: Bengaluru
 About the role:
@@ -85,9 +85,9 @@ Key Requirements:
 - Docker, Kubernetes, and automated CI/CD deployment pipelines.`,
   },
   {
-    id: 'ai-startup-fullstack',
-    title: 'Full Stack AI Engineer',
-    company: 'NextGen AI Lab',
+    id: "ai-startup-fullstack",
+    title: "Full Stack AI Engineer",
+    company: "NextGen AI Lab",
     description: `Role: Full Stack AI Engineer
 Location: Remote / Delhi NCR
 About the role:
@@ -100,249 +100,267 @@ Key Requirements:
 - Clean API design, async task queues with Celery or Redis, and PostgreSQL.
 - Rapid prototyping mindset: ship MVPs in days, iterate based on user telemetry.`,
   },
-]
+];
 
 const PROCESSING_STAGES = [
-  'Reading resume & target job specifications…',
-  'Running ATS parser & extracting core technical skills…',
-  'Grilling keyword gaps against role expectations…',
-  'Simulating recruiter 6-second eye-tracking scan…',
-  'Drafting tailored red-pen bullet rewrites…',
-  'Finalizing ATS Reality Check report…',
-]
+  "Reading resume & target job specifications…",
+  "Running ATS parser & extracting core technical skills…",
+  "Grilling keyword gaps against role expectations…",
+  "Simulating recruiter 6-second eye-tracking scan…",
+  "Drafting tailored red-pen bullet rewrites…",
+  "Finalizing ATS Reality Check report…",
+];
 
 export default function MatchPage() {
-  usePageTitle('Job Description Match & ATS Gap Scanner')
-  const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
-  const { i18n } = useTranslation()
-  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
+  usePageTitle("Job Description Match & ATS Gap Scanner");
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
 
-  const { result: existingRoast } = useAppStore()
+  const { result: existingRoast } = useAppStore();
 
   // Form State
-  const [resumeFile, setResumeFile] = useState<File | null>(null)
-  const [useExistingRoast, setUseExistingRoast] = useState<boolean>(false)
-  const [roastIdParam, setRoastIdParam] = useState<string | null>(null)
-  const [jobTitle, setJobTitle] = useState('')
-  const [companyName, setCompanyName] = useState('')
-  const [jobDescription, setJobDescription] = useState('')
-  const [samples, setSamples] = useState<SampleJD[]>(FALLBACK_SAMPLES)
-  const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null)
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [useExistingRoast, setUseExistingRoast] = useState<boolean>(false);
+  const [roastIdParam, setRoastIdParam] = useState<string | null>(null);
+  const [jobTitle, setJobTitle] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
+  const [samples, setSamples] = useState<SampleJD[]>(FALLBACK_SAMPLES);
+  const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
 
   // Execution State
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [processingStageIdx, setProcessingStageIdx] = useState(0)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [matchResult, setMatchResult] = useState<MatchResultData | null>(null)
-  const [copiedRewriteIndex, setCopiedRewriteIndex] = useState<number | null>(null)
-  const [copiedFullReport, setCopiedFullReport] = useState(false)
-  const [showWaitlist, setShowWaitlist] = useState(false)
-  const [activeKeywordPopover, setActiveKeywordPopover] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStageIdx, setProcessingStageIdx] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [matchResult, setMatchResult] = useState<MatchResultData | null>(null);
+  const [copiedRewriteIndex, setCopiedRewriteIndex] = useState<number | null>(
+    null,
+  );
+  const [copiedFullReport, setCopiedFullReport] = useState(false);
+  const [showWaitlist, setShowWaitlist] = useState(false);
+  const [activeKeywordPopover, setActiveKeywordPopover] = useState<
+    string | null
+  >(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Detect query param roast_id or use current stored roast
   useEffect(() => {
-    const qRoastId = searchParams.get('roast_id')
+    const qRoastId = searchParams.get("roast_id");
     if (qRoastId) {
-      setRoastIdParam(qRoastId)
-      setUseExistingRoast(true)
+      setRoastIdParam(qRoastId);
+      setUseExistingRoast(true);
     } else if (existingRoast?.id) {
-      setRoastIdParam(existingRoast.id)
-      setUseExistingRoast(true)
+      setRoastIdParam(existingRoast.id);
+      setUseExistingRoast(true);
     }
-  }, [searchParams, existingRoast])
+  }, [searchParams, existingRoast]);
 
   // Fetch sample JDs from backend
   useEffect(() => {
     axios
-      .get('/api/match/samples')
+      .get("/api/match/samples")
       .then((res) => {
-        if (res.data?.samples && Array.isArray(res.data.samples) && res.data.samples.length > 0) {
-          setSamples(res.data.samples)
+        if (
+          res.data?.samples &&
+          Array.isArray(res.data.samples) &&
+          res.data.samples.length > 0
+        ) {
+          setSamples(res.data.samples);
         }
       })
       .catch(() => {
         // Fallback already pre-loaded
-      })
-  }, [])
+      });
+  }, []);
 
   // Progress animation cycle
   useEffect(() => {
-    if (!isProcessing) return
+    if (!isProcessing) return;
     const interval = setInterval(() => {
-      setProcessingStageIdx((prev) => (prev < PROCESSING_STAGES.length - 1 ? prev + 1 : prev))
-    }, 2800)
-    return () => clearInterval(interval)
-  }, [isProcessing])
+      setProcessingStageIdx((prev) =>
+        prev < PROCESSING_STAGES.length - 1 ? prev + 1 : prev,
+      );
+    }, 2800);
+    return () => clearInterval(interval);
+  }, [isProcessing]);
 
   const handleSelectSample = (sample: SampleJD) => {
-    setSelectedSampleId(sample.id)
-    setJobTitle(sample.title)
-    setCompanyName(sample.company)
-    setJobDescription(sample.description)
-    setErrorMessage(null)
-  }
+    setSelectedSampleId(sample.id);
+    setJobTitle(sample.title);
+    setCompanyName(sample.company);
+    setJobDescription(sample.description);
+    setErrorMessage(null);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         setErrorMessage(
           isHinglish
-            ? 'File size 5MB se chhota hona chahiye.'
-            : 'File size exceeds 5MB limit. Please upload a smaller document.'
-        )
-        return
+            ? "File size 5MB se chhota hona chahiye."
+            : "File size exceeds 5MB limit. Please upload a smaller document.",
+        );
+        return;
       }
-      setResumeFile(file)
-      setUseExistingRoast(false)
-      setErrorMessage(null)
+      setResumeFile(file);
+      setUseExistingRoast(false);
+      setErrorMessage(null);
     }
-  }
+  };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    if (isProcessing) return
-    const file = e.dataTransfer.files?.[0]
+    e.preventDefault();
+    if (isProcessing) return;
+    const file = e.dataTransfer.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         setErrorMessage(
           isHinglish
-            ? 'File size 5MB se chhota hona chahiye.'
-            : 'File size exceeds 5MB limit. Please upload a smaller document.'
-        )
-        return
+            ? "File size 5MB se chhota hona chahiye."
+            : "File size exceeds 5MB limit. Please upload a smaller document.",
+        );
+        return;
       }
-      setResumeFile(file)
-      setUseExistingRoast(false)
-      setErrorMessage(null)
+      setResumeFile(file);
+      setUseExistingRoast(false);
+      setErrorMessage(null);
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (isProcessing) return
+    e.preventDefault();
+    if (isProcessing) return;
 
     if (!jobDescription || jobDescription.trim().length < 30) {
       setErrorMessage(
         isHinglish
-          ? 'Kripya poora Job Description paste karein (kam se kam 30 characters).'
-          : 'Please paste a complete Job Description (at least 30 characters).'
-      )
-      return
+          ? "Kripya poora Job Description paste karein (kam se kam 30 characters)."
+          : "Please paste a complete Job Description (at least 30 characters).",
+      );
+      return;
     }
 
     if (!resumeFile && !useExistingRoast) {
       setErrorMessage(
         isHinglish
-          ? 'Kripya apna resume upload karein ya previous roast use karein.'
-          : 'Please upload a resume document or select your recent roast.'
-      )
-      return
+          ? "Kripya apna resume upload karein ya previous roast use karein."
+          : "Please upload a resume document or select your recent roast.",
+      );
+      return;
     }
 
-    setIsProcessing(true)
-    setProcessingStageIdx(0)
-    setErrorMessage(null)
-    setMatchResult(null)
+    setIsProcessing(true);
+    setProcessingStageIdx(0);
+    setErrorMessage(null);
+    setMatchResult(null);
 
     try {
-      let response
+      let response;
       if (resumeFile) {
-        const formData = new FormData()
-        formData.append('file', resumeFile)
-        formData.append('job_description', jobDescription)
-        if (jobTitle) formData.append('job_title', jobTitle)
-        if (companyName) formData.append('company_name', companyName)
-        formData.append('language', isHinglish ? 'hi-IN' : 'en-US')
+        const formData = new FormData();
+        formData.append("file", resumeFile);
+        formData.append("job_description", jobDescription);
+        if (jobTitle) formData.append("job_title", jobTitle);
+        if (companyName) formData.append("company_name", companyName);
+        formData.append("language", isHinglish ? "hi-IN" : "en-US");
 
-        response = await axios.post('/api/match', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        response = await axios.post("/api/match", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
           timeout: 45000,
-        })
+        });
       } else {
         response = await axios.post(
-          '/api/match',
+          "/api/match",
           {
             roast_id: roastIdParam,
             job_description: jobDescription,
             job_title: jobTitle,
             company_name: companyName,
-            language: isHinglish ? 'hi-IN' : 'en-US',
+            language: isHinglish ? "hi-IN" : "en-US",
           },
-          { timeout: 45000 }
-        )
+          { timeout: 45000 },
+        );
       }
 
-      setMatchResult(response.data)
+      setMatchResult(response.data);
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message
+      const detail = err?.response?.data?.detail || err?.message;
       setErrorMessage(
         detail ||
           (isHinglish
-            ? 'JD match analyze karne mein dikkat aayi. Kripya dobara koshish karein.'
-            : 'Failed to analyze JD match. Please try again.')
-      )
+            ? "JD match analyze karne mein dikkat aayi. Kripya dobara koshish karein."
+            : "Failed to analyze JD match. Please try again."),
+      );
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
   const handleCopyRewrite = async (text: string, index: number) => {
     try {
-      await navigator.clipboard.writeText(text)
-      setCopiedRewriteIndex(index)
-      setTimeout(() => setCopiedRewriteIndex(null), 2500)
+      await navigator.clipboard.writeText(text);
+      setCopiedRewriteIndex(index);
+      setTimeout(() => setCopiedRewriteIndex(null), 2500);
     } catch {
       // fallback
     }
-  }
+  };
 
   const handleCopyFullReport = async () => {
-    if (!matchResult) return
+    if (!matchResult) return;
     const lines = [
       `ATS REALITY CHECK REPORT — ${matchResult.job_title} @ ${matchResult.company_name}`,
       `Match Score: ${matchResult.match_score}/100 [Status: ${matchResult.ats_status.toUpperCase()}]`,
       `Recruiter Verdict: "${matchResult.verdict}"`,
-      '',
-      '--- MATCHED SKILLS ---',
-      matchResult.matched_skills.map((s) => `✓ ${s}`).join('\n'),
-      '',
-      '--- CRITICAL MISSING KEYWORDS ---',
+      "",
+      "--- MATCHED SKILLS ---",
+      matchResult.matched_skills.map((s) => `✓ ${s}`).join("\n"),
+      "",
+      "--- CRITICAL MISSING KEYWORDS ---",
       matchResult.missing_keywords
-        .map((k) => `✗ [${k.importance.toUpperCase()}] ${k.keyword}: ${k.roast}`)
-        .join('\n'),
-      '',
-      '--- TAILORED BULLET REWRITES ---',
+        .map(
+          (k) => `✗ [${k.importance.toUpperCase()}] ${k.keyword}: ${k.roast}`,
+        )
+        .join("\n"),
+      "",
+      "--- TAILORED BULLET REWRITES ---",
       matchResult.tailored_bullet_rewrites
         .map(
           (rw, i) =>
-            `#${i + 1} Target: ${rw.target_jd_requirement}\nOriginal: "${rw.original}"\nTailored: "${rw.tailored_fix}"\n`
+            `#${i + 1} Target: ${rw.target_jd_requirement}\nOriginal: "${rw.original}"\nTailored: "${rw.tailored_fix}"\n`,
         )
-        .join('\n'),
-      'Analyzed via Resume Roast (https://resumeroast.app/match)',
-    ]
+        .join("\n"),
+      "Analyzed via Resume Roast (https://resumeroast.app/match)",
+    ];
     try {
-      await navigator.clipboard.writeText(lines.join('\n'))
-      setCopiedFullReport(true)
-      setTimeout(() => setCopiedFullReport(false), 2500)
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopiedFullReport(true);
+      setTimeout(() => setCopiedFullReport(false), 2500);
     } catch {
       // fallback
     }
-  }
+  };
 
   return (
     <main className="min-h-screen flex flex-col justify-between p-4 sm:p-6 desk-cursor">
       {/* Top Header */}
       <header className="max-w-[1040px] w-full mx-auto flex items-center justify-between py-2">
-        <Link to="/" className="font-display text-lg sm:text-xl tracking-tight text-paper select-none">
+        <Link
+          to="/"
+          className="font-display text-lg sm:text-xl tracking-tight text-paper select-none"
+        >
           RESUME<span className="text-stamp">ROAST</span>
         </Link>
         <div className="flex items-center gap-4">
-          <Link to="/" className="font-mono text-xs text-tan-dim hover:text-tan transition-colors">
-            {isHinglish ? '← Desk Pe Wapas' : '← Back to Desk'}
+          <Link
+            to="/"
+            className="font-mono text-xs text-tan-dim hover:text-tan transition-colors"
+          >
+            {isHinglish ? "← Desk Pe Wapas" : "← Back to Desk"}
           </Link>
           <LanguageSwitcher />
         </div>
@@ -355,10 +373,10 @@ export default function MatchPage() {
             to="/roast"
             className="flex-1 py-2 px-3 text-center font-mono text-xs text-tan-dim hover:text-tan transition-colors rounded-sm hover:bg-white/[0.03]"
           >
-            🔥 {isHinglish ? 'General Roast' : 'General Roast'}
+            🔥 {isHinglish ? "General Roast" : "General Roast"}
           </Link>
           <div className="flex-1 py-2 px-3 text-center font-mono text-xs font-bold text-paper bg-stamp/20 border border-stamp/40 rounded-sm shadow-sm">
-            🎯 {isHinglish ? 'JD Match Mode (NEW)' : 'JD Match Mode (NEW)'}
+            🎯 {isHinglish ? "JD Match Mode (NEW)" : "JD Match Mode (NEW)"}
           </div>
         </div>
       </div>
@@ -368,17 +386,19 @@ export default function MatchPage() {
         {/* Hero Title */}
         <div className="text-center mb-8">
           <p className="section-label mb-2">
-            {isHinglish ? 'ATS REALITY CHECK & ROLE TAILORING' : 'ATS REALITY CHECK & ROLE TAILORING'}
+            {isHinglish
+              ? "ATS REALITY CHECK & ROLE TAILORING"
+              : "ATS REALITY CHECK & ROLE TAILORING"}
           </p>
           <h1 className="font-display text-2xl sm:text-4xl text-paper tracking-tight mb-2">
             {isHinglish
-              ? 'Pata karo tumhara resume ATS mein reject kyun hoga.'
-              : 'Find out exactly why your dream ATS will reject you.'}
+              ? "Pata karo tumhara resume ATS mein reject kyun hoga."
+              : "Find out exactly why your dream ATS will reject you."}
           </h1>
           <p className="font-mono text-xs sm:text-sm text-tan-dim max-w-xl mx-auto">
             {isHinglish
-              ? 'Target company ka JD dalo. Missing keywords, irrelevant clutter aur exact bullet rewrites pao.'
-              : 'Paste your target job description. Uncover missing keyword traps and get tailored drop-in bullet rewrites.'}
+              ? "Target company ka JD dalo. Missing keywords, irrelevant clutter aur exact bullet rewrites pao."
+              : "Paste your target job description. Uncover missing keyword traps and get tailored drop-in bullet rewrites."}
           </p>
         </div>
 
@@ -391,11 +411,16 @@ export default function MatchPage() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <label className="font-display text-sm text-paper flex items-center gap-2">
-                      <span>📄 1. {isHinglish ? 'Resume Document' : 'Resume Document'}</span>
+                      <span>
+                        📄 1.{" "}
+                        {isHinglish ? "Resume Document" : "Resume Document"}
+                      </span>
                     </label>
                     {roastIdParam && (
                       <span className="font-mono text-[11px] text-emerald-400 bg-emerald-950/40 px-2 py-0.5 border border-emerald-500/30 rounded-xs">
-                        {isHinglish ? 'Recent roast linked' : 'Recent roast linked'}
+                        {isHinglish
+                          ? "Recent roast linked"
+                          : "Recent roast linked"}
                       </span>
                     )}
                   </div>
@@ -407,7 +432,9 @@ export default function MatchPage() {
                         <span className="text-xl">⚡</span>
                         <div>
                           <p className="font-mono text-xs text-paper font-semibold">
-                            {isHinglish ? 'Roasted Resume Linked' : 'Recently Roasted Resume'}
+                            {isHinglish
+                              ? "Roasted Resume Linked"
+                              : "Recently Roasted Resume"}
                           </p>
                           <p className="font-mono text-[10px] text-tan-dim">
                             ID: {roastIdParam.slice(0, 8)}…
@@ -420,17 +447,17 @@ export default function MatchPage() {
                           onClick={() => setUseExistingRoast(true)}
                           className={`font-mono text-[11px] px-2.5 py-1 rounded-sm border transition-all ${
                             useExistingRoast
-                              ? 'bg-stamp text-paper border-stamp font-bold'
-                              : 'bg-transparent text-tan-dim border-white/20 hover:text-tan'
+                              ? "bg-stamp text-paper border-stamp font-bold"
+                              : "bg-transparent text-tan-dim border-white/20 hover:text-tan"
                           }`}
                         >
                           {useExistingRoast
                             ? isHinglish
-                              ? '✓ Selected'
-                              : '✓ Selected'
+                              ? "✓ Selected"
+                              : "✓ Selected"
                             : isHinglish
-                            ? 'Use This'
-                            : 'Use This'}
+                              ? "Use This"
+                              : "Use This"}
                         </button>
                       </div>
                     </div>
@@ -443,10 +470,10 @@ export default function MatchPage() {
                     onClick={() => fileInputRef.current?.click()}
                     className={`border-2 border-dashed rounded-sm p-6 text-center cursor-pointer transition-colors ${
                       resumeFile
-                        ? 'border-emerald-500/60 bg-emerald-950/10'
+                        ? "border-emerald-500/60 bg-emerald-950/10"
                         : useExistingRoast
-                        ? 'border-white/20 bg-white/[0.01]'
-                        : 'border-white/20 hover:border-stamp/60 bg-white/[0.02]'
+                          ? "border-white/20 bg-white/[0.01]"
+                          : "border-white/20 hover:border-stamp/60 bg-white/[0.02]"
                     }`}
                   >
                     <input
@@ -462,7 +489,8 @@ export default function MatchPage() {
                           ✓ {resumeFile.name}
                         </p>
                         <p className="font-mono text-[11px] text-tan-dim">
-                          {(resumeFile.size / 1024).toFixed(0)} KB · Click to change file
+                          {(resumeFile.size / 1024).toFixed(0)} KB · Click to
+                          change file
                         </p>
                       </div>
                     ) : (
@@ -470,8 +498,8 @@ export default function MatchPage() {
                         <span className="text-3xl block">📥</span>
                         <p className="font-mono text-xs text-paper">
                           {isHinglish
-                            ? 'PDF ya DOCX drop karein ya browse karein'
-                            : 'Drop target resume (PDF/DOCX) or browse'}
+                            ? "PDF ya DOCX drop karein ya browse karein"
+                            : "Drop target resume (PDF/DOCX) or browse"}
                         </p>
                         <p className="font-mono text-[11px] text-tan-dim">
                           Max 5MB · Text-based PDF or DOCX
@@ -483,7 +511,10 @@ export default function MatchPage() {
 
                 <div className="mt-4 pt-3 border-t border-white/[0.06]">
                   <p className="font-mono text-[11px] text-tan-dim">
-                    🔒 {isHinglish ? 'Aapka data 100% private rehta hai.' : 'Your resume is analyzed securely and never shared.'}
+                    🔒{" "}
+                    {isHinglish
+                      ? "Aapka data 100% private rehta hai."
+                      : "Your resume is analyzed securely and never shared."}
                   </p>
                 </div>
               </div>
@@ -493,14 +524,21 @@ export default function MatchPage() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <label className="font-display text-sm text-paper flex items-center gap-2">
-                      <span>🎯 2. {isHinglish ? 'Target Job Description (JD)' : 'Target Job Description (JD)'}</span>
+                      <span>
+                        🎯 2.{" "}
+                        {isHinglish
+                          ? "Target Job Description (JD)"
+                          : "Target Job Description (JD)"}
+                      </span>
                     </label>
                   </div>
 
                   {/* Sample Chips */}
                   <div className="mb-3">
                     <p className="font-mono text-[11px] text-tan-dim mb-1.5">
-                      {isHinglish ? '1-Click Trial Chips (Sample JDs):' : 'Instant 1-Click Samples:'}
+                      {isHinglish
+                        ? "1-Click Trial Chips (Sample JDs):"
+                        : "Instant 1-Click Samples:"}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {samples.map((s) => (
@@ -510,11 +548,17 @@ export default function MatchPage() {
                           onClick={() => handleSelectSample(s)}
                           className={`font-mono text-[11px] px-2.5 py-1 rounded-sm border transition-all ${
                             selectedSampleId === s.id
-                              ? 'bg-ember/20 border-ember text-ember font-bold'
-                              : 'bg-white/[0.03] border-white/15 text-tan-dim hover:text-tan hover:border-white/30'
+                              ? "bg-ember/20 border-ember text-ember font-bold"
+                              : "bg-white/[0.03] border-white/15 text-tan-dim hover:text-tan hover:border-white/30"
                           }`}
                         >
-                          💼 {s.company} ({s.id.includes('frontend') ? 'Frontend' : s.id.includes('backend') ? 'Backend' : 'AI'})
+                          💼 {s.company} (
+                          {s.id.includes("frontend")
+                            ? "Frontend"
+                            : s.id.includes("backend")
+                              ? "Backend"
+                              : "AI"}
+                          )
                         </button>
                       ))}
                     </div>
@@ -525,7 +569,11 @@ export default function MatchPage() {
                     <div>
                       <input
                         type="text"
-                        placeholder={isHinglish ? 'Job Title (e.g. SDE II)' : 'Job Title (e.g. SDE II)'}
+                        placeholder={
+                          isHinglish
+                            ? "Job Title (e.g. SDE II)"
+                            : "Job Title (e.g. SDE II)"
+                        }
                         value={jobTitle}
                         onChange={(e) => setJobTitle(e.target.value)}
                         className="w-full bg-black/40 border border-white/15 rounded-sm px-3 py-1.5 font-mono text-xs text-paper focus:outline-none focus:border-stamp"
@@ -534,7 +582,11 @@ export default function MatchPage() {
                     <div>
                       <input
                         type="text"
-                        placeholder={isHinglish ? 'Company (e.g. Swiggy)' : 'Company (e.g. Swiggy)'}
+                        placeholder={
+                          isHinglish
+                            ? "Company (e.g. Swiggy)"
+                            : "Company (e.g. Swiggy)"
+                        }
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
                         className="w-full bg-black/40 border border-white/15 rounded-sm px-3 py-1.5 font-mono text-xs text-paper focus:outline-none focus:border-stamp"
@@ -547,13 +599,13 @@ export default function MatchPage() {
                     rows={7}
                     placeholder={
                       isHinglish
-                        ? 'LinkedIn, Naukri, ya Careers page se Job Description yahan paste karein…'
-                        : 'Paste job description, requirements, and tech stack here from LinkedIn, Naukri, or Careers page…'
+                        ? "LinkedIn, Naukri, ya Careers page se Job Description yahan paste karein…"
+                        : "Paste job description, requirements, and tech stack here from LinkedIn, Naukri, or Careers page…"
                     }
                     value={jobDescription}
                     onChange={(e) => {
-                      setJobDescription(e.target.value)
-                      setSelectedSampleId(null)
+                      setJobDescription(e.target.value);
+                      setSelectedSampleId(null);
                     }}
                     className="w-full bg-black/40 border border-white/15 rounded-sm p-3 font-mono text-xs text-paper focus:outline-none focus:border-stamp leading-relaxed resize-y"
                   />
@@ -580,12 +632,15 @@ export default function MatchPage() {
                 disabled={isProcessing}
                 className="btn-primary !py-3 !px-8 text-sm sm:text-base font-display tracking-wider uppercase shadow-lg shadow-stamp/20 hover:scale-[1.01] active:scale-[0.99] transition-transform"
               >
-                🎯 {isHinglish ? 'ATS Reality Check Run Karo →' : 'Run ATS Reality Check →'}
+                🎯{" "}
+                {isHinglish
+                  ? "ATS Reality Check Run Karo →"
+                  : "Run ATS Reality Check →"}
               </button>
               <p className="font-mono text-[11px] text-tan-dim mt-2">
                 {isHinglish
-                  ? 'Free tier includes match score, brutal verdict, and top keywords gap breakdown'
-                  : 'Free tier includes match score, brutal verdict, and top keywords gap breakdown'}
+                  ? "Free tier includes match score, brutal verdict, and top keywords gap breakdown"
+                  : "Free tier includes match score, brutal verdict, and top keywords gap breakdown"}
               </p>
             </div>
           </form>
@@ -608,7 +663,8 @@ export default function MatchPage() {
               />
             </div>
             <p className="font-mono text-xs text-tan-dim">
-              Comparing your experience against target role requirements & ATS filters…
+              Comparing your experience against target role requirements & ATS
+              filters…
             </p>
           </div>
         )}
@@ -634,11 +690,11 @@ export default function MatchPage() {
                 {/* ATS Score Stamp */}
                 <div
                   className={`border-3 p-4 rounded-sm text-center min-w-[170px] uppercase font-display select-none transform rotate-[-2deg] ${
-                    matchResult.ats_status === 'rejected'
-                      ? 'border-stamp text-stamp bg-stamp/10 shadow-lg shadow-stamp/20'
-                      : matchResult.ats_status === 'shortlisted'
-                      ? 'border-emerald-500 text-emerald-400 bg-emerald-950/30 shadow-lg shadow-emerald-500/20'
-                      : 'border-ember text-ember bg-ember/10 shadow-lg shadow-ember/20'
+                    matchResult.ats_status === "rejected"
+                      ? "border-stamp text-stamp bg-stamp/10 shadow-lg shadow-stamp/20"
+                      : matchResult.ats_status === "shortlisted"
+                        ? "border-emerald-500 text-emerald-400 bg-emerald-950/30 shadow-lg shadow-emerald-500/20"
+                        : "border-ember text-ember bg-ember/10 shadow-lg shadow-ember/20"
                   }`}
                 >
                   <p className="text-3xl sm:text-4xl tracking-tight leading-none">
@@ -653,11 +709,11 @@ export default function MatchPage() {
               {/* Brutal Recruiter Verdict */}
               <div className="mt-6 bg-black/40 border border-white/[0.08] rounded-sm p-4 sm:p-5 flex items-start gap-4">
                 <span className="text-2xl sm:text-3xl shrink-0">
-                  {matchResult.ats_status === 'rejected'
-                    ? '💀'
-                    : matchResult.ats_status === 'shortlisted'
-                    ? '🚀'
-                    : '🧐'}
+                  {matchResult.ats_status === "rejected"
+                    ? "💀"
+                    : matchResult.ats_status === "shortlisted"
+                      ? "🚀"
+                      : "🧐"}
                 </span>
                 <div>
                   <p className="font-mono text-xs text-tan-dim uppercase tracking-wider mb-1">
@@ -683,7 +739,8 @@ export default function MatchPage() {
                   </span>
                 </div>
                 <p className="font-mono text-xs text-tan-dim mb-4">
-                  These verified skills and technologies were detected in both your resume and the JD.
+                  These verified skills and technologies were detected in both
+                  your resume and the JD.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {matchResult.matched_skills.map((skill, i) => (
@@ -708,7 +765,8 @@ export default function MatchPage() {
                   </span>
                 </div>
                 <p className="font-mono text-xs text-tan-dim mb-4">
-                  Demanded in the JD but absent from your resume. Click tags to see why ATS auto-rejects:
+                  Demanded in the JD but absent from your resume. Click tags to
+                  see why ATS auto-rejects:
                 </p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {matchResult.missing_keywords.map((kw, i) => (
@@ -716,17 +774,23 @@ export default function MatchPage() {
                       key={i}
                       type="button"
                       onClick={() =>
-                        setActiveKeywordPopover(activeKeywordPopover === kw.keyword ? null : kw.keyword)
+                        setActiveKeywordPopover(
+                          activeKeywordPopover === kw.keyword
+                            ? null
+                            : kw.keyword,
+                        )
                       }
                       className={`font-mono text-xs px-2.5 py-1 rounded-sm border transition-all text-left flex items-center gap-1.5 ${
                         activeKeywordPopover === kw.keyword
-                          ? 'bg-stamp text-paper border-stamp font-bold scale-105'
-                          : 'bg-stamp/10 text-stamp border-stamp/40 hover:border-stamp'
+                          ? "bg-stamp text-paper border-stamp font-bold scale-105"
+                          : "bg-stamp/10 text-stamp border-stamp/40 hover:border-stamp"
                       }`}
                     >
                       <span>⚠</span>
                       <span>{kw.keyword}</span>
-                      <span className="text-[10px] opacity-70 uppercase">({kw.importance})</span>
+                      <span className="text-[10px] opacity-70 uppercase">
+                        ({kw.importance})
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -736,13 +800,15 @@ export default function MatchPage() {
                   <div className="bg-black/60 border border-stamp/50 rounded-sm p-3.5 mt-2 animate-fadeIn text-left">
                     {(() => {
                       const item = matchResult.missing_keywords.find(
-                        (k) => k.keyword === activeKeywordPopover
-                      )
-                      if (!item) return null
+                        (k) => k.keyword === activeKeywordPopover,
+                      );
+                      if (!item) return null;
                       return (
                         <>
                           <div className="flex items-center justify-between text-xs font-mono mb-1">
-                            <span className="font-bold text-stamp">{item.keyword}</span>
+                            <span className="font-bold text-stamp">
+                              {item.keyword}
+                            </span>
                             <span className="text-tan-dim uppercase text-[10px]">
                               Priority: {item.importance}
                             </span>
@@ -751,7 +817,7 @@ export default function MatchPage() {
                             {item.roast}
                           </p>
                         </>
-                      )
+                      );
                     })()}
                   </div>
                 )}
@@ -759,42 +825,52 @@ export default function MatchPage() {
             </div>
 
             {/* Irrelevant Fluff / Clutter Section (if any) */}
-            {matchResult.irrelevant_clutter && matchResult.irrelevant_clutter.length > 0 && (
-              <div className="border border-ember/30 bg-ember/5 rounded-sm p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-display text-sm sm:text-base text-ember flex items-center gap-2">
-                    <span>⚠️ Irrelevant Resume Clutter</span>
-                  </h3>
-                  <span className="font-mono text-xs text-ember/80">
-                    Wasting 1-page real estate
-                  </span>
+            {matchResult.irrelevant_clutter &&
+              matchResult.irrelevant_clutter.length > 0 && (
+                <div className="border border-ember/30 bg-ember/5 rounded-sm p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-display text-sm sm:text-base text-ember flex items-center gap-2">
+                      <span>⚠️ Irrelevant Resume Clutter</span>
+                    </h3>
+                    <span className="font-mono text-xs text-ember/80">
+                      Wasting 1-page real estate
+                    </span>
+                  </div>
+                  <p className="font-mono text-xs text-tan-dim mb-4">
+                    These lines or sections have zero bearing on this specific
+                    role and dilute your core engineering impact:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {matchResult.irrelevant_clutter.map((clutter, i) => (
+                      <div
+                        key={i}
+                        className="bg-black/40 border border-ember/20 rounded-sm p-3"
+                      >
+                        <p className="font-mono text-xs text-paper font-semibold mb-1">
+                          "{clutter.quoted_text}"
+                        </p>
+                        <p className="font-mono text-xs text-tan-dim">
+                          {clutter.roast}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <p className="font-mono text-xs text-tan-dim mb-4">
-                  These lines or sections have zero bearing on this specific role and dilute your core engineering impact:
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {matchResult.irrelevant_clutter.map((clutter, i) => (
-                    <div key={i} className="bg-black/40 border border-ember/20 rounded-sm p-3">
-                      <p className="font-mono text-xs text-paper font-semibold mb-1">
-                        "{clutter.quoted_text}"
-                      </p>
-                      <p className="font-mono text-xs text-tan-dim">{clutter.roast}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
 
             {/* Tailored Red-Pen Rewrites (The Pro Upsell Hook) */}
             <div className="border border-white/[0.08] bg-[#1a1712] rounded-sm p-6 sm:p-8">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
                 <div>
-                  <span className="section-label mb-1">ROLE-SPECIFIC RED-PEN REWRITES</span>
+                  <span className="section-label mb-1">
+                    ROLE-SPECIFIC RED-PEN REWRITES
+                  </span>
                   <h3 className="font-display text-xl sm:text-2xl text-paper">
                     Tailored Bullet Point Transformations
                   </h3>
                   <p className="font-mono text-xs text-tan-dim mt-1">
-                    Adapted directly to target this JD's language, technologies, and measurable scale.
+                    Adapted directly to target this JD's language, technologies,
+                    and measurable scale.
                   </p>
                 </div>
                 {matchResult.tailored_bullet_rewrites.length > 0 && (
@@ -803,7 +879,9 @@ export default function MatchPage() {
                     onClick={handleCopyFullReport}
                     className="btn-ghost !text-xs !py-1.5 !px-3 font-mono text-paper"
                   >
-                    {copiedFullReport ? '✓ Report Copied!' : '📋 Copy All Report'}
+                    {copiedFullReport
+                      ? "✓ Report Copied!"
+                      : "📋 Copy All Report"}
                   </button>
                 )}
               </div>
@@ -824,7 +902,9 @@ export default function MatchPage() {
                         onClick={() => handleCopyRewrite(rw.tailored_fix, i)}
                         className="font-mono text-xs text-tan-dim hover:text-emerald-400 transition-colors flex items-center gap-1"
                       >
-                        {copiedRewriteIndex === i ? '✓ Copied to clipboard' : 'Copy Rewrite ⎘'}
+                        {copiedRewriteIndex === i
+                          ? "✓ Copied to clipboard"
+                          : "Copy Rewrite ⎘"}
                       </button>
                     </div>
 
@@ -860,7 +940,8 @@ export default function MatchPage() {
                       3 Additional Tailored Rewrites & Full Keyword Gap Matrix
                     </h4>
                     <p className="font-mono text-xs text-tan-dim max-w-md mx-auto">
-                      Unlock all role-specific metrics, quantified impact bullets, and full ATS pass guarantee.
+                      Unlock all role-specific metrics, quantified impact
+                      bullets, and full ATS pass guarantee.
                     </p>
                     <div className="pt-2">
                       <button
@@ -881,9 +962,9 @@ export default function MatchPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setMatchResult(null)
-                  setJobDescription('')
-                  setSelectedSampleId(null)
+                  setMatchResult(null);
+                  setJobDescription("");
+                  setSelectedSampleId(null);
                 }}
                 className="btn-ghost !text-xs font-mono"
               >
@@ -914,5 +995,5 @@ export default function MatchPage() {
         subheadline="All tailored bullet rewrites, deep ATS keyword matrix, and unlimited JD matches unlock the moment Pro goes live. Join the waitlist for launch priority and early-bird pricing."
       />
     </main>
-  )
+  );
 }

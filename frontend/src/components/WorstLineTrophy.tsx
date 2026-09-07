@@ -1,27 +1,30 @@
-import { useState } from 'react'
-import type { Issue } from '@/store/useAppStore'
-import { getHinglishTag } from '@/utils/categoryTags'
+import { useState } from "react";
+import type { Issue } from "@/store/useAppStore";
+import { getHinglishTag } from "@/utils/categoryTags";
 
 interface WorstLineTrophyProps {
-  issue: Issue
-  candidateName?: string
+  issue: Issue;
+  candidateName?: string;
 }
 
-export default function WorstLineTrophy({ issue, candidateName }: WorstLineTrophyProps) {
-  const [copied, setCopied] = useState(false)
+export default function WorstLineTrophy({
+  issue,
+  candidateName,
+}: WorstLineTrophyProps) {
+  const [copied, setCopied] = useState(false);
 
-  const tagLabel = issue.badge_label?.trim() || getHinglishTag(issue.category)
+  const tagLabel = issue.badge_label?.trim() || getHinglishTag(issue.category);
 
-  const shareText = `🏆 BUZZWORD CHAMPION TROPHY 🏆\n\nMere resume ki sabse bekaar line pakdi gayi 😂:\n"${issue.quoted_text}"\n\nRed Pen Verdict: "${issue.roast}"\n\nApna resume test karwao: https://resumeroast.app`
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`
+  const shareText = `🏆 BUZZWORD CHAMPION TROPHY 🏆\n\nMere resume ki sabse bekaar line pakdi gayi 😂:\n"${issue.quoted_text}"\n\nRed Pen Verdict: "${issue.roast}"\n\nApna resume test karwao: https://resumeroast.app`;
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
   const handleCopyStatus = async () => {
     if (navigator.clipboard) {
-      await navigator.clipboard.writeText(shareText)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 3000)
+      await navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
     }
-  }
+  };
 
   return (
     <div className="w-full max-w-[640px] mx-auto bg-gradient-to-br from-[#24130F] to-[#17140F] border-2 border-dashed border-stamp/60 rounded-sm p-6 text-left relative overflow-hidden shadow-2xl">
@@ -77,10 +80,10 @@ export default function WorstLineTrophy({ issue, candidateName }: WorstLineTroph
             onClick={handleCopyStatus}
             className="btn-ghost !py-1.5 !px-3 !text-xs"
           >
-            {copied ? '✓ Copied!' : 'Copy Text'}
+            {copied ? "✓ Copied!" : "Copy Text"}
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 }

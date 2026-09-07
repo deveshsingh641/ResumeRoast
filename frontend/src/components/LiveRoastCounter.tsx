@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 
 export default function LiveRoastCounter() {
-  const [count, setCount] = useState(12847)
+  const [count, setCount] = useState(12847);
 
   useEffect(() => {
     // Subtle live increment every 12-25 seconds to feel active and authentic
     const interval = setInterval(() => {
-      setCount((prev) => prev + Math.floor(Math.random() * 2) + 1)
-    }, 14000)
-    return () => clearInterval(interval)
-  }, [])
+      setCount((prev) => prev + Math.floor(Math.random() * 2) + 1);
+    }, 14000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="inline-flex max-w-full items-center gap-2 bg-[#1A1612] border border-amber-500/20 rounded-full px-3 py-1 text-[11px] sm:text-xs select-none shadow-sm mb-4 sm:mb-6">
@@ -20,9 +20,10 @@ export default function LiveRoastCounter() {
       <span className="font-mono text-tan-dim tracking-wide truncate">
         <strong className="text-amber-400 font-bold">
           {count.toLocaleString()}
-        </strong>{' '}
-        resumes ab tak <span className="text-paper font-semibold">bhun chuke hain</span> 🔥
+        </strong>{" "}
+        resumes ab tak{" "}
+        <span className="text-paper font-semibold">bhun chuke hain</span> 🔥
       </span>
     </div>
-  )
+  );
 }

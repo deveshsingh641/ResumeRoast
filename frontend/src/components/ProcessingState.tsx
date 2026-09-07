@@ -1,50 +1,55 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 
 const STAGES = [
-  { label: 'Reading document text…', duration: 2500 },
-  { label: 'Highlighting buzzwords & fluff…', duration: 3000 },
-  { label: 'Calculating scoring band…', duration: 3500 },
-  { label: 'Drafting brutally honest feedback…', duration: 4000 },
-  { label: 'Applying the verdict stamp…', duration: 5000 },
-  { label: 'Finalizing review on the desk…', duration: 8000 },
-  { label: 'Almost done — grading in final stage…', duration: 15000 },
-]
+  { label: "Reading document text…", duration: 2500 },
+  { label: "Highlighting buzzwords & fluff…", duration: 3000 },
+  { label: "Calculating scoring band…", duration: 3500 },
+  { label: "Drafting brutally honest feedback…", duration: 4000 },
+  { label: "Applying the verdict stamp…", duration: 5000 },
+  { label: "Finalizing review on the desk…", duration: 8000 },
+  { label: "Almost done — grading in final stage…", duration: 15000 },
+];
 
 export default function ProcessingState() {
-  const [currentStageIdx, setCurrentStageIdx] = useState(0)
-  const [progressPercent, setProgressPercent] = useState(12)
+  const [currentStageIdx, setCurrentStageIdx] = useState(0);
+  const [progressPercent, setProgressPercent] = useState(12);
 
-  const [isTakingLonger, setIsTakingLonger] = useState(false)
+  const [isTakingLonger, setIsTakingLonger] = useState(false);
 
   useEffect(() => {
     // Stage cycle
     const stageTimer = setInterval(() => {
-      setCurrentStageIdx((prev) => (prev < STAGES.length - 1 ? prev + 1 : prev))
-    }, 3200)
+      setCurrentStageIdx((prev) =>
+        prev < STAGES.length - 1 ? prev + 1 : prev,
+      );
+    }, 3200);
 
     // Progress bar estimation over ~15 seconds, smoothly slows down near 95% if on slow network
-    const start = Date.now()
-    const targetDuration = 16000
+    const start = Date.now();
+    const targetDuration = 16000;
 
     const progressTimer = setInterval(() => {
-      const elapsed = Date.now() - start
+      const elapsed = Date.now() - start;
       if (elapsed > 14000) {
-        setIsTakingLonger(true)
+        setIsTakingLonger(true);
       }
       if (elapsed < targetDuration) {
-        const pct = Math.min(90, Math.round((elapsed / targetDuration) * 90) + 10)
-        setProgressPercent(pct)
+        const pct = Math.min(
+          90,
+          Math.round((elapsed / targetDuration) * 90) + 10,
+        );
+        setProgressPercent(pct);
       } else {
         // Slow crawl while waiting for backend
-        setProgressPercent((prev) => (prev < 96 ? prev + 1 : 96))
+        setProgressPercent((prev) => (prev < 96 ? prev + 1 : 96));
       }
-    }, 250)
+    }, 250);
 
     return () => {
-      clearInterval(stageTimer)
-      clearInterval(progressTimer)
-    }
-  }, [])
+      clearInterval(stageTimer);
+      clearInterval(progressTimer);
+    };
+  }, []);
 
   return (
     <div
@@ -55,7 +60,7 @@ export default function ProcessingState() {
       {/* Single-line status in IBM Plex Mono */}
       <div className="flex items-center justify-between text-xs font-mono">
         <span className="text-paper tracking-wide">
-          {STAGES[currentStageIdx]?.label || 'Grading resume…'}
+          {STAGES[currentStageIdx]?.label || "Grading resume…"}
         </span>
         <span className="text-tan-dim font-medium">{progressPercent}%</span>
       </div>
@@ -76,11 +81,12 @@ export default function ProcessingState() {
           <div className="pt-2 border-t border-white/[0.06] flex items-center gap-2 font-mono text-[11px] text-amber-300 animate-fadeIn">
             <span>⏳</span>
             <span>
-              Deep analysis taking a moment longer to verify every single metric & bullet point... almost done, please keep this tab open.
+              Deep analysis taking a moment longer to verify every single metric
+              & bullet point... almost done, please keep this tab open.
             </span>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

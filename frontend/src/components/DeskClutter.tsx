@@ -1,34 +1,34 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 
 interface DeskClutterProps {
-  stickyText?: string
-  stickyRotation?: number
+  stickyText?: string;
+  stickyRotation?: number;
 }
 
 export default function DeskClutter({
-  stickyText = 'friday se pehle fix kar le yaar!! 😭',
+  stickyText = "friday se pehle fix kar le yaar!! 😭",
   stickyRotation = 4,
 }: DeskClutterProps) {
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
-  const [isTouch, setIsTouch] = useState(false)
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isTouch, setIsTouch] = useState(false);
 
   useEffect(() => {
     // Detect touch devices
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-      setIsTouch(true)
-      return
+    if ("ontouchstart" in window || navigator.maxTouchPoints > 0) {
+      setIsTouch(true);
+      return;
     }
 
     const handleMouseMove = (e: MouseEvent) => {
-      const { innerWidth, innerHeight } = window
-      const x = (e.clientX / innerWidth - 0.5) * 12 // max 6px each way
-      const y = (e.clientY / innerHeight - 0.5) * 12
-      setOffset({ x, y })
-    }
+      const { innerWidth, innerHeight } = window;
+      const x = (e.clientX / innerWidth - 0.5) * 12; // max 6px each way
+      const y = (e.clientY / innerHeight - 0.5) * 12;
+      setOffset({ x, y });
+    };
 
-    window.addEventListener('mousemove', handleMouseMove, { passive: true })
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   return (
     <div
@@ -39,7 +39,9 @@ export default function DeskClutter({
       <div
         className="absolute top-12 -left-16 sm:-left-8 opacity-25 transition-transform duration-300 ease-out hidden md:block"
         style={{
-          transform: isTouch ? 'none' : `translate3d(${offset.x * 0.4}px, ${offset.y * 0.4}px, 0)`,
+          transform: isTouch
+            ? "none"
+            : `translate3d(${offset.x * 0.4}px, ${offset.y * 0.4}px, 0)`,
         }}
       >
         <svg width="220" height="220" viewBox="0 0 200 200" fill="none">
@@ -80,7 +82,7 @@ export default function DeskClutter({
         className="absolute bottom-16 -left-8 sm:left-4 opacity-30 transition-transform duration-500 ease-out hidden md:block"
         style={{
           transform: isTouch
-            ? 'rotate(-14deg)'
+            ? "rotate(-14deg)"
             : `translate3d(${offset.x * 0.8}px, ${offset.y * 0.8}px, 0) rotate(-14deg)`,
         }}
       >
@@ -121,5 +123,5 @@ export default function DeskClutter({
         </div>
       </div>
     </div>
-  )
+  );
 }

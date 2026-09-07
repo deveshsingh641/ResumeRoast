@@ -1,108 +1,145 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { normalizeLang } from '@/i18n/detector'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
-import axios from 'axios'
-import ScoreStamp from '@/components/ScoreStamp'
-import PaperMockup from '@/components/PaperMockup'
-import { IssueList } from '@/components/IssueCard'
-import BattleShareCard from '@/components/BattleShareCard'
-import DeskClutter from '@/components/DeskClutter'
-import Footer from '@/components/Footer'
-import { usePageTitle } from '@/utils/usePageTitle'
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import axios from "axios";
+import ScoreStamp from "@/components/ScoreStamp";
+import PaperMockup from "@/components/PaperMockup";
+import { IssueList } from "@/components/IssueCard";
+import BattleShareCard from "@/components/BattleShareCard";
+import DeskClutter from "@/components/DeskClutter";
+import Footer from "@/components/Footer";
+import { usePageTitle } from "@/utils/usePageTitle";
 
 export default function BattlePage() {
-  usePageTitle('1-on-1 Resume Battle Arena')
-  const { id } = useParams<{ id: string }>()
-  const { i18n } = useTranslation()
-  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
+  usePageTitle("1-on-1 Resume Battle Arena");
+  const { id } = useParams<{ id: string }>();
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
 
-  const [file1, setFile1] = useState<File | null>(null)
-  const [file2, setFile2] = useState<File | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [battleData, setBattleData] = useState<any | null>(null)
+  const [file1, setFile1] = useState<File | null>(null);
+  const [file2, setFile2] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [battleData, setBattleData] = useState<any | null>(null);
 
   // Fetch existing battle if id provided
   useEffect(() => {
-    if (!id) return
+    if (!id) return;
     const fetchBattle = async () => {
       try {
-        setLoading(true)
-        setError(null)
-        const { data } = await axios.get(`/api/battle/${id}`)
-        setBattleData(data)
+        setLoading(true);
+        setError(null);
+        const { data } = await axios.get(`/api/battle/${id}`);
+        setBattleData(data);
       } catch (err: any) {
-        setError(isHinglish ? 'Yeh battle nahi mili ya expire ho chuki hai.' : 'This battle could not be found or has expired.')
+        setError(
+          isHinglish
+            ? "Yeh battle nahi mili ya expire ho chuki hai."
+            : "This battle could not be found or has expired.",
+        );
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchBattle()
-  }, [id, isHinglish])
+    };
+    fetchBattle();
+  }, [id, isHinglish]);
 
   const handleStartBattle = async () => {
     if (!file1 || !file2) {
-      setError(isHinglish ? 'Dangal shuru karne se pehle dono resumes select karo.' : 'Please select both resumes before starting the battle.')
-      return
+      setError(
+        isHinglish
+          ? "Dangal shuru karne se pehle dono resumes select karo."
+          : "Please select both resumes before starting the battle.",
+      );
+      return;
     }
 
     if (file1.size === 0 || file2.size === 0) {
-      setError(isHinglish ? 'Ek file khali (0 bytes) hai. Kripya valid resume upload karein.' : 'One of your files is empty (0 bytes). Please upload complete resume documents.')
-      return
+      setError(
+        isHinglish
+          ? "Ek file khali (0 bytes) hai. Kripya valid resume upload karein."
+          : "One of your files is empty (0 bytes). Please upload complete resume documents.",
+      );
+      return;
     }
 
     if (file1.size > 5 * 1024 * 1024 || file2.size > 5 * 1024 * 1024) {
-      setError(isHinglish ? 'Har resume file ka maximum size 5MB tak hi allowed hai.' : 'Maximum supported size is 5MB per resume file.')
-      return
+      setError(
+        isHinglish
+          ? "Har resume file ka maximum size 5MB tak hi allowed hai."
+          : "Maximum supported size is 5MB per resume file.",
+      );
+      return;
     }
 
     try {
-      setLoading(true)
-      setError(null)
-      const formData = new FormData()
-      formData.append('fighter1', file1)
-      formData.append('fighter2', file2)
+      setLoading(true);
+      setError(null);
+      const formData = new FormData();
+      formData.append("fighter1", file1);
+      formData.append("fighter2", file2);
 
-      const { data } = await axios.post('/api/battle', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      setBattleData(data)
-      window.history.pushState({}, '', `/battle/${data.id}`)
+      const { data } = await axios.post("/api/battle", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setBattleData(data);
+      window.history.pushState({}, "", `/battle/${data.id}`);
     } catch (err: any) {
-      const detail = err?.response?.data?.detail
-      let msg = isHinglish ? 'Battle shuru karne mein dikkat aayi. Files check karein.' : 'Failed to start battle. Please check your files.'
-      if (typeof detail === 'object' && detail?.message) {
-        msg = detail.message
-      } else if (typeof detail === 'string') {
-        msg = detail
+      const detail = err?.response?.data?.detail;
+      let msg = isHinglish
+        ? "Battle shuru karne mein dikkat aayi. Files check karein."
+        : "Failed to start battle. Please check your files.";
+      if (typeof detail === "object" && detail?.message) {
+        msg = detail.message;
+      } else if (typeof detail === "string") {
+        msg = detail;
       } else if (err?.message) {
-        msg = err.message
+        msg = err.message;
       }
-      setError(msg)
+      setError(msg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <main className="min-h-screen pb-24 desk-cursor relative overflow-hidden">
       {/* Tactile Desk Clutter */}
-      <DeskClutter stickyText={isHinglish ? 'jo jeetega referral uska 🥊' : 'winner gets the referral 🥊'} stickyRotation={3} />
+      <DeskClutter
+        stickyText={
+          isHinglish
+            ? "jo jeetega referral uska 🥊"
+            : "winner gets the referral 🥊"
+        }
+        stickyRotation={3}
+      />
 
       {/* Header */}
       <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6 mb-6 sm:mb-8 relative z-10">
         <div className="max-w-[1100px] mx-auto flex items-center justify-between gap-2">
-          <Link to="/" className="font-display text-base sm:text-lg tracking-tight text-paper select-none shrink-0">
-            RESUME<span className="text-stamp">ROAST</span> <span className="text-ember font-mono text-[10px] sm:text-xs ml-0.5 sm:ml-1">// BATTLE</span>
+          <Link
+            to="/"
+            className="font-display text-base sm:text-lg tracking-tight text-paper select-none shrink-0"
+          >
+            RESUME<span className="text-stamp">ROAST</span>{" "}
+            <span className="text-ember font-mono text-[10px] sm:text-xs ml-0.5 sm:ml-1">
+              // BATTLE
+            </span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-4">
-            <Link to="/wall" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+            <Link
+              to="/wall"
+              className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap"
+            >
               <span className="hidden sm:inline">Wall of Fame/Shame →</span>
               <span className="sm:hidden">Wall →</span>
             </Link>
-            <Link to="/roast" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+            <Link
+              to="/roast"
+              className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap"
+            >
               <span className="hidden sm:inline">Single Roast →</span>
               <span className="sm:hidden">Roast →</span>
             </Link>
@@ -115,15 +152,15 @@ export default function BattlePage() {
         {/* Title */}
         <div>
           <p className="section-label mb-2">
-            {isHinglish ? '1-ON-1 RESUME KA DANGAL' : '1-ON-1 RESUME FACE-OFF'}
+            {isHinglish ? "1-ON-1 RESUME KA DANGAL" : "1-ON-1 RESUME FACE-OFF"}
           </p>
           <h1 className="font-display text-2xl sm:text-4xl text-paper tracking-tight">
             Resume <span className="text-stamp">Roast Battle</span>
           </h1>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-[600px] mx-auto">
             {isHinglish
-              ? 'Do resume desk pe daal. AI referee karega dangal aur batayega kiska kachra kam hai.'
-              : 'Drop two resumes on the desk. The AI referee crowns the winner and roasts both.'}
+              ? "Do resume desk pe daal. AI referee karega dangal aur batayega kiska kachra kam hai."
+              : "Drop two resumes on the desk. The AI referee crowns the winner and roasts both."}
           </p>
         </div>
 
@@ -135,9 +172,16 @@ export default function BattlePage() {
               <div className="border border-dashed border-white/20 hover:border-amber-400/50 rounded-lg p-6 bg-white/[0.02] text-left transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-mono text-xs text-amber-400 font-bold uppercase tracking-wider">
-                    🥊 {isHinglish ? 'FIGHTER 1 (TERA RESUME)' : 'FIGHTER 1 (YOUR RESUME)'}
+                    🥊{" "}
+                    {isHinglish
+                      ? "FIGHTER 1 (TERA RESUME)"
+                      : "FIGHTER 1 (YOUR RESUME)"}
                   </span>
-                  {file1 && <span className="font-mono text-xs text-emerald-400">✓ Ready</span>}
+                  {file1 && (
+                    <span className="font-mono text-xs text-emerald-400">
+                      ✓ Ready
+                    </span>
+                  )}
                 </div>
                 <input
                   type="file"
@@ -145,7 +189,7 @@ export default function BattlePage() {
                   accept=".pdf,.docx"
                   className="hidden"
                   onChange={(e) => {
-                    if (e.target.files?.[0]) setFile1(e.target.files[0])
+                    if (e.target.files?.[0]) setFile1(e.target.files[0]);
                   }}
                 />
                 <label
@@ -154,10 +198,16 @@ export default function BattlePage() {
                 >
                   <p className="text-2xl mb-2">📄</p>
                   <p className="font-mono text-xs text-paper font-bold truncate">
-                    {file1 ? file1.name : (isHinglish ? 'Pehla Resume Chuno (PDF/DOCX)' : 'Choose First Resume (PDF/DOCX)')}
+                    {file1
+                      ? file1.name
+                      : isHinglish
+                        ? "Pehla Resume Chuno (PDF/DOCX)"
+                        : "Choose First Resume (PDF/DOCX)"}
                   </p>
                   <p className="font-mono text-[10px] text-tan-dim mt-1">
-                    {isHinglish ? 'File choose karne ke liye click karo' : 'Click to select file'}
+                    {isHinglish
+                      ? "File choose karne ke liye click karo"
+                      : "Click to select file"}
                   </p>
                 </label>
               </div>
@@ -166,9 +216,16 @@ export default function BattlePage() {
               <div className="border border-dashed border-white/20 hover:border-ember/50 rounded-lg p-6 bg-white/[0.02] text-left transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-mono text-xs text-ember font-bold uppercase tracking-wider">
-                    🥊 {isHinglish ? 'FIGHTER 2 (DOST YA RIVAL KA RESUME)' : 'FIGHTER 2 (RIVAL RESUME)'}
+                    🥊{" "}
+                    {isHinglish
+                      ? "FIGHTER 2 (DOST YA RIVAL KA RESUME)"
+                      : "FIGHTER 2 (RIVAL RESUME)"}
                   </span>
-                  {file2 && <span className="font-mono text-xs text-emerald-400">✓ Ready</span>}
+                  {file2 && (
+                    <span className="font-mono text-xs text-emerald-400">
+                      ✓ Ready
+                    </span>
+                  )}
                 </div>
                 <input
                   type="file"
@@ -176,7 +233,7 @@ export default function BattlePage() {
                   accept=".pdf,.docx"
                   className="hidden"
                   onChange={(e) => {
-                    if (e.target.files?.[0]) setFile2(e.target.files[0])
+                    if (e.target.files?.[0]) setFile2(e.target.files[0]);
                   }}
                 />
                 <label
@@ -185,10 +242,16 @@ export default function BattlePage() {
                 >
                   <p className="text-2xl mb-2">📄</p>
                   <p className="font-mono text-xs text-paper font-bold truncate">
-                    {file2 ? file2.name : (isHinglish ? 'Doosra Resume Chuno (PDF/DOCX)' : 'Choose Second Resume (PDF/DOCX)')}
+                    {file2
+                      ? file2.name
+                      : isHinglish
+                        ? "Doosra Resume Chuno (PDF/DOCX)"
+                        : "Choose Second Resume (PDF/DOCX)"}
                   </p>
                   <p className="font-mono text-[10px] text-tan-dim mt-1">
-                    {isHinglish ? 'File choose karne ke liye click karo' : 'Click to select file'}
+                    {isHinglish
+                      ? "File choose karne ke liye click karo"
+                      : "Click to select file"}
                   </p>
                 </label>
               </div>
@@ -207,8 +270,12 @@ export default function BattlePage() {
               className="btn-primary w-full sm:w-auto sm:px-12 py-3 text-sm justify-center shadow-lg"
             >
               {loading
-                ? (isHinglish ? 'Dono fighters ko inspect kar rahe hain… 🥊' : 'Inspecting both fighters… 🥊')
-                : (isHinglish ? '⚔️ DANGAL SHURU KARO' : '⚔️ START BATTLE')}
+                ? isHinglish
+                  ? "Dono fighters ko inspect kar rahe hain… 🥊"
+                  : "Inspecting both fighters… 🥊"
+                : isHinglish
+                  ? "⚔️ DANGAL SHURU KARO"
+                  : "⚔️ START BATTLE"}
             </button>
           </div>
         )}
@@ -220,7 +287,8 @@ export default function BattlePage() {
             <div className="bg-gradient-to-r from-bg via-[#211614] to-bg border border-stamp/40 rounded-lg p-6 sm:p-8 max-w-[860px] mx-auto shadow-2xl">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <span className="font-mono text-xs text-amber-400 uppercase tracking-widest">
-                  REFEREE VERDICT // {battleData.margin} {battleData.winner.toUpperCase()}
+                  REFEREE VERDICT // {battleData.margin}{" "}
+                  {battleData.winner.toUpperCase()}
                 </span>
               </div>
               <h2 className="font-display text-2xl sm:text-4xl text-paper mb-4 leading-snug">
@@ -230,12 +298,20 @@ export default function BattlePage() {
               {/* Best callouts */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left pt-4 border-t border-white/[0.08]">
                 <div className="bg-black/30 p-3 rounded border border-white/5">
-                  <p className="font-mono text-[10px] text-amber-400 uppercase font-bold">Fighter 1 Note:</p>
-                  <p className="font-mono text-xs text-tan-light mt-1">"{battleData.fighter_1_best_line}"</p>
+                  <p className="font-mono text-[10px] text-amber-400 uppercase font-bold">
+                    Fighter 1 Note:
+                  </p>
+                  <p className="font-mono text-xs text-tan-light mt-1">
+                    "{battleData.fighter_1_best_line}"
+                  </p>
                 </div>
                 <div className="bg-black/30 p-3 rounded border border-white/5">
-                  <p className="font-mono text-[10px] text-ember uppercase font-bold">Fighter 2 Note:</p>
-                  <p className="font-mono text-xs text-tan-light mt-1">"{battleData.fighter_2_best_line}"</p>
+                  <p className="font-mono text-[10px] text-ember uppercase font-bold">
+                    Fighter 2 Note:
+                  </p>
+                  <p className="font-mono text-xs text-tan-light mt-1">
+                    "{battleData.fighter_2_best_line}"
+                  </p>
                 </div>
               </div>
             </div>
@@ -245,15 +321,16 @@ export default function BattlePage() {
               {/* Fighter 1 Card */}
               <div
                 className={`relative border rounded-lg p-6 bg-bg transition-all ${
-                  battleData.winner === 'fighter_1'
-                    ? 'border-amber-400/60 shadow-[0_0_30px_rgba(255,185,60,0.15)]'
-                    : 'border-white/[0.08]'
+                  battleData.winner === "fighter_1"
+                    ? "border-amber-400/60 shadow-[0_0_30px_rgba(255,185,60,0.15)]"
+                    : "border-white/[0.08]"
                 }`}
               >
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <span className="font-mono text-xs text-amber-400 font-bold uppercase">
-                      Fighter 1 {battleData.winner === 'fighter_1' && '👑 WINNER'}
+                      Fighter 1{" "}
+                      {battleData.winner === "fighter_1" && "👑 WINNER"}
                     </span>
                     <h3 className="font-display text-lg text-paper truncate max-w-[220px]">
                       {battleData.fighter_1.name}
@@ -268,7 +345,9 @@ export default function BattlePage() {
                 </div>
 
                 <div className="mb-4">
-                  <p className="font-mono text-xs text-tan italic">"{battleData.fighter_1.one_line_verdict}"</p>
+                  <p className="font-mono text-xs text-tan italic">
+                    "{battleData.fighter_1.one_line_verdict}"
+                  </p>
                 </div>
 
                 <IssueList
@@ -281,15 +360,16 @@ export default function BattlePage() {
               {/* Fighter 2 Card */}
               <div
                 className={`relative border rounded-lg p-6 bg-bg transition-all ${
-                  battleData.winner === 'fighter_2'
-                    ? 'border-ember/60 shadow-[0_0_30px_rgba(232,66,45,0.15)]'
-                    : 'border-white/[0.08]'
+                  battleData.winner === "fighter_2"
+                    ? "border-ember/60 shadow-[0_0_30px_rgba(232,66,45,0.15)]"
+                    : "border-white/[0.08]"
                 }`}
               >
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <span className="font-mono text-xs text-ember font-bold uppercase">
-                      Fighter 2 {battleData.winner === 'fighter_2' && '👑 WINNER'}
+                      Fighter 2{" "}
+                      {battleData.winner === "fighter_2" && "👑 WINNER"}
                     </span>
                     <h3 className="font-display text-lg text-paper truncate max-w-[220px]">
                       {battleData.fighter_2.name}
@@ -304,7 +384,9 @@ export default function BattlePage() {
                 </div>
 
                 <div className="mb-4">
-                  <p className="font-mono text-xs text-tan italic">"{battleData.fighter_2.one_line_verdict}"</p>
+                  <p className="font-mono text-xs text-tan italic">
+                    "{battleData.fighter_2.one_line_verdict}"
+                  </p>
                 </div>
 
                 <IssueList
@@ -318,7 +400,7 @@ export default function BattlePage() {
             {/* Battle Share Card Generator */}
             <div className="pt-6">
               <p className="section-label mb-2">
-                {isHinglish ? 'VS DAMAGE SHARE KARO' : 'SHARE THE VS DAMAGE'}
+                {isHinglish ? "VS DAMAGE SHARE KARO" : "SHARE THE VS DAMAGE"}
               </p>
               <BattleShareCard battle={battleData} />
             </div>
@@ -328,14 +410,16 @@ export default function BattlePage() {
               <button
                 type="button"
                 onClick={() => {
-                  setBattleData(null)
-                  setFile1(null)
-                  setFile2(null)
-                  window.history.pushState({}, '', '/battle')
+                  setBattleData(null);
+                  setFile1(null);
+                  setFile2(null);
+                  window.history.pushState({}, "", "/battle");
                 }}
                 className="btn-ghost"
               >
-                {isHinglish ? 'Naya dangal shuru karo 🥊' : 'Start another battle 🥊'}
+                {isHinglish
+                  ? "Naya dangal shuru karo 🥊"
+                  : "Start another battle 🥊"}
               </button>
             </div>
           </div>
@@ -346,5 +430,5 @@ export default function BattlePage() {
         <Footer />
       </div>
     </main>
-  )
+  );
 }

@@ -1,205 +1,235 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { normalizeLang } from '@/i18n/detector'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
-import axios from 'axios'
-import ScoreStamp from '@/components/ScoreStamp'
-import DeskClutter from '@/components/DeskClutter'
-import Footer from '@/components/Footer'
-import type { ScoreBand } from '@/store/useAppStore'
-import { usePageTitle } from '@/utils/usePageTitle'
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import axios from "axios";
+import ScoreStamp from "@/components/ScoreStamp";
+import DeskClutter from "@/components/DeskClutter";
+import Footer from "@/components/Footer";
+import type { ScoreBand } from "@/store/useAppStore";
+import { usePageTitle } from "@/utils/usePageTitle";
 
 interface WallEntry {
-  id: string
-  type: 'shame' | 'fame'
-  score: number
-  band: ScoreBand
-  one_line_verdict: string
-  top_roast_lines: string[]
-  created_at: string
+  id: string;
+  type: "shame" | "fame";
+  score: number;
+  band: ScoreBand;
+  one_line_verdict: string;
+  top_roast_lines: string[];
+  created_at: string;
 }
 
 export default function WallPage() {
-  usePageTitle('Wall of Flame & Fame')
-  const { i18n } = useTranslation()
-  const isHinglish = normalizeLang(i18n.language) === 'hi-IN'
+  usePageTitle("Wall of Flame & Fame");
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
 
-  const [activeTab, setActiveTab] = useState<'shame' | 'fame'>('shame')
-  const [sortBy, setSortBy] = useState<'recent' | 'score'>('recent')
-  const [entries, setEntries] = useState<WallEntry[]>([])
-  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<"shame" | "fame">("shame");
+  const [sortBy, setSortBy] = useState<"recent" | "score">("recent");
+  const [entries, setEntries] = useState<WallEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [flaggedIds, setFlaggedIds] = useState<Set<string>>(() => {
     try {
-      const saved = localStorage.getItem('resumeroast_flagged_ids')
-      return saved ? new Set(JSON.parse(saved)) : new Set()
+      const saved = localStorage.getItem("resumeroast_flagged_ids");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
     } catch {
-      return new Set()
+      return new Set();
     }
-  })
+  });
 
-  const fetchWall = async (type: 'shame' | 'fame', sort: 'recent' | 'score') => {
+  const fetchWall = async (
+    type: "shame" | "fame",
+    sort: "recent" | "score",
+  ) => {
     try {
-      setLoading(true)
-      const { data } = await axios.get(`/api/wall?type=${type}&sort=${sort}&limit=24`)
+      setLoading(true);
+      const { data } = await axios.get(
+        `/api/wall?type=${type}&sort=${sort}&limit=24`,
+      );
       if (data && Array.isArray(data.items) && data.items.length > 0) {
-        setEntries(data.items)
+        setEntries(data.items);
       } else {
-        throw new Error('Empty feed')
+        throw new Error("Empty feed");
       }
     } catch (err) {
-      console.warn('Using showcase fallback for wall feed:', err)
+      console.warn("Using showcase fallback for wall feed:", err);
       // Fallback showcase entries
       setEntries(
-        type === 'shame'
+        type === "shame"
           ? [
               {
-                id: 'shame-1',
-                type: 'shame',
+                id: "shame-1",
+                type: "shame",
                 score: 28,
-                band: 'weak',
+                band: "weak",
                 one_line_verdict: isHinglish
-                  ? 'Bhai resume hai ya suspense novel? 🕵️'
-                  : 'Is this a resume or an unsolved mystery novel? 🕵️',
+                  ? "Bhai resume hai ya suspense novel? 🕵️"
+                  : "Is this a resume or an unsolved mystery novel? 🕵️",
                 top_roast_lines: isHinglish
                   ? [
                       '"Responsible for" likhna band karo yaar 😩 recruiter ko number chahiye, kahani nahi.',
-                      'Declaration 2005 ka kyu daal rakha hai? Modern resume mein iski zaroorat nahi.',
+                      "Declaration 2005 ka kyu daal rakha hai? Modern resume mein iski zaroorat nahi.",
                     ]
                   : [
                       'Stop using "Responsible for" 😩 Recruiters want verifiable metrics, not generic bedtime stories.',
-                      'A declaration statement from 2005? Modern tech resumes do not include legal disclaimers.',
+                      "A declaration statement from 2005? Modern tech resumes do not include legal disclaimers.",
                     ],
                 created_at: new Date().toISOString(),
               },
               {
-                id: 'shame-2',
-                type: 'shame',
+                id: "shame-2",
+                type: "shame",
                 score: 21,
-                band: 'weak',
+                band: "weak",
                 one_line_verdict: isHinglish
-                  ? 'Buzzword ki dukaan khol rakhi hai bhai 🤖'
-                  : 'A digital museum of buzzwords with zero actual proof 🤖',
+                  ? "Buzzword ki dukaan khol rakhi hai bhai 🤖"
+                  : "A digital museum of buzzwords with zero actual proof 🤖",
                 top_roast_lines: isHinglish
                   ? [
-                      'Synergized, leveraged, orchestrated — par code ek line bhi likha ya nahi?',
+                      "Synergized, leveraged, orchestrated — par code ek line bhi likha ya nahi?",
                       'Hobbies mein "Browsing internet" daala hai? Year 2003 se time travel karke aaye ho kya?',
                     ]
                   : [
-                      'Synergized, leveraged, orchestrated — but did you actually write a single line of working code?',
+                      "Synergized, leveraged, orchestrated — but did you actually write a single line of working code?",
                       'Listed "Browsing Internet" under hobbies? Welcome back from the year 2003.',
                     ],
                 created_at: new Date().toISOString(),
               },
               {
-                id: 'shame-3',
-                type: 'shame',
+                id: "shame-3",
+                type: "shame",
                 score: 34,
-                band: 'weak',
+                band: "weak",
                 one_line_verdict: isHinglish
-                  ? 'Design dekh ke aankhon se aansu nikal gaye 😭'
-                  : 'Looking at this template brought tears to our eyes 😭',
+                  ? "Design dekh ke aankhon se aansu nikal gaye 😭"
+                  : "Looking at this template brought tears to our eyes 😭",
                 top_roast_lines: isHinglish
                   ? [
                       'Arre yaar "Pythno" aur "Jacascript"? 🤡 Spellcheck skip kar diya kya bhai?',
-                      '4 page ka resume for entry-level dev? Novel likh rahe ho kya boss?',
+                      "4 page ka resume for entry-level dev? Novel likh rahe ho kya boss?",
                     ]
                   : [
                       'Did you really type "Pythno" and "Jacascript"? 🤡 Spellcheck has left the building.',
-                      '4 pages for an entry-level resume? What are you writing, an autobiography?',
+                      "4 pages for an entry-level resume? What are you writing, an autobiography?",
                     ],
                 created_at: new Date().toISOString(),
               },
             ]
           : [
               {
-                id: 'fame-1',
-                type: 'fame',
+                id: "fame-1",
+                type: "fame",
                 score: 92,
-                band: 'strong',
+                band: "strong",
                 one_line_verdict: isHinglish
-                  ? 'Recruiter pehli nazar mein shortlist karega 🚀'
-                  : 'First-glance shortlist material, exemplary engineering clarity 🚀',
+                  ? "Recruiter pehli nazar mein shortlist karega 🚀"
+                  : "First-glance shortlist material, exemplary engineering clarity 🚀",
                 top_roast_lines: isHinglish
                   ? [
-                      'Har bullet point mein action verb + context + measurable business outcome quantified.',
-                      'Clean minimal 1-page layout, zero corporate buzzwords, 100% parseable by ATS.',
+                      "Har bullet point mein action verb + context + measurable business outcome quantified.",
+                      "Clean minimal 1-page layout, zero corporate buzzwords, 100% parseable by ATS.",
                     ]
                   : [
-                      'Every bullet point follows action verb + context + measurable business impact.',
-                      'Clean minimal 1-page layout with verified links and flawless ATS readability.',
+                      "Every bullet point follows action verb + context + measurable business impact.",
+                      "Clean minimal 1-page layout with verified links and flawless ATS readability.",
                     ],
                 created_at: new Date().toISOString(),
               },
               {
-                id: 'fame-2',
-                type: 'fame',
+                id: "fame-2",
+                type: "fame",
                 score: 88,
-                band: 'strong',
+                band: "strong",
                 one_line_verdict: isHinglish
-                  ? 'Ekdum solid profile hai boss, crisp metrics! 🔥'
-                  : 'Genuinely solid profile, crisp quantifiable metrics 🔥',
+                  ? "Ekdum solid profile hai boss, crisp metrics! 🔥"
+                  : "Genuinely solid profile, crisp quantifiable metrics 🔥",
                 top_roast_lines: isHinglish
                   ? [
-                      'FastAPI aur React ka crisp integration, 45k req/min with 99.9% uptime quantified.',
-                      'GitHub live repo links verified aur clean structured technical hierarchy.',
+                      "FastAPI aur React ka crisp integration, 45k req/min with 99.9% uptime quantified.",
+                      "GitHub live repo links verified aur clean structured technical hierarchy.",
                     ]
                   : [
-                      'The FastAPI and React stack is well quantified with 45k req/min uptime metrics.',
-                      'GitHub live repository links are clean and effortlessly parseable by ATS systems.',
+                      "The FastAPI and React stack is well quantified with 45k req/min uptime metrics.",
+                      "GitHub live repository links are clean and effortlessly parseable by ATS systems.",
                     ],
                 created_at: new Date().toISOString(),
               },
-            ]
-      )
+            ],
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchWall(activeTab, sortBy)
-  }, [activeTab, sortBy])
+    fetchWall(activeTab, sortBy);
+  }, [activeTab, sortBy]);
 
   const handleFlag = async (id: string) => {
-    if (flaggedIds.has(id)) return
+    if (flaggedIds.has(id)) return;
     try {
-      await axios.post(`/api/wall/${id}/flag`)
+      await axios.post(`/api/wall/${id}/flag`);
       setFlaggedIds((prev) => {
-        const next = new Set(prev).add(id)
+        const next = new Set(prev).add(id);
         try {
-          localStorage.setItem('resumeroast_flagged_ids', JSON.stringify(Array.from(next)))
+          localStorage.setItem(
+            "resumeroast_flagged_ids",
+            JSON.stringify(Array.from(next)),
+          );
         } catch {}
-        return next
-      })
+        return next;
+      });
     } catch {
       setFlaggedIds((prev) => {
-        const next = new Set(prev).add(id)
+        const next = new Set(prev).add(id);
         try {
-          localStorage.setItem('resumeroast_flagged_ids', JSON.stringify(Array.from(next)))
+          localStorage.setItem(
+            "resumeroast_flagged_ids",
+            JSON.stringify(Array.from(next)),
+          );
         } catch {}
-        return next
-      })
+        return next;
+      });
     }
-  }
+  };
 
   return (
     <main className="min-h-screen pb-24 desk-cursor relative overflow-hidden">
       {/* Tactile Desk Clutter */}
-      <DeskClutter stickyText={isHinglish ? 'anonymized roasts ka dher 🔥' : 'hall of anonymous damage 🔥'} stickyRotation={-3} />
+      <DeskClutter
+        stickyText={
+          isHinglish
+            ? "anonymized roasts ka dher 🔥"
+            : "hall of anonymous damage 🔥"
+        }
+        stickyRotation={-3}
+      />
 
       {/* Header */}
       <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6 mb-6 sm:mb-8 relative z-10">
         <div className="max-w-[1100px] mx-auto flex items-center justify-between gap-2">
-          <Link to="/" className="font-display text-base sm:text-lg tracking-tight text-paper select-none shrink-0">
-            RESUME<span className="text-stamp">ROAST</span> <span className="text-amber-400 font-mono text-[10px] sm:text-xs ml-0.5 sm:ml-1">// WALL</span>
+          <Link
+            to="/"
+            className="font-display text-base sm:text-lg tracking-tight text-paper select-none shrink-0"
+          >
+            RESUME<span className="text-stamp">ROAST</span>{" "}
+            <span className="text-amber-400 font-mono text-[10px] sm:text-xs ml-0.5 sm:ml-1">
+              // WALL
+            </span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-4">
-            <Link to="/battle" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+            <Link
+              to="/battle"
+              className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap"
+            >
               <span className="hidden sm:inline">⚔️ Battle Mode →</span>
               <span className="sm:hidden">⚔️ Battle</span>
             </Link>
-            <Link to="/roast" className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap">
+            <Link
+              to="/roast"
+              className="font-mono text-[11px] sm:text-xs text-tan-dim hover:text-tan transition-colors whitespace-nowrap"
+            >
               <span className="hidden sm:inline">Grade Resume →</span>
               <span className="sm:hidden">Grade</span>
             </Link>
@@ -212,15 +242,24 @@ export default function WallPage() {
         {/* Title */}
         <div className="text-center">
           <p className="section-label mb-2">
-            {isHinglish ? 'ASLI CANDIDATES KA ANONYMOUS DAMAGE' : 'PUBLIC ANONYMOUS HALL OF DAMAGE'}
+            {isHinglish
+              ? "ASLI CANDIDATES KA ANONYMOUS DAMAGE"
+              : "PUBLIC ANONYMOUS HALL OF DAMAGE"}
           </p>
           <h1 className="font-display text-2xl sm:text-4xl text-paper tracking-tight">
-            Wall of <span className={activeTab === 'shame' ? 'text-stamp' : 'text-amber-400'}>{activeTab === 'shame' ? 'Shame' : 'Fame'}</span>
+            Wall of{" "}
+            <span
+              className={
+                activeTab === "shame" ? "text-stamp" : "text-amber-400"
+              }
+            >
+              {activeTab === "shame" ? "Shame" : "Fame"}
+            </span>
           </h1>
           <p className="font-mono text-xs text-tan-dim mt-2 max-w-[580px] mx-auto">
             {isHinglish
-              ? 'Brave candidates ke asli anonymized resumes. Saare personal names aur emails pehle hi sanitize kar diye gaye hain.'
-              : 'Real anonymized resumes submitted by brave candidates. All personal data, emails, and company names have been pre-sanitized.'}
+              ? "Brave candidates ke asli anonymized resumes. Saare personal names aur emails pehle hi sanitize kar diye gaye hain."
+              : "Real anonymized resumes submitted by brave candidates. All personal data, emails, and company names have been pre-sanitized."}
           </p>
         </div>
 
@@ -230,22 +269,22 @@ export default function WallPage() {
           <div className="flex items-center gap-2 p-1 bg-white/[0.03] border border-white/[0.08] rounded-sm">
             <button
               type="button"
-              onClick={() => setActiveTab('shame')}
+              onClick={() => setActiveTab("shame")}
               className={`px-4 py-2 rounded-sm text-xs font-mono font-bold transition-all ${
-                activeTab === 'shame'
-                  ? 'bg-stamp text-paper shadow-sm'
-                  : 'text-tan-dim hover:text-tan'
+                activeTab === "shame"
+                  ? "bg-stamp text-paper shadow-sm"
+                  : "text-tan-dim hover:text-tan"
               }`}
             >
               🔥 Wall of Shame (Score ≤ 50)
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('fame')}
+              onClick={() => setActiveTab("fame")}
               className={`px-4 py-2 rounded-sm text-xs font-mono font-bold transition-all ${
-                activeTab === 'fame'
-                  ? 'bg-amber-400 text-bg shadow-sm'
-                  : 'text-tan-dim hover:text-tan'
+                activeTab === "fame"
+                  ? "bg-amber-400 text-bg shadow-sm"
+                  : "text-tan-dim hover:text-tan"
               }`}
             >
               🏆 Wall of Fame (Score &gt; 50)
@@ -254,27 +293,35 @@ export default function WallPage() {
 
           {/* Sort */}
           <div className="flex items-center gap-2 font-mono text-xs text-tan-dim">
-            <span>{isHinglish ? 'Kram:' : 'Sort by:'}</span>
+            <span>{isHinglish ? "Kram:" : "Sort by:"}</span>
             <button
               type="button"
-              onClick={() => setSortBy('recent')}
+              onClick={() => setSortBy("recent")}
               className={`px-2 py-1 rounded-sm transition-colors ${
-                sortBy === 'recent' ? 'text-amber-400 bg-white/[0.06]' : 'hover:text-tan'
+                sortBy === "recent"
+                  ? "text-amber-400 bg-white/[0.06]"
+                  : "hover:text-tan"
               }`}
             >
-              {isHinglish ? 'Sabse Naya' : 'Most Recent'}
+              {isHinglish ? "Sabse Naya" : "Most Recent"}
             </button>
             <span>/</span>
             <button
               type="button"
-              onClick={() => setSortBy('score')}
+              onClick={() => setSortBy("score")}
               className={`px-2 py-1 rounded-sm transition-colors ${
-                sortBy === 'score' ? 'text-amber-400 bg-white/[0.06]' : 'hover:text-tan'
+                sortBy === "score"
+                  ? "text-amber-400 bg-white/[0.06]"
+                  : "hover:text-tan"
               }`}
             >
-              {activeTab === 'shame' 
-                ? (isHinglish ? 'Bhaari Nuksaan' : 'Highest Damage') 
-                : (isHinglish ? 'Top Score' : 'Top Score')}
+              {activeTab === "shame"
+                ? isHinglish
+                  ? "Bhaari Nuksaan"
+                  : "Highest Damage"
+                : isHinglish
+                  ? "Top Score"
+                  : "Top Score"}
             </button>
           </div>
         </div>
@@ -283,18 +330,22 @@ export default function WallPage() {
         <div className="max-w-[960px] mx-auto bg-gradient-to-r from-[#17140F] via-white/[0.03] to-[#17140F] border border-white/[0.08] rounded-sm p-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
           <div>
             <p className="font-display text-base text-paper">
-              {activeTab === 'shame'
-                ? (isHinglish ? 'Lagta hai tera resume isse bhi zyada disastrous hai? 👀' : 'Think your resume is even more disastrous? 👀')
-                : (isHinglish ? 'Lagta hai tu in scores ko beat kar sakta hai? 🚀' : 'Think you can beat these scores? 🚀')}
+              {activeTab === "shame"
+                ? isHinglish
+                  ? "Lagta hai tera resume isse bhi zyada disastrous hai? 👀"
+                  : "Think your resume is even more disastrous? 👀"
+                : isHinglish
+                  ? "Lagta hai tu in scores ko beat kar sakta hai? 🚀"
+                  : "Think you can beat these scores? 🚀"}
             </p>
             <p className="font-mono text-xs text-tan-dim">
               {isHinglish
-                ? 'Apna resume upload kar brutal red-pen roast ke liye aur rank check kar.'
-                : 'Upload your resume for a brutal red-pen roast and see where you rank.'}
+                ? "Apna resume upload kar brutal red-pen roast ke liye aur rank check kar."
+                : "Upload your resume for a brutal red-pen roast and see where you rank."}
             </p>
           </div>
           <Link to="/roast" className="btn-primary shrink-0 text-xs">
-            {isHinglish ? 'Abhi resume roast karwayein' : 'Roast my resume now'}
+            {isHinglish ? "Abhi resume roast karwayein" : "Roast my resume now"}
           </Link>
         </div>
 
@@ -311,7 +362,9 @@ export default function WallPage() {
                   WEEKLY SPOTLIGHT // MOST VIRAL SUBMISSION
                 </span>
                 <h2 className="font-display text-lg sm:text-xl text-paper">
-                  {activeTab === 'shame' ? 'This Week’s Hall of Disaster Champion' : 'This Week’s Benchmark Resume'}
+                  {activeTab === "shame"
+                    ? "This Week’s Hall of Disaster Champion"
+                    : "This Week’s Benchmark Resume"}
                 </h2>
               </div>
             </div>
@@ -323,24 +376,30 @@ export default function WallPage() {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-black/40 border border-white/10 rounded-sm p-4">
             <div className="flex-1 space-y-2">
               <p className="font-display text-base sm:text-lg text-paper">
-                "{activeTab === 'shame'
-                  ? 'Bhai resume hai ya suspense novel? 🕵️ 4 page ka resume dekh ke ATS behosh ho gaya.'
-                  : 'FastAPI aur React ka crisp integration with real performance metrics! 🚀'}"
+                "
+                {activeTab === "shame"
+                  ? "Bhai resume hai ya suspense novel? 🕵️ 4 page ka resume dekh ke ATS behosh ho gaya."
+                  : "FastAPI aur React ka crisp integration with real performance metrics! 🚀"}
+                "
               </p>
               <div className="flex flex-wrap gap-2 text-[11px] font-mono text-tan-dim">
                 <span className="bg-white/[0.05] px-2 py-0.5 rounded-[2px]">
-                  {activeTab === 'shame' ? '❌ 14 Buzzwords' : '✅ 8 Metrics Included'}
+                  {activeTab === "shame"
+                    ? "❌ 14 Buzzwords"
+                    : "✅ 8 Metrics Included"}
                 </span>
                 <span className="bg-white/[0.05] px-2 py-0.5 rounded-[2px]">
-                  {activeTab === 'shame' ? '❌ 0 Numbers' : '✅ Clean 1-Page Layout'}
+                  {activeTab === "shame"
+                    ? "❌ 0 Numbers"
+                    : "✅ Clean 1-Page Layout"}
                 </span>
               </div>
             </div>
 
             <div className="shrink-0 flex items-center gap-4">
               <ScoreStamp
-                score={activeTab === 'shame' ? 22 : 92}
-                band={activeTab === 'shame' ? 'weak' : 'strong'}
+                score={activeTab === "shame" ? 22 : 92}
+                band={activeTab === "shame" ? "weak" : "strong"}
                 size="md"
                 animate={false}
               />
@@ -358,30 +417,39 @@ export default function WallPage() {
           </div>
         ) : entries.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-white/10 rounded-sm max-w-[640px] mx-auto">
-            <p className="text-3xl mb-2">{activeTab === 'shame' ? '👻' : '🏅'}</p>
-            <p className="font-mono text-xs text-paper">No entries on this wall yet.</p>
-            <p className="font-mono text-[10px] text-tan-dim mt-1">Be the first to roast and post your resume!</p>
+            <p className="text-3xl mb-2">
+              {activeTab === "shame" ? "👻" : "🏅"}
+            </p>
+            <p className="font-mono text-xs text-paper">
+              No entries on this wall yet.
+            </p>
+            <p className="font-mono text-[10px] text-tan-dim mt-1">
+              Be the first to roast and post your resume!
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-[1100px] mx-auto text-left">
             {entries.map((entry, idx) => {
               // Slight deterministic rotation per card (-1.2deg to 1.2deg)
-              const cardRotation = ((idx % 5) - 2) * 0.6
+              const cardRotation = ((idx % 5) - 2) * 0.6;
               return (
                 <div
                   key={entry.id}
                   className="paper-mockup-card bg-paper text-ink rounded-sm p-6 flex flex-col justify-between transition-all duration-200 relative border border-black/15 group hover:-translate-y-1 min-h-[260px]"
                   style={{
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.35)',
+                    boxShadow:
+                      "0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.35)",
                     transform: `rotate(${cardRotation}deg)`,
-                    ['--paper-rotate' as string]: `${cardRotation}deg`,
+                    ["--paper-rotate" as string]: `${cardRotation}deg`,
                   }}
                 >
                   {/* Top: ScoreStamp & Type */}
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-3.5 border-b border-black/10 pb-2.5">
                       <span className="font-mono text-[11px] tracking-wider text-ink/70 uppercase font-semibold">
-                        {entry.type === 'shame' ? '🔥 DISASTER ENTRY' : '⭐ HALL OF FAME'}
+                        {entry.type === "shame"
+                          ? "🔥 DISASTER ENTRY"
+                          : "⭐ HALL OF FAME"}
                       </span>
                       <ScoreStamp
                         score={entry.score}
@@ -399,7 +467,10 @@ export default function WallPage() {
                     {/* Redacted Roast Snippets */}
                     <div className="space-y-2 mb-5">
                       {entry.top_roast_lines?.map((line, lIdx) => (
-                        <div key={lIdx} className="bg-black/[0.04] border-l-2 border-stamp rounded-[2px] p-2.5">
+                        <div
+                          key={lIdx}
+                          className="bg-black/[0.04] border-l-2 border-stamp rounded-[2px] p-2.5"
+                        >
                           <p className="font-mono text-xs text-ink/90 leading-relaxed">
                             {line}
                           </p>
@@ -410,23 +481,25 @@ export default function WallPage() {
 
                   {/* Bottom: Flag / Report with subtle hover appearance */}
                   <div className="pt-3 border-t border-black/10 flex items-center justify-between text-[11px] font-mono text-ink/65">
-                    <span className="font-semibold tracking-wide">ANONYMOUS CANDIDATE</span>
+                    <span className="font-semibold tracking-wide">
+                      ANONYMOUS CANDIDATE
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleFlag(entry.id)}
                       disabled={flaggedIds.has(entry.id)}
                       className={`transition-colors flex items-center gap-1 ${
                         flaggedIds.has(entry.id)
-                          ? 'text-stamp font-medium cursor-default'
-                          : 'hover:text-stamp cursor-pointer'
+                          ? "text-stamp font-medium cursor-default"
+                          : "hover:text-stamp cursor-pointer"
                       }`}
                       title="Report this entry"
                     >
-                      {flaggedIds.has(entry.id) ? '✓ Reported' : '🚩 Flag'}
+                      {flaggedIds.has(entry.id) ? "✓ Reported" : "🚩 Flag"}
                     </button>
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         )}
@@ -436,5 +509,5 @@ export default function WallPage() {
         <Footer />
       </div>
     </main>
-  )
+  );
 }
