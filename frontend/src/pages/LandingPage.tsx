@@ -11,6 +11,7 @@ import PlacementSeasonBanner from "@/components/PlacementSeasonBanner";
 import LiveRoastCounter from "@/components/LiveRoastCounter";
 import Footer from "@/components/Footer";
 import WaitlistModal from "@/components/WaitlistModal";
+import CheckoutModal from "@/components/CheckoutModal";
 import { usePageTitle } from "@/utils/usePageTitle";
 import { getSampleResumes, getDailyRotationIndex } from "@/data/sampleRoast";
 
@@ -253,6 +254,7 @@ function PricingSection() {
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const [annual, setAnnual] = useState(false);
   const [showWaitlist, setShowWaitlist] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   const features = isHinglish
     ? [
@@ -432,15 +434,23 @@ function PricingSection() {
               </ul>
             </div>
 
-            <Link
-              to="/pricing"
-              className="btn-primary w-full justify-center font-semibold text-center"
+            <button
+              type="button"
+              id="landing-unlock-pro-button"
+              onClick={() => setShowCheckout(true)}
+              className="btn-primary w-full justify-center font-semibold text-center shadow-lg hover:shadow-xl transition-all"
             >
               {isHinglish ? "Unlock Pro ₹99 →" : "Get Pro Access (₹99) →"}
-            </Link>
+            </button>
           </div>
         </div>
       </div>
+
+      <CheckoutModal
+        isOpen={showCheckout}
+        onClose={() => setShowCheckout(false)}
+        defaultPlan={annual ? "annual" : "monthly"}
+      />
 
       <WaitlistModal
         isOpen={showWaitlist}

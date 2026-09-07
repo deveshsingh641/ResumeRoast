@@ -193,6 +193,12 @@ export default function PricingPage() {
     if (searchParams.get("waitlist") === "true") {
       setShowWaitlistModal(true);
     }
+    if (
+      searchParams.get("checkout") === "true" ||
+      searchParams.get("pay") === "true"
+    ) {
+      setShowEmailModal(true);
+    }
 
     // Fetch public gateway config for mode transparency
     axios
