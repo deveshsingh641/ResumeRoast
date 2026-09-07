@@ -172,28 +172,6 @@ export default function CheckoutModal({
           },
           confirm_close: true,
         },
-        config: {
-          display: {
-            blocks: {
-              upi: {
-                name: "Pay with UPI (GPay, PhonePe, Paytm, QR)",
-                instruments: [{ method: "upi" }],
-              },
-              cards: {
-                name: "Debit & Credit Cards (Visa, Mastercard, RuPay)",
-                instruments: [{ method: "card" }],
-              },
-              netbanking: {
-                name: "Netbanking (All Major Indian Banks)",
-                instruments: [{ method: "netbanking" }],
-              },
-            },
-            sequence: ["block.upi", "block.cards", "block.netbanking"],
-            preferences: {
-              show_default_blocks: true,
-            },
-          },
-        },
         handler: async (response: RazorpaySuccessResponse) => {
           await verifyPaymentSuccess(response, cleanEmail, selectedPlan);
         },
@@ -502,6 +480,7 @@ export default function CheckoutModal({
               type="submit"
               disabled={
                 checkoutStatus === "creating_order" ||
+                checkoutStatus === "modal_open" ||
                 checkoutStatus === "verifying"
               }
               className="btn-primary w-full justify-center text-sm py-3.5 font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
@@ -510,6 +489,11 @@ export default function CheckoutModal({
                 <span className="flex items-center gap-2 font-mono text-xs">
                   <span className="animate-spin inline-block">⚡</span>
                   Connecting to Razorpay…
+                </span>
+              ) : checkoutStatus === "modal_open" ? (
+                <span className="flex items-center gap-2 font-mono text-xs">
+                  <span className="animate-spin inline-block">⚡</span>
+                  Opening Razorpay Gateway…
                 </span>
               ) : checkoutStatus === "verifying" ? (
                 <span className="flex items-center gap-2 font-mono text-xs">

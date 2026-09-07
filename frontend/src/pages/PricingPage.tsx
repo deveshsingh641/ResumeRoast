@@ -200,7 +200,8 @@ export default function PricingPage() {
       setShowEmailModal(true);
     }
 
-    // Fetch public gateway config for mode transparency
+    // Pre-warm Razorpay SDK and fetch public gateway config
+    loadRazorpaySDK().catch(() => {});
     axios
       .get("/api/billing/config")
       .then(({ data }) => setGatewayConfig(data))
@@ -324,29 +325,6 @@ export default function PricingPage() {
             );
           },
           confirm_close: true,
-        },
-        // Display UPI as the primary choice for Indian users
-        config: {
-          display: {
-            blocks: {
-              upi: {
-                name: "Pay with UPI (GPay, PhonePe, Paytm, QR)",
-                instruments: [{ method: "upi" }],
-              },
-              cards: {
-                name: "Debit & Credit Cards (Visa, Mastercard, RuPay)",
-                instruments: [{ method: "card" }],
-              },
-              netbanking: {
-                name: "Netbanking (All Major Indian Banks)",
-                instruments: [{ method: "netbanking" }],
-              },
-            },
-            sequence: ["block.upi", "block.cards", "block.netbanking"],
-            preferences: {
-              show_default_blocks: true,
-            },
-          },
         },
         handler: async (response: RazorpaySuccessResponse) => {
           await verifyPaymentSuccess(response, cleanEmail, selectedPlan);
@@ -1004,6 +982,7 @@ export default function PricingPage() {
                       type="button"
                       disabled={
                         checkoutStatus === "creating_order" ||
+                        checkoutStatus === "modal_open" ||
                         checkoutStatus === "verifying"
                       }
                       onClick={() => handleInitiatePayment(email)}
@@ -1013,6 +992,11 @@ export default function PricingPage() {
                         <span className="flex items-center gap-2">
                           <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                           Creating Order…
+                        </span>
+                      ) : checkoutStatus === "modal_open" ? (
+                        <span className="flex items-center gap-2">
+                          <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Opening Razorpay Gateway…
                         </span>
                       ) : checkoutStatus === "verifying" ? (
                         <span className="flex items-center gap-2">

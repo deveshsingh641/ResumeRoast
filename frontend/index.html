@@ -24,8 +24,12 @@
     <meta name="twitter:title" content="Resume Roast — Brutally Honest AI Resume Critique" />
     <meta name="twitter:description" content="Brutally honest AI resume critique. Free, instant, no fluff." />
     <meta name="twitter:image" content="https://resumeroast.app/logo.png" />
-    <!-- Razorpay Standard Web Checkout SDK -->
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <!-- Razorpay Preconnect & Checkout SDK -->
+    <link rel="preconnect" href="https://checkout.razorpay.com" crossorigin />
+    <link rel="preconnect" href="https://api.razorpay.com" crossorigin />
+    <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
+    <link rel="dns-prefetch" href="https://api.razorpay.com" />
+    <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
   </head>
   <body class="bg-bg text-tan font-body selection:bg-stamp selection:text-paper antialiased min-h-screen">
     <div class="desk-noise-overlay" aria-hidden="true"></div>

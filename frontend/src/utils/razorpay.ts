@@ -89,20 +89,57 @@ export function loadRazorpaySDK(): Promise<boolean> {
   }
 
   loadPromise = new Promise<boolean>((resolve) => {
-    // Check if script element already exists in document
-    const existingScript = document.querySelector(
-      'script[src="https://checkout.razorpay.com/v1/checkout.js"]',
-    );
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(true));
-      existingScript.addEventListener("error", () => resolve(false));
+    // 1. If window.Razorpay already initialized, resolve immediately
+    if (window.Razorpay) {
+      resolve(true);
       return;
     }
 
+    // 2. Check if script element already exists in document
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[src="https://checkout.razorpay.com/v1/checkout.js"]',
+    );
+
+    if (existingScript) {
+      // Check readyState if available
+      const anyScript = existingScript as any;
+      if (
+        anyScript.readyState === "loaded" ||
+        anyScript.readyState === "complete"
+      ) {
+        if (window.Razorpay) {
+          resolve(true);
+          return;
+        }
+      }
+
+      existingScript.addEventListener("load", () => {
+        resolve(Boolean(window.Razorpay));
+      });
+      existingScript.addEventListener("error", () => resolve(false));
+
+      // Guard against missed 'load' event if already parsed by browser
+      let checkCount = 0;
+      const interval = setInterval(() => {
+        checkCount++;
+        if (window.Razorpay) {
+          clearInterval(interval);
+          resolve(true);
+        } else if (checkCount > 40) {
+          // 2 seconds max
+          clearInterval(interval);
+          resolve(Boolean(window.Razorpay));
+        }
+      }, 50);
+
+      return;
+    }
+
+    // 3. If no script tag exists, inject one
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
-    script.onload = () => resolve(true);
+    script.onload = () => resolve(Boolean(window.Razorpay));
     script.onerror = () => {
       console.error("Failed to load Razorpay Checkout SDK.");
       resolve(false);
