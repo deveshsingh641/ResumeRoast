@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
@@ -29,6 +29,7 @@ interface GatewayConfig {
     monthly: { amount_paise: number; amount_inr: number; name: string };
     annual: { amount_paise: number; amount_inr: number; name: string };
   };
+  key_configured: boolean;
 }
 
 interface SimulatedOrderData {
@@ -78,6 +79,26 @@ export default function PricingPage() {
   const [loadingStage, setLoadingStage] = useState<
     "immediate" | "waiting" | "timeout"
   >("immediate");
+
+  const slowNoticeTimerRef = useRef<number | null>(null);
+  const timeoutTimerRef = useRef<number | null>(null);
+
+  const clearTimers = () => {
+    if (slowNoticeTimerRef.current !== null) {
+      window.clearTimeout(slowNoticeTimerRef.current);
+      slowNoticeTimerRef.current = null;
+    }
+    if (timeoutTimerRef.current !== null) {
+      window.clearTimeout(timeoutTimerRef.current);
+      timeoutTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimers();
+    };
+  }, []);
 
   // Escape key closes modals
   useEffect(() => {
@@ -262,6 +283,7 @@ export default function PricingPage() {
       localStorage.setItem("resumeroast_user_email", cleanEmail);
     } catch {}
 
+    clearTimers();
     setCheckoutStatus("creating_order");
     setCheckoutMessage(null);
     setSimulatedOrder(null);
@@ -273,26 +295,26 @@ export default function PricingPage() {
     );
 
     // Phase 2: After 3.2s, notify user that extra time is needed
-    const slowNoticeTimer = window.setTimeout(() => {
+    slowNoticeTimerRef.current = window.setTimeout(() => {
       setLoadingStage("waiting");
     }, 3200);
 
-    // Phase 3: Client-side 8.5s timeout guard
-    const timeoutTimer = window.setTimeout(() => {
+    // Phase 3: Client-side timeout guard ONLY while creating order
+    timeoutTimerRef.current = window.setTimeout(() => {
       setCheckoutStatus((current) => {
-        if (current === "creating_order" || current === "modal_open") {
+        if (current === "creating_order") {
           console.warn(
-            "[Razorpay PricingPage] Modal opening timed out after 8.5s.",
+            "[Razorpay PricingPage] Order creation timed out after 12s.",
           );
           setLoadingStage("timeout");
           setCheckoutMessage(
-            "Payment checkout load nahi ho paya. Please try again.",
+            "Payment server connection timed out. Please check your network and try again.",
           );
           return "error";
         }
         return current;
       });
-    }, 8500);
+    }, 12000);
 
     try {
       // 1. Preload Razorpay Checkout JS SDK in background
@@ -315,7 +337,7 @@ export default function PricingPage() {
 
       // 3. Check if running in Developer Simulation Mode
       if (data.simulated) {
-        window.clearTimeout(timeoutTimer);
+        clearTimers();
         setSimulatedOrder({
           order_id: data.order_id,
           amount: data.amount,
@@ -331,7 +353,7 @@ export default function PricingPage() {
       // 4. Real Razorpay In-Page Checkout
       const isSdkLoaded = await loadRazorpaySDK();
       if (!isSdkLoaded || !window.Razorpay) {
-        window.clearTimeout(timeoutTimer);
+        clearTimers();
         throw new Error(
           "Could not initialize Razorpay SDK. Please check your internet connection or ad-blocker.",
         );
@@ -358,7 +380,7 @@ export default function PricingPage() {
         },
         modal: {
           ondismiss: () => {
-            window.clearTimeout(timeoutTimer);
+            clearTimers();
             console.info("[Razorpay PricingPage] Modal dismissed by user.");
             setCheckoutStatus("cancelled");
             setCheckoutMessage(
@@ -368,7 +390,7 @@ export default function PricingPage() {
           confirm_close: true,
         },
         handler: async (response: RazorpaySuccessResponse) => {
-          window.clearTimeout(timeoutTimer);
+          clearTimers();
           const tPaid = performance.now();
           console.info(
             `[Razorpay PricingPage] Payment authorized in ${(tPaid - tStart).toFixed(0)}ms total. Verifying signature...`,
@@ -380,7 +402,7 @@ export default function PricingPage() {
       const rzp = new window.Razorpay(options);
 
       rzp.on("payment.failed", (failResp: any) => {
-        window.clearTimeout(timeoutTimer);
+        clearTimers();
         const desc =
           failResp?.error?.description ||
           failResp?.error?.reason ||
@@ -390,14 +412,25 @@ export default function PricingPage() {
         setCheckoutMessage(`Payment failed: ${desc}. No amount was deducted.`);
       });
 
+      // Clear order-creation timers before invoking checkout overlay
+      clearTimers();
       setCheckoutStatus("modal_open");
       const tOpen = performance.now();
       console.info(
         `[Razorpay PricingPage] 3. Invoking rzp.open() at +${(tOpen - tStart).toFixed(0)}ms`,
       );
-      rzp.open();
+
+      try {
+        rzp.open();
+      } catch (openErr: any) {
+        console.error("[Razorpay PricingPage] rzp.open() error:", openErr);
+        setCheckoutStatus("error");
+        setCheckoutMessage(
+          "Payment checkout window could not open. Please disable any pop-up/ad blockers and try again.",
+        );
+      }
     } catch (err: any) {
-      window.clearTimeout(timeoutTimer);
+      clearTimers();
       const errorDetail = err?.response?.data?.detail;
       const displayMsg =
         typeof errorDetail === "string"

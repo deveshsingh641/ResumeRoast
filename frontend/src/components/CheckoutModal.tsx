@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
@@ -53,6 +53,26 @@ export default function CheckoutModal({
     "immediate" | "waiting" | "timeout"
   >("immediate");
 
+  const slowNoticeTimerRef = useRef<number | null>(null);
+  const timeoutTimerRef = useRef<number | null>(null);
+
+  const clearTimers = () => {
+    if (slowNoticeTimerRef.current !== null) {
+      window.clearTimeout(slowNoticeTimerRef.current);
+      slowNoticeTimerRef.current = null;
+    }
+    if (timeoutTimerRef.current !== null) {
+      window.clearTimeout(timeoutTimerRef.current);
+      timeoutTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimers();
+    };
+  }, []);
+
   // Sync defaultPlan when prop changes
   useEffect(() => {
     setAnnual(defaultPlan === "annual");
@@ -78,6 +98,7 @@ export default function CheckoutModal({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
+        clearTimers();
         onClose();
       }
     };
@@ -86,6 +107,11 @@ export default function CheckoutModal({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const handleClose = () => {
+    clearTimers();
+    onClose();
+  };
 
   const handleInitiatePayment = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -105,6 +131,7 @@ export default function CheckoutModal({
       localStorage.setItem("resumeroast_user_email", cleanEmail);
     } catch {}
 
+    clearTimers();
     setCheckoutStatus("creating_order");
     setCheckoutMessage(null);
     setSimulatedOrder(null);
@@ -116,28 +143,28 @@ export default function CheckoutModal({
     );
 
     // Phase 2: After 3.2s, communicate that extra time is needed
-    const slowNoticeTimer = window.setTimeout(() => {
+    slowNoticeTimerRef.current = window.setTimeout(() => {
       setLoadingStage("waiting");
     }, 3200);
 
-    // Phase 3: Client-side 8.5s timeout guard to prevent indefinite spinning
-    const timeoutTimer = window.setTimeout(() => {
+    // Phase 3: Client-side timeout guard ONLY while waiting for server order creation
+    timeoutTimerRef.current = window.setTimeout(() => {
       setCheckoutStatus((current) => {
-        if (current === "creating_order" || current === "modal_open") {
+        if (current === "creating_order") {
           console.warn(
-            "[Razorpay Checkout] Modal opening timed out after 8.5s.",
+            "[Razorpay Checkout] Order creation timed out after 12s.",
           );
           setLoadingStage("timeout");
           setCheckoutMessage(
             isHinglish
-              ? "Payment checkout load nahi ho paya. Please try again."
-              : "Payment checkout could not load. Please try again.",
+              ? "Payment server se connect nahi ho paya. Kripya thodi der baad dubara koshish karein."
+              : "Payment checkout could not connect. Please check your connection and try again.",
           );
           return "error";
         }
         return current;
       });
-    }, 8500);
+    }, 12000);
 
     try {
       // 1. Preload Razorpay Checkout JS SDK in background
@@ -160,7 +187,7 @@ export default function CheckoutModal({
 
       // 3. Developer Simulation Mode (when keys not configured)
       if (data.simulated) {
-        window.clearTimeout(timeoutTimer);
+        clearTimers();
         setSimulatedOrder({
           order_id: data.order_id,
           amount: data.amount,
@@ -176,7 +203,7 @@ export default function CheckoutModal({
       // 4. Real Razorpay In-Page Checkout
       const isSdkLoaded = await loadRazorpaySDK();
       if (!isSdkLoaded || !window.Razorpay) {
-        window.clearTimeout(timeoutTimer);
+        clearTimers();
         throw new Error(
           isHinglish
             ? "Razorpay checkout SDK load nahi hua. Ad-blocker ya internet connection check karein."
@@ -205,7 +232,7 @@ export default function CheckoutModal({
         },
         modal: {
           ondismiss: () => {
-            window.clearTimeout(timeoutTimer);
+            clearTimers();
             console.info("[Razorpay Checkout] Modal dismissed by user.");
             setCheckoutStatus("cancelled");
             setCheckoutMessage(
@@ -217,7 +244,7 @@ export default function CheckoutModal({
           confirm_close: true,
         },
         handler: async (response: RazorpaySuccessResponse) => {
-          window.clearTimeout(timeoutTimer);
+          clearTimers();
           const tPaid = performance.now();
           console.info(
             `[Razorpay Checkout] Payment authorized in ${(tPaid - tStart).toFixed(0)}ms total. Verifying signature...`,
@@ -229,7 +256,7 @@ export default function CheckoutModal({
       const rzp = new window.Razorpay(options);
 
       rzp.on("payment.failed", (failResp: any) => {
-        window.clearTimeout(timeoutTimer);
+        clearTimers();
         const desc =
           failResp?.error?.description ||
           failResp?.error?.reason ||
@@ -243,14 +270,27 @@ export default function CheckoutModal({
         );
       });
 
+      // Crucial: Clear order-creation timers BEFORE opening Razorpay modal
+      clearTimers();
       setCheckoutStatus("modal_open");
       const tOpen = performance.now();
       console.info(
         `[Razorpay Checkout] 3. Invoking rzp.open() at +${(tOpen - tStart).toFixed(0)}ms`,
       );
-      rzp.open();
+
+      try {
+        rzp.open();
+      } catch (openErr: any) {
+        console.error("[Razorpay Checkout] rzp.open() threw error:", openErr);
+        setCheckoutStatus("error");
+        setCheckoutMessage(
+          isHinglish
+            ? "Payment popup block ho gaya. Kripya popup blocker disable karein aur dubara click karein."
+            : "Payment popup was blocked or could not open. Please disable any popup blockers and try again.",
+        );
+      }
     } catch (err: any) {
-      window.clearTimeout(timeoutTimer);
+      clearTimers();
       const errorDetail = err?.response?.data?.detail;
       const displayMsg =
         typeof errorDetail === "string"
@@ -371,7 +411,7 @@ export default function CheckoutModal({
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="relative w-full max-w-md bg-[#16130F] border border-stamp/40 rounded-sm p-6 sm:p-7 text-left shadow-2xl space-y-4"
@@ -380,7 +420,7 @@ export default function CheckoutModal({
         {/* Close button */}
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-4 right-4 text-tan-dim hover:text-tan font-mono text-sm"
           aria-label="Close"
         >

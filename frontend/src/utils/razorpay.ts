@@ -73,7 +73,7 @@ let loadPromise: Promise<boolean> | null = null;
 
 /**
  * Dynamically loads Razorpay's official checkout.js SDK into the page.
- * Cached so multiple calls reuse the same script.
+ * Cached so multiple calls reuse the same script, but resets on failure to allow clean retries.
  */
 export function loadRazorpaySDK(): Promise<boolean> {
   if (typeof window === "undefined") {
@@ -116,19 +116,26 @@ export function loadRazorpaySDK(): Promise<boolean> {
       existingScript.addEventListener("load", () => {
         resolve(Boolean(window.Razorpay));
       });
-      existingScript.addEventListener("error", () => resolve(false));
+      existingScript.addEventListener("error", () => {
+        loadPromise = null;
+        resolve(false);
+      });
 
-      // Guard against missed 'load' event if already parsed by browser
+      // Poll with 50ms interval for up to 5 seconds
       let checkCount = 0;
       const interval = setInterval(() => {
         checkCount++;
         if (window.Razorpay) {
           clearInterval(interval);
           resolve(true);
-        } else if (checkCount > 40) {
-          // 2 seconds max
+        } else if (checkCount > 100) {
+          // 5 seconds max
           clearInterval(interval);
-          resolve(Boolean(window.Razorpay));
+          const isAvailable = Boolean(window.Razorpay);
+          if (!isAvailable) {
+            loadPromise = null; // allow retry
+          }
+          resolve(isAvailable);
         }
       }, 50);
 
@@ -142,6 +149,7 @@ export function loadRazorpaySDK(): Promise<boolean> {
     script.onload = () => resolve(Boolean(window.Razorpay));
     script.onerror = () => {
       console.error("Failed to load Razorpay Checkout SDK.");
+      loadPromise = null; // allow retry
       resolve(false);
     };
     document.body.appendChild(script);
