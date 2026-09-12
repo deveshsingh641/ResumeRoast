@@ -5,8 +5,8 @@ import { getHinglishTag } from "@/utils/categoryTags";
 interface PaperMockupProps {
   candidateName?: string;
   candidateTitle?: string;
-  experienceHeader?: string;
-  companyLine?: string;
+  experienceHeader?: string | null;
+  companyLine?: string | null;
   bullet1Text?: string;
   bullet1Annotated?: string;
   bullet1Tag?: string;
@@ -27,8 +27,8 @@ interface PaperMockupProps {
 export default function PaperMockup({
   candidateName = "ROHIT SHARMA",
   candidateTitle = "SOFTWARE ENGINEER // 3 YOE",
-  experienceHeader = "EXPERIENCE (KAAM KA RECORD)",
-  companyLine = "TechCorp Labs — Software Engineer (2022–Present)",
+  experienceHeader,
+  companyLine,
   bullet1Text = "Leveraged cross-functional synergies to drive high-impact outcomes across 12 product teams.",
   bullet1Annotated = "Leveraged cross-functional synergies to drive high-impact outcomes",
   bullet1Tag = "BUZZWORD KA OVERDOSE",
@@ -279,15 +279,19 @@ export default function PaperMockup({
           </p>
         </div>
 
-        {/* Section Heading */}
-        <div className="relative mb-3 text-left">
-          <p className="font-mono text-xs font-semibold uppercase tracking-widest text-ink/60">
-            {experienceHeader}
-          </p>
-          <p className="font-body text-sm font-medium text-ink mt-1">
-            {companyLine}
-          </p>
-        </div>
+        {/* Section Heading — rendered only if companyLine or experienceHeader is provided */}
+        {((companyLine && companyLine.trim() !== "") || (experienceHeader && experienceHeader.trim() !== "")) && (
+          <div className="relative mb-3 text-left">
+            <p className="font-mono text-xs font-semibold uppercase tracking-widest text-ink/60">
+              {experienceHeader || "EXPERIENCE (KAAM KA RECORD)"}
+            </p>
+            {companyLine && companyLine.trim() !== "" && (
+              <p className="font-body text-sm font-medium text-ink mt-1">
+                {companyLine}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Bullet Points with Red Pen Annotations OR X-Ray Heatmap Strips */}
         <div className="relative space-y-4 text-left font-body text-xs sm:text-sm text-ink leading-relaxed">

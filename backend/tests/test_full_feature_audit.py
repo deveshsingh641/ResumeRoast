@@ -153,6 +153,7 @@ class TestFullFeatureAudit(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(app)
+        os.environ["ADMIN_SECRET_KEY"] = "audit_admin_key"
         database._memory_store.clear()
         database._usage_memory.clear()
         database._dedup_cache.clear()
@@ -362,7 +363,11 @@ class TestFullFeatureAudit(unittest.TestCase):
         self.assertTrue(flag3.json()["hidden"], "Entry must auto-hide on 3rd flag!")
 
         # Admin unhide
-        admin_resp = self.client.post(f"/api/wall/admin/{wall_id}/hide?hidden=false")
+        os.environ["ADMIN_SECRET_KEY"] = "audit_admin_key"
+        admin_resp = self.client.post(
+            f"/api/wall/admin/{wall_id}/hide?hidden=false",
+            headers={"X-Admin-Key": "audit_admin_key"},
+        )
         self.assertEqual(admin_resp.status_code, 200)
         self.assertFalse(admin_resp.json()["hidden"])
 
@@ -526,14 +531,21 @@ class TestFullFeatureAudit(unittest.TestCase):
         self.assertEqual(empty_cb.status_code, 422)
 
         # 10.3 Admin Roasts Explorer API
-        admin_resp = self.client.get("/api/admin/roasts?limit=5")
+        os.environ["ADMIN_SECRET_KEY"] = "audit_admin_key"
+        admin_resp = self.client.get(
+            "/api/admin/roasts?limit=5",
+            headers={"X-Admin-Key": "audit_admin_key"},
+        )
         self.assertEqual(admin_resp.status_code, 200)
         admin_data = admin_resp.json()
         self.assertTrue(admin_data["ok"])
         self.assertIsInstance(admin_data["roasts"], list)
 
         # 10.4 /stats HTML dashboard includes explorer
-        stats_html = self.client.get("/stats", headers={"Accept": "text/html"})
+        stats_html = self.client.get(
+            "/stats",
+            headers={"Accept": "text/html", "X-Admin-Key": "audit_admin_key"},
+        )
         self.assertEqual(stats_html.status_code, 200)
         self.assertIn("Uploaded Resumes Explorer", stats_html.text)
 

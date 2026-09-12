@@ -10,6 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
+from app.core.limiter import limiter
 from app.db import database
 from app.i18n.mapping import DEFAULT_LANGUAGE, language_from_request
 from app.services import voice_service
@@ -41,6 +42,7 @@ ENGLISH_DEMO_VOICE_ROAST = {
 
 
 @router.post("/{roast_id}/voice")
+@limiter.limit("15/minute")
 async def generate_voice_roast(roast_id: str, request: Request) -> JSONResponse:
     """
     Generate or retrieve an existing voice note roast in requested language.

@@ -41,9 +41,10 @@ def verify_admin_access(request: Request, explicit_key: Optional[str] = None) ->
     """
     configured_key = os.getenv("ADMIN_SECRET_KEY", "").strip()
 
-    # In isolated testing environments where no key is configured, permit access
+    # Fail closed: never permit access if secret key is not configured
     if not configured_key:
-        return True
+        logger.error("[SECURITY_DENIED] Admin access denied: ADMIN_SECRET_KEY is not configured in environment.")
+        return False
 
     client_ip = _get_client_ip(request)
     now = time.time()

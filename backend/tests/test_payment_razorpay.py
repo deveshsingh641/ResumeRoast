@@ -138,29 +138,38 @@ class TestPaymentRazorpay(unittest.TestCase):
 
     def test_verify_simulation_payment(self):
         """Verifying simulation payment unlocks Pro in database immediately."""
-        email = "testuser_pro@example.com"
-        response = self.client.post(
-            "/api/verify-payment",
-            json={
-                "razorpay_order_id": "order_sim_12345678_abcdef",
-                "razorpay_payment_id": "pay_sim_987654321",
-                "razorpay_signature": "mock_signature",
-                "email": email,
-                "plan": "monthly",
-            },
-        )
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertTrue(data["is_pro"])
+        os.environ["RAZORPAY_KEY_ID"] = ""
+        os.environ["RAZORPAY_KEY_SECRET"] = ""
+        try:
+            email = "testuser_pro@example.com"
+            response = self.client.post(
+                "/api/verify-payment",
+                json={
+                    "razorpay_order_id": "order_sim_12345678_abcdef",
+                    "razorpay_payment_id": "pay_sim_987654321",
+                    "razorpay_signature": "mock_signature",
+                    "email": email,
+                    "plan": "monthly",
+                },
+            )
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertTrue(data["is_pro"])
 
-        # Check database directly
-        status = database.get_user_subscription(email)
-        self.assertEqual(status, "pro")
+            # Check database directly
+            status = database.get_user_subscription(email)
+            self.assertEqual(status, "pro")
 
-        # Check subscription status route
-        status_resp = self.client.get(f"/api/subscription/status?email={email}")
-        self.assertEqual(status_resp.status_code, 200)
-        self.assertTrue(status_resp.json()["is_pro"])
+            # Check subscription status route with authenticated token
+            token = data.get("pro_token")
+            status_resp = self.client.get(f"/api/subscription/status?email={email}", headers={"X-Pro-Token": token})
+            self.assertEqual(status_resp.status_code, 200)
+            self.assertTrue(status_resp.json()["is_pro"])
+        finally:
+            if self.orig_key_id:
+                os.environ["RAZORPAY_KEY_ID"] = self.orig_key_id
+            if self.orig_key_secret:
+                os.environ["RAZORPAY_KEY_SECRET"] = self.orig_key_secret
 
     def test_verify_payment_missing_fields(self):
         """Missing verification fields returns 400."""
@@ -248,29 +257,38 @@ class TestPaymentRazorpay(unittest.TestCase):
         self.assertEqual(free_resp.json()["total_issues"], 5)
 
         # Setup pro user and test with email
+        from app.services.pro_auth import create_pro_token
         email = "verified_pro_user@example.com"
         database.create_or_get_user(email)
         database.update_subscription(email, "pro")
 
-        # Query with email param
-        pro_resp = self.client.get(f"/api/roast/{roast_id}?email={email}")
-        self.assertEqual(pro_resp.status_code, 200)
-        self.assertFalse(pro_resp.json()["is_truncated"])
-        self.assertEqual(len(pro_resp.json()["issues"]), 5)
+        # Unauthenticated query with email param/header must NOT unlock Pro (Section 0C spoof protection)
+        unauth_resp = self.client.get(f"/api/roast/{roast_id}?email={email}")
+        self.assertEqual(unauth_resp.status_code, 200)
+        self.assertTrue(unauth_resp.json()["is_truncated"])
 
-        # Query with X-User-Email header
-        pro_header_resp = self.client.get(f"/api/roast/{roast_id}", headers={"X-User-Email": email})
+        # Authenticated query with valid X-Pro-Token unlocks untruncated roast
+        token = create_pro_token(email)
+        pro_header_resp = self.client.get(f"/api/roast/{roast_id}", headers={"X-Pro-Token": token})
         self.assertEqual(pro_header_resp.status_code, 200)
         self.assertFalse(pro_header_resp.json()["is_truncated"])
         self.assertEqual(len(pro_header_resp.json()["issues"]), 5)
 
     def test_usage_pro_user(self):
-        """GET /api/usage returns is_pro=True and unlimited remaining for Pro user."""
+        """GET /api/usage returns is_pro=True and unlimited remaining for Pro user with valid token."""
+        from app.services.pro_auth import create_pro_token
         email = "pro_usage_checker@example.com"
         database.create_or_get_user(email)
         database.update_subscription(email, "pro")
 
-        resp = self.client.get(f"/api/usage?email={email}")
+        # Unauthenticated call returns is_pro=False
+        unauth_resp = self.client.get(f"/api/usage?email={email}")
+        self.assertEqual(unauth_resp.status_code, 200)
+        self.assertFalse(unauth_resp.json()["is_pro"])
+
+        # Authenticated call with X-Pro-Token returns is_pro=True and unlimited remaining
+        token = create_pro_token(email)
+        resp = self.client.get(f"/api/usage", headers={"X-Pro-Token": token})
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data["is_pro"])
@@ -344,34 +362,50 @@ class TestPaymentRazorpay(unittest.TestCase):
 
     def test_verify_payment_idempotency(self):
         """Calling verify-payment multiple times with same payment ID returns idempotent success."""
-        email = "idempotent_user@example.com"
-        payload = {
-            "razorpay_order_id": "order_sim_idem_1",
-            "razorpay_payment_id": "pay_sim_idem_99",
-            "razorpay_signature": "mock_sig",
-            "email": email,
-            "plan": "monthly",
-        }
-        res1 = self.client.post("/api/verify-payment", json=payload)
-        self.assertEqual(res1.status_code, 200)
-        self.assertTrue(res1.json()["is_pro"])
+        os.environ["RAZORPAY_KEY_ID"] = ""
+        os.environ["RAZORPAY_KEY_SECRET"] = ""
+        try:
+            email = "idempotent_user@example.com"
+            payload = {
+                "razorpay_order_id": "order_sim_idem_1",
+                "razorpay_payment_id": "pay_sim_idem_99",
+                "razorpay_signature": "mock_sig",
+                "email": email,
+                "plan": "monthly",
+            }
+            res1 = self.client.post("/api/verify-payment", json=payload)
+            self.assertEqual(res1.status_code, 200)
+            self.assertTrue(res1.json()["is_pro"])
 
-        # Second call with same payment_id
-        res2 = self.client.post("/api/verify-payment", json=payload)
-        self.assertEqual(res2.status_code, 200)
-        self.assertTrue(res2.json()["is_pro"])
-        self.assertTrue(res2.json().get("idempotent", False))
+            # Second call with same payment_id
+            res2 = self.client.post("/api/verify-payment", json=payload)
+            self.assertEqual(res2.status_code, 200)
+            self.assertTrue(res2.json()["is_pro"])
+            self.assertTrue(res2.json().get("idempotent", False))
+        finally:
+            if self.orig_key_id:
+                os.environ["RAZORPAY_KEY_ID"] = self.orig_key_id
+            if self.orig_key_secret:
+                os.environ["RAZORPAY_KEY_SECRET"] = self.orig_key_secret
 
     def test_reconcile_payment_endpoint(self):
-        """Reconciliation endpoint rescues users if network blip occurred."""
-        email = "reconcile_user@example.com"
-        res = self.client.post(
-            "/api/payment/reconcile",
-            json={"email": email, "payment_id": "pay_sim_reconcile_123"},
-        )
-        self.assertEqual(res.status_code, 200)
-        self.assertTrue(res.json()["is_pro"])
-        self.assertEqual(database.get_user_subscription(email), "pro")
+        """Reconciliation endpoint rescues users if network blip occurred in simulation mode."""
+        os.environ["RAZORPAY_KEY_ID"] = ""
+        os.environ["RAZORPAY_KEY_SECRET"] = ""
+        try:
+            email = "reconcile_user@example.com"
+            res = self.client.post(
+                "/api/payment/reconcile",
+                json={"email": email, "payment_id": "pay_sim_reconcile_123"},
+            )
+            self.assertEqual(res.status_code, 200)
+            self.assertTrue(res.json()["is_pro"])
+            self.assertEqual(database.get_user_subscription(email), "pro")
+        finally:
+            if self.orig_key_id:
+                os.environ["RAZORPAY_KEY_ID"] = self.orig_key_id
+            if self.orig_key_secret:
+                os.environ["RAZORPAY_KEY_SECRET"] = self.orig_key_secret
 
     def test_verify_payment_idor_cross_user_rejected(self):
         """If user B attempts to verify an order created for user A, request is rejected with 403."""

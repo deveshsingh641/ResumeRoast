@@ -22,3 +22,5 @@ services:
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
+      - key: ADMIN_SECRET_KEY
+        sync: false

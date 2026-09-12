@@ -11,6 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 
+from app.core.limiter import limiter
 from app.db import database
 from app.i18n.mapping import DEFAULT_LANGUAGE, language_from_request
 from app.routers.roast import _device_fingerprint, MAX_FILE_SIZE
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/api", tags=["battle"])
 
 
 @router.post("/battle")
+@limiter.limit("5/minute")
 async def create_battle(
     request: Request,
     fighter1: UploadFile = File(...),

@@ -14,6 +14,9 @@ os.environ["DATABASE_URL"] = ""
 os.environ["ADMIN_SECRET_KEY"] = ""
 os.environ["HISTORICAL_ROASTS_OFFSET"] = "0"
 os.environ["HISTORICAL_UNIQUE_OFFSET"] = "0"
+os.environ["GEMINI_API_KEY"] = ""
+os.environ["GROQ_API_KEY"] = ""
+os.environ["ANTHROPIC_API_KEY"] = ""
 
 from app.db import database
 database.DATABASE_URL = ""
@@ -36,6 +39,11 @@ def _clear_all_memory():
 
 
 from app.services import admin_auth
+from app.core.limiter import limiter
+from app.routers import payment
+
+# Disable slowapi request rate-limiting during pytest execution to prevent test suite throttling
+limiter.enabled = False
 
 
 @pytest.fixture(autouse=True)
@@ -43,8 +51,14 @@ def ensure_db_isolated():
     """Guarantee that tests always operate strictly in-memory and clean state between tests."""
     os.environ["ADMIN_SECRET_KEY"] = ""
     admin_auth._failed_attempts.clear()
+    payment._processed_payments.clear()
+    payment._active_orders_cache.clear()
+    payment._order_email_map.clear()
     _clear_all_memory()
     yield
     os.environ["ADMIN_SECRET_KEY"] = ""
     admin_auth._failed_attempts.clear()
+    payment._processed_payments.clear()
+    payment._active_orders_cache.clear()
+    payment._order_email_map.clear()
     _clear_all_memory()

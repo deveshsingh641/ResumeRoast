@@ -1152,6 +1152,20 @@ def _generate_fallback_roast(
         cat_counts[iss["category"]] = cat_counts.get(iss["category"], 0) + 1
     top_cat = max(cat_counts, key=cat_counts.get) if cat_counts else "general"
 
+    # Heuristic extraction of most recent role/company line if available
+    extracted_exp_line: str | None = None
+    role_pattern = re.compile(
+        r"\b(engineer|developer|designer|manager|lead|intern|analyst|associate|consultant|architect|specialist|officer|head|director)\b",
+        re.IGNORECASE,
+    )
+    date_pattern = re.compile(r"\b(20\d\d|19\d\d|present|current)\b", re.IGNORECASE)
+    for l in lines[:15]:
+        if role_pattern.search(l) and (date_pattern.search(l) or "—" in l or "-" in l or "@" in l or " at " in l.lower()):
+            clean_l = l.strip().strip("-•*# ")
+            if 10 <= len(clean_l) <= 120:
+                extracted_exp_line = clean_l
+                break
+
     verdict = _generate_grounded_verdict(resume_text, domain, band, top_cat, lang)
     strengths = _extract_grounded_strengths(resume_text, domain, lang)
 
@@ -1159,6 +1173,7 @@ def _generate_fallback_roast(
         "overall_score": score,
         "band": band,
         "one_line_verdict": verdict,
+        "experience_header_line": extracted_exp_line,
         "issues": issues,
         "strengths": strengths,
     }
@@ -1269,6 +1284,14 @@ def _validate_schema(data: dict, resume_text: str | None = None, language: str =
 
     if not isinstance(data["strengths"], list):
         data["strengths"] = [str(data["strengths"])] if data["strengths"] else []
+
+    # Experience header line (role + company + dates)
+    exp_line = data.get("experience_header_line")
+    if exp_line is not None and isinstance(exp_line, str) and exp_line.strip():
+        clean_exp = exp_line.strip().strip('"\'')
+        data["experience_header_line"] = clean_exp[:140] if clean_exp else None
+    else:
+        data["experience_header_line"] = None
 
 
 # Spelled-out numbers to catch (covers most realistic resume contexts)
@@ -1447,7 +1470,7 @@ def analyze_resume(resume_text: str, language: str = DEFAULT_LANGUAGE) -> dict[s
     lang = normalize_language(language)
 
     env_path = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
-    load_dotenv(dotenv_path=os.path.abspath(env_path), override=True)
+    load_dotenv(dotenv_path=os.path.abspath(env_path), override=False)
 
     gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
     groq_key = os.getenv("GROQ_API_KEY", "").strip()

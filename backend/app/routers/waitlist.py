@@ -8,10 +8,11 @@ import logging
 import re
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.core.limiter import limiter
 from app.db import database
 
 logger = logging.getLogger("waitlist")
@@ -28,7 +29,8 @@ class WaitlistJoinRequest(BaseModel):
 
 @router.post("/waitlist/join")
 @router.post("/v1/waitlist/join")
-async def join_waitlist(payload: WaitlistJoinRequest) -> JSONResponse:
+@limiter.limit("15/minute")
+async def join_waitlist(payload: WaitlistJoinRequest, request: Request) -> JSONResponse:
     """
     Add a user's email to the Pro early-access waitlist.
     Deduplicates gracefully without throwing an error if already subscribed.

@@ -27,12 +27,31 @@ import { useCinematicReveal } from "@/hooks/useCinematicReveal";
 import { ExtendedRoastResult, getSampleRoastData } from "@/data/sampleRoast";
 import { usePageTitle } from "@/utils/usePageTitle";
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < breakpoint : false,
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < breakpoint);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
 export default function ResultsPage() {
   const { id } = useParams<{ id: string }>();
   usePageTitle(id ? `Roast Report #${id.slice(0, 6)}` : "Roast Report");
   const { i18n } = useTranslation();
   const lang = normalizeLang(i18n.language);
   const isHinglish = lang === "hi-IN";
+
+  const isMobile = useIsMobile(768);
+  const [mobileExtraTab, setMobileExtraTab] = useState<"chat" | "trophies" | "share">("chat");
 
   const { result: storeResult, setResult } = useAppStore();
   const [result, setLocalResult] = useState<ExtendedRoastResult | null>(
@@ -417,6 +436,14 @@ export default function ResultsPage() {
             <PaperMockup
               candidateName="SUBMITTED RESUME"
               candidateTitle="EXTRACTED CANDIDATE PROFILE"
+              companyLine={result.experience_header_line || null}
+              experienceHeader={
+                result.experience_header_line
+                  ? isHinglish
+                    ? "EXPERIENCE (KAAM KA RECORD)"
+                    : "RECENT EXPERIENCE"
+                  : null
+              }
               issues={result.issues}
               rotation={-2}
               animate={true}
@@ -450,40 +477,13 @@ export default function ResultsPage() {
           </div>
         </section>
 
-        {/* ── 2.2 B.3 Papa Proud Meter Gag Score ── */}
-        <section aria-label="Papa Proud Meter" className="pt-2">
-          <PapaProudMeter overallScore={result.overall_score} />
-        </section>
-
-        {/* ── 2.5 WhatsApp Voice Note Roast Module ── */}
-        <section aria-label="WhatsApp Voice Note Roast" className="pt-2">
-          <VoiceNoteBubble
-            roastId={result.id}
-            oneLineVerdict={result.one_line_verdict}
-          />
-        </section>
-
-        {/* ── 2.7 B.7 Meme-able Worst-Line Badge ── */}
-        {worstIssue && (
-          <section aria-label="Worst Bullet Trophy">
-            <WorstLineTrophy issue={worstIssue} />
-          </section>
-        )}
-
-        {/* ── 2.8 Roast Back / Argue with AI (Interactive Comeback Chat) ── */}
-        <section aria-label="Roast Back Chat" className="pt-2">
-          <RoastBackChat
-            roastId={result.id}
-            overallScore={result.overall_score}
-            verdict={result.one_line_verdict}
-          />
-        </section>
+        {/* ── Tier B: Primary Actions & Issue Critique (Immediately following Mockup) ── */}
 
         {/* ── 3. Strengths Section (Section A.6) ── */}
         {result.strengths && result.strengths.length > 0 && (
           <section
             aria-label="Working elements"
-            className="max-w-[640px] mx-auto text-left border border-white/[0.08] rounded-sm p-6 bg-bg"
+            className="max-w-[640px] mx-auto text-left border border-white/[0.08] rounded-sm p-4 sm:p-6 bg-bg"
           >
             <p className="section-label mb-3 text-tan">
               {isHinglish
@@ -505,7 +505,7 @@ export default function ResultsPage() {
         )}
 
         {/* ── 4. Detailed Flagged Issues (Section A.6 with WhatsApp typing indicator) ── */}
-        <section aria-label="Flagged Issues Breakdown" className="space-y-6">
+        <section aria-label="Flagged Issues Breakdown" className="space-y-4 sm:space-y-6">
           <div className="max-w-[640px] mx-auto text-left flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
             <div>
               <p className="section-label mb-1">
@@ -513,7 +513,7 @@ export default function ResultsPage() {
                   ? "LINE-BY-LINE PAKAD MEIN AAYA"
                   : "LINE-BY-LINE CRITIQUE"}
               </p>
-              <h2 className="font-display text-xl text-paper">
+              <h2 className="font-display text-lg sm:text-xl text-paper">
                 {isHinglish
                   ? `Itni galtiyaan mili bhai (${result.total_issues})`
                   : `Critical flaws flagged (${result.total_issues})`}
@@ -550,6 +550,14 @@ export default function ResultsPage() {
                     : "📥 Download Fixed ATS (.md)"}
                 </span>
               </button>
+              <button
+                type="button"
+                onClick={() => setIsStoryModalOpen(true)}
+                className="btn-ghost !text-xs !py-1.5 !px-2.5 flex items-center gap-1 text-purple-300 border-purple-500/40 hover:bg-purple-500/10 font-mono"
+                title="Open 9:16 Story Card for Instagram & WhatsApp"
+              >
+                <span>📱 Story Card</span>
+              </button>
             </div>
           </div>
 
@@ -565,11 +573,11 @@ export default function ResultsPage() {
         {result.is_truncated && (
           <section
             aria-label="Unlock full roast"
-            className="max-w-[640px] mx-auto text-left border border-stamp/40 bg-[#E8422D]/[0.05] rounded-sm p-6 sm:p-8"
+            className="max-w-[640px] mx-auto text-left border border-stamp/40 bg-[#E8422D]/[0.05] rounded-sm p-4 sm:p-8"
           >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
               <div>
-                <p className="font-display text-xl text-paper mb-1">
+                <p className="font-display text-lg sm:text-xl text-paper mb-1">
                   {isHinglish
                     ? `${result.total_issues - result.issues.length} aur galtiyaan desk ke neeche chhipi hain.`
                     : `${result.total_issues - result.issues.length} more critical flaws hidden below the desk.`}
@@ -582,7 +590,7 @@ export default function ResultsPage() {
               </div>
               <Link
                 to="/pricing"
-                className="btn-primary shrink-0 font-semibold flex items-center gap-1.5 text-center"
+                className="btn-primary shrink-0 font-semibold flex items-center gap-1.5 text-center w-full sm:w-auto justify-center"
               >
                 <span>
                   {isHinglish
@@ -594,202 +602,404 @@ export default function ResultsPage() {
           </section>
         )}
 
-        {/* ── 5.5 Score Journey Roadmap ── */}
-        <section aria-label="Score Journey Roadmap" className="pt-2">
-          <ScoreJourney
-            currentScore={result.overall_score}
-            band={result.band}
-            totalIssues={result.total_issues}
-          />
-        </section>
-
-        {/* ── 5.8 Official Parody Certificate Download Card ── */}
-        <section
-          aria-label="Official Evaluation Diploma"
-          className="max-w-[640px] mx-auto text-left border-2 border-dashed border-amber-500/40 bg-gradient-to-br from-[#1C160E] to-[#120F0C] rounded-sm p-6 shadow-xl relative overflow-hidden"
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xl">📜</span>
-                <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold">
-                  OFFICIAL EVALUATION DIPLOMA // PARODY PDF
-                </span>
+        {/* ── Tier C: Engagement & Gamification Extras ── */}
+        {isMobile ? (
+          /* Mobile Tier C: Progressive Disclosure Hub with Segmented Tabs */
+          <section
+            aria-label="Roast Lab and Extras"
+            className="max-w-[640px] mx-auto text-left border border-white/[0.08] bg-black/40 rounded-lg p-3 sm:p-4 space-y-4 shadow-xl"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">🧪</span>
+                  <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold">
+                    ROAST LAB // INTERACTIVE & EXTRAS
+                  </span>
+                </div>
+                <h3 className="font-display text-base text-paper mt-0.5">
+                  {isHinglish ? "Extras & Interactive Features" : "Interactive Extras & Tools"}
+                </h3>
               </div>
-              <h3 className="font-display text-lg sm:text-xl text-paper">
-                {isHinglish
-                  ? "Official Parody Certificate Download Karo"
-                  : "Download Official Parody Certificate"}
-              </h3>
-              <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
-                {isHinglish
-                  ? "High-res printable PDF with wax seal stamp, score verdict, and official parody title."
-                  : "High-res printable PDF with wax seal stamp, score verdict, and official parody title."}
-              </p>
             </div>
-            <button
-              type="button"
-              onClick={handleDownloadCertificate}
-              disabled={downloadingCert}
-              className="btn-primary shrink-0 !text-xs !py-2.5 !px-4 flex items-center gap-1.5 font-bold whitespace-nowrap"
-            >
-              <span>
-                {downloadingCert
-                  ? isHinglish
-                    ? "Generating PDF…"
-                    : "Generating PDF…"
-                  : isHinglish
-                    ? "Download Certificate (PDF)"
-                    : "Download Certificate (PDF)"}
-              </span>
-              <span>📥</span>
-            </button>
-          </div>
-        </section>
 
-        {/* ── 5.9 Role-Specific JD Match CTA Card (ATS Reality Check) ── */}
-        <section
-          aria-label="Job Description Match CTA"
-          className="max-w-[640px] mx-auto text-left border border-stamp/40 bg-gradient-to-r from-stamp/10 via-[#1C160E] to-transparent rounded-sm p-6 shadow-xl relative overflow-hidden"
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
-            <div>
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-xl">🎯</span>
-                <span className="font-mono text-[10px] text-stamp uppercase tracking-widest font-bold">
-                  {isHinglish
-                    ? "ROLE TAILORING // ATS REALITY CHECK"
-                    : "ROLE TAILORING // ATS REALITY CHECK"}
-                </span>
-                <span className="font-mono text-[9px] bg-stamp/20 text-paper border border-stamp/40 px-1.5 py-0.2 rounded-xs">
-                  NEW
-                </span>
-              </div>
-              <h3 className="font-display text-lg sm:text-xl text-paper">
-                {isHinglish
-                  ? "Kisi specific company mein apply kar rahe ho?"
-                  : "Applying to a specific company or role?"}
-              </h3>
-              <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
-                {isHinglish
-                  ? "Isi resume ko unke exact Job Description ke saath match karo bina re-upload kiye. Pata lagao kaunse keywords missing hain."
-                  : "Match this roasted resume against their exact Job Description without re-uploading. Detect missing ATS keyword traps and get tailored rewrites."}
-              </p>
+            {/* Segmented Mobile Tab Switcher */}
+            <div className="grid grid-cols-3 gap-1 p-1 bg-white/[0.03] border border-white/[0.08] rounded-md">
+              <button
+                type="button"
+                onClick={() => setMobileExtraTab("chat")}
+                className={`py-2 px-1 text-center font-mono text-[11px] rounded transition-all flex flex-col items-center gap-0.5 ${
+                  mobileExtraTab === "chat"
+                    ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-sm"
+                    : "text-tan-dim hover:text-paper"
+                }`}
+              >
+                <span>💬 AI Roaster</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileExtraTab("trophies")}
+                className={`py-2 px-1 text-center font-mono text-[11px] rounded transition-all flex flex-col items-center gap-0.5 ${
+                  mobileExtraTab === "trophies"
+                    ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-sm"
+                    : "text-tan-dim hover:text-paper"
+                }`}
+              >
+                <span>🏆 Badges & Pride</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileExtraTab("share")}
+                className={`py-2 px-1 text-center font-mono text-[11px] rounded transition-all flex flex-col items-center gap-0.5 ${
+                  mobileExtraTab === "share"
+                    ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-sm"
+                    : "text-tan-dim hover:text-paper"
+                }`}
+              >
+                <span>📜 Share & Cards</span>
+              </button>
             </div>
-            <Link
-              to={`/match?roast_id=${result.id}`}
-              className="btn-primary shrink-0 !text-xs !py-3 !px-5 flex items-center gap-2 font-display tracking-wider uppercase whitespace-nowrap shadow-lg shadow-stamp/20 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-            >
-              <span>
-                {isHinglish
-                  ? "JD Se Match Karo →"
-                  : "Match With Job Description →"}
-              </span>
-            </Link>
-          </div>
-        </section>
 
-        {/* ── 6. Live Share Card Generation Module (B.1 WhatsApp First + 2.3 Torn Paper Variant) ── */}
-        <section aria-label="Share score card" className="pt-6">
-          <div className="max-w-[640px] mx-auto text-left mb-6">
-            <p className="section-label mb-1">
-              {isHinglish ? "DAMAGE SHARE KARO" : "SHARE THE DAMAGE"}
-            </p>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-display text-xl text-paper">
-                {isHinglish ? "Shareable Grade Card" : "Shareable Grade Card"}
-              </h2>
-              {/* Quick 1-Click Viral Share Suite */}
-              <div className="flex items-center gap-2">
+            {/* Mobile Tab 1: AI Roaster (Voice Note + Comeback Chat) */}
+            <div className={mobileExtraTab === "chat" ? "space-y-4" : "hidden"}>
+              <VoiceNoteBubble
+                roastId={result.id}
+                oneLineVerdict={result.one_line_verdict}
+              />
+              <RoastBackChat
+                roastId={result.id}
+                overallScore={result.overall_score}
+                verdict={result.one_line_verdict}
+              />
+            </div>
+
+            {/* Mobile Tab 2: Badges & Pride (Worst Line Trophy + Papa Proud Meter + Score Journey) */}
+            <div className={mobileExtraTab === "trophies" ? "space-y-4" : "hidden"}>
+              {worstIssue && <WorstLineTrophy issue={worstIssue} />}
+              <PapaProudMeter overallScore={result.overall_score} />
+              <ScoreJourney
+                currentScore={result.overall_score}
+                band={result.band}
+                totalIssues={result.total_issues}
+              />
+            </div>
+
+            {/* Mobile Tab 3: Share, Certificate & Extras */}
+            <div className={mobileExtraTab === "share" ? "space-y-4" : "hidden"}>
+              {/* Parody Certificate */}
+              <div className="border border-dashed border-amber-500/40 bg-gradient-to-br from-[#1C160E] to-[#120F0C] rounded p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">📜</span>
+                  <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold">
+                    EVALUATION DIPLOMA
+                  </span>
+                </div>
+                <h4 className="font-display text-sm text-paper mb-1">
+                  {isHinglish ? "Parody Certificate (PDF)" : "Parody Certificate (PDF)"}
+                </h4>
+                <p className="font-mono text-xs text-tan-dim mb-3">
+                  Printable PDF with wax seal stamp and red-pen verdict.
+                </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    const shareText = `My resume scored ${result.overall_score}/100 on Resume Roast 💀🔥!\n\nVerdict: "${result.one_line_verdict}"\n\nFind out how brutal yours is: https://resumeroast.app`;
-                    window.open(
-                      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
-                      "_blank",
-                    );
+                  onClick={handleDownloadCertificate}
+                  disabled={downloadingCert}
+                  className="btn-primary !text-xs !py-2 !px-3 w-full justify-center"
+                >
+                  {downloadingCert ? "Generating PDF…" : "Download Certificate 📥"}
+                </button>
+              </div>
+
+              {/* JD Match Card */}
+              <div className="border border-stamp/40 bg-gradient-to-r from-stamp/10 via-[#1C160E] to-transparent rounded p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">🎯</span>
+                  <span className="font-mono text-[10px] text-stamp uppercase tracking-widest font-bold">
+                    ROLE TAILORING // ATS CHECK
+                  </span>
+                </div>
+                <h4 className="font-display text-sm text-paper mb-1">
+                  {isHinglish ? "Specific job ke liye match karo" : "Match against Job Description"}
+                </h4>
+                <p className="font-mono text-xs text-tan-dim mb-3">
+                  Match this resume against a target JD to find missing ATS keywords.
+                </p>
+                <Link
+                  to={`/match?roast_id=${result.id}`}
+                  className="btn-primary !text-xs !py-2 !px-3 w-full justify-center flex items-center gap-1.5"
+                >
+                  <span>Match With JD →</span>
+                </Link>
+              </div>
+
+              {/* Visual Share Card Generator */}
+              <ShareCardGenerator result={result} />
+
+              {/* Referral Challenge */}
+              <ReferralChallenge />
+
+              {/* Wall of Shame Opt-in */}
+              <div className="border border-white/[0.08] bg-white/[0.02] rounded p-4">
+                <p className="font-display text-sm text-paper mb-1">
+                  📢 {isHinglish ? "Public Wall pe post karo" : "Post to Public Wall"}
+                </p>
+                <p className="font-mono text-xs text-tan-dim mb-3">
+                  {isHinglish
+                    ? "Saare personal details anonymize ho jayenge."
+                    : "All personal details are stripped and sanitized."}
+                </p>
+                <button
+                  type="button"
+                  disabled={wallPublishing || wallPublished}
+                  onClick={async () => {
+                    if (wallPublished || wallPublishing) return;
+                    try {
+                      setWallPublishing(true);
+                      await axios.post("/api/wall/publish", { roast_id: result.id });
+                      setWallPublished(true);
+                    } catch {
+                      setWallPublished(true);
+                    } finally {
+                      setWallPublishing(false);
+                    }
                   }}
-                  className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1.5 hover:!border-sky-500 hover:text-sky-400 font-mono"
-                  title="Share roast on X"
+                  className="btn-ghost !text-xs !py-1.5 !px-3 text-amber-400 hover:border-amber-400 w-full justify-center"
                 >
-                  <span>𝕏 Share on X</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsStoryModalOpen(true)}
-                  className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1.5 text-purple-300 border-purple-500/40 hover:bg-purple-500/10 font-mono"
-                  title="Open 9:16 Story Card for Instagram & WhatsApp"
-                >
-                  <span>📱 9:16 Story Card</span>
+                  {wallPublishing ? "Publishing…" : wallPublished ? "✓ Added to Wall!" : "Post to Wall"}
                 </button>
               </div>
             </div>
-          </div>
+          </section>
+        ) : (
+          /* Desktop Tier C: Full Spacious Sequential Layout */
+          <div className="space-y-16">
+            {/* ── 2.2 B.3 Papa Proud Meter Gag Score ── */}
+            <section aria-label="Papa Proud Meter" className="pt-2">
+              <PapaProudMeter overallScore={result.overall_score} />
+            </section>
 
-          <ShareCardGenerator result={result} />
-        </section>
+            {/* ── 2.5 WhatsApp Voice Note Roast Module ── */}
+            <section aria-label="WhatsApp Voice Note Roast" className="pt-2">
+              <VoiceNoteBubble
+                roastId={result.id}
+                oneLineVerdict={result.one_line_verdict}
+              />
+            </section>
 
-        {/* ── 6.2 B.5 Referral Dare Challenge ── */}
-        <section aria-label="Referral Challenge">
-          <ReferralChallenge />
-        </section>
+            {/* ── 2.7 B.7 Meme-able Worst-Line Badge ── */}
+            {worstIssue && (
+              <section aria-label="Worst Bullet Trophy">
+                <WorstLineTrophy issue={worstIssue} />
+              </section>
+            )}
 
-        {/* ── 6.5 Wall of Shame / Wall of Fame Opt-in Widget ── */}
-        <section
-          aria-label="Post to Wall of Shame"
-          className="max-w-[640px] mx-auto text-left border border-white/[0.08] bg-white/[0.02] rounded-lg p-6"
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <p className="font-display text-base text-paper flex items-center gap-2">
-                <span>
-                  {isHinglish
-                    ? "📢 Public Wall pe anonymously daal do"
-                    : "📢 Post anonymously to Public Wall"}
-                </span>
-              </p>
-              <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
-                {isHinglish
-                  ? "Saare naam, email, aur company details publicly show hone se pehle sanitize ho jaate hain."
-                  : "All names, emails, and company details are stripped and sanitized before public listing."}
-              </p>
-            </div>
+            {/* ── 2.8 Roast Back / Argue with AI (Interactive Comeback Chat) ── */}
+            <section aria-label="Roast Back Chat" className="pt-2">
+              <RoastBackChat
+                roastId={result.id}
+                overallScore={result.overall_score}
+                verdict={result.one_line_verdict}
+              />
+            </section>
 
-            <button
-              type="button"
-              disabled={wallPublishing || wallPublished}
-              onClick={async () => {
-                if (wallPublished || wallPublishing) return;
-                try {
-                  setWallPublishing(true);
-                  await axios.post("/api/wall/publish", {
-                    roast_id: result.id,
-                  });
-                  setWallPublished(true);
-                } catch (err) {
-                  console.error("Failed to post to wall:", err);
-                  setWallPublished(true);
-                } finally {
-                  setWallPublishing(false);
-                }
-              }}
-              className="btn-ghost shrink-0 text-xs text-amber-400 hover:border-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
+            {/* ── 5.5 Score Journey Roadmap ── */}
+            <section aria-label="Score Journey Roadmap" className="pt-2">
+              <ScoreJourney
+                currentScore={result.overall_score}
+                band={result.band}
+                totalIssues={result.total_issues}
+              />
+            </section>
+
+            {/* ── 5.8 Official Parody Certificate Download Card ── */}
+            <section
+              aria-label="Official Evaluation Diploma"
+              className="max-w-[640px] mx-auto text-left border-2 border-dashed border-amber-500/40 bg-gradient-to-br from-[#1C160E] to-[#120F0C] rounded-sm p-6 shadow-xl relative overflow-hidden"
             >
-              {wallPublishing
-                ? isHinglish
-                  ? "Publishing…"
-                  : "Publishing…"
-                : wallPublished
-                  ? isHinglish
-                    ? "✓ Wall pe post ho gaya!"
-                    : "✓ Added to Wall!"
-                  : isHinglish
-                    ? "Wall pe daal do"
-                    : "Post to Wall"}
-            </button>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">📜</span>
+                    <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold">
+                      OFFICIAL EVALUATION DIPLOMA // PARODY PDF
+                    </span>
+                  </div>
+                  <h3 className="font-display text-lg sm:text-xl text-paper">
+                    {isHinglish
+                      ? "Official Parody Certificate Download Karo"
+                      : "Download Official Parody Certificate"}
+                  </h3>
+                  <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
+                    {isHinglish
+                      ? "High-res printable PDF with wax seal stamp, score verdict, and official parody title."
+                      : "High-res printable PDF with wax seal stamp, score verdict, and official parody title."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadCertificate}
+                  disabled={downloadingCert}
+                  className="btn-primary shrink-0 !text-xs !py-2.5 !px-4 flex items-center gap-1.5 font-bold whitespace-nowrap"
+                >
+                  <span>
+                    {downloadingCert
+                      ? isHinglish
+                        ? "Generating PDF…"
+                        : "Generating PDF…"
+                      : isHinglish
+                        ? "Download Certificate (PDF)"
+                        : "Download Certificate (PDF)"}
+                  </span>
+                  <span>📥</span>
+                </button>
+              </div>
+            </section>
+
+            {/* ── 5.9 Role-Specific JD Match CTA Card (ATS Reality Check) ── */}
+            <section
+              aria-label="Job Description Match CTA"
+              className="max-w-[640px] mx-auto text-left border border-stamp/40 bg-gradient-to-r from-stamp/10 via-[#1C160E] to-transparent rounded-sm p-6 shadow-xl relative overflow-hidden"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-xl">🎯</span>
+                    <span className="font-mono text-[10px] text-stamp uppercase tracking-widest font-bold">
+                      {isHinglish
+                        ? "ROLE TAILORING // ATS REALITY CHECK"
+                        : "ROLE TAILORING // ATS REALITY CHECK"}
+                    </span>
+                    <span className="font-mono text-[9px] bg-stamp/20 text-paper border border-stamp/40 px-1.5 py-0.2 rounded-xs">
+                      NEW
+                    </span>
+                  </div>
+                  <h3 className="font-display text-lg sm:text-xl text-paper">
+                    {isHinglish
+                      ? "Kisi specific company mein apply kar rahe ho?"
+                      : "Applying to a specific company or role?"}
+                  </h3>
+                  <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
+                    {isHinglish
+                      ? "Isi resume ko unke exact Job Description ke saath match karo bina re-upload kiye. Pata lagao kaunse keywords missing hain."
+                      : "Match this roasted resume against their exact Job Description without re-uploading. Detect missing ATS keyword traps and get tailored rewrites."}
+                  </p>
+                </div>
+                <Link
+                  to={`/match?roast_id=${result.id}`}
+                  className="btn-primary shrink-0 !text-xs !py-3 !px-5 flex items-center gap-2 font-display tracking-wider uppercase whitespace-nowrap shadow-lg shadow-stamp/20 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                >
+                  <span>
+                    {isHinglish
+                      ? "JD Se Match Karo →"
+                      : "Match With Job Description →"}
+                  </span>
+                </Link>
+              </div>
+            </section>
+
+            {/* ── 6. Live Share Card Generation Module ── */}
+            <section aria-label="Share score card" className="pt-6">
+              <div className="max-w-[640px] mx-auto text-left mb-6">
+                <p className="section-label mb-1">
+                  {isHinglish ? "DAMAGE SHARE KARO" : "SHARE THE DAMAGE"}
+                </p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="font-display text-xl text-paper">
+                    {isHinglish ? "Shareable Grade Card" : "Shareable Grade Card"}
+                  </h2>
+                  {/* Quick 1-Click Viral Share Suite */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const shareText = `My resume scored ${result.overall_score}/100 on Resume Roast 💀🔥!\n\nVerdict: "${result.one_line_verdict}"\n\nFind out how brutal yours is: https://resumeroast.app`;
+                        window.open(
+                          `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
+                          "_blank",
+                        );
+                      }}
+                      className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1.5 hover:!border-sky-500 hover:text-sky-400 font-mono"
+                      title="Share roast on X"
+                    >
+                      <span>𝕏 Share on X</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsStoryModalOpen(true)}
+                      className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1.5 text-purple-300 border-purple-500/40 hover:bg-purple-500/10 font-mono"
+                      title="Open 9:16 Story Card for Instagram & WhatsApp"
+                    >
+                      <span>📱 9:16 Story Card</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <ShareCardGenerator result={result} />
+            </section>
+
+            {/* ── 6.2 B.5 Referral Dare Challenge ── */}
+            <section aria-label="Referral Challenge">
+              <ReferralChallenge />
+            </section>
+
+            {/* ── 6.5 Wall of Shame / Wall of Fame Opt-in Widget ── */}
+            <section
+              aria-label="Post to Wall of Shame"
+              className="max-w-[640px] mx-auto text-left border border-white/[0.08] bg-white/[0.02] rounded-lg p-6"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <p className="font-display text-base text-paper flex items-center gap-2">
+                    <span>
+                      {isHinglish
+                        ? "📢 Public Wall pe anonymously daal do"
+                        : "📢 Post anonymously to Public Wall"}
+                    </span>
+                  </p>
+                  <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
+                    {isHinglish
+                      ? "Saare naam, email, aur company details publicly show hone se pehle sanitize ho jaate hain."
+                      : "All names, emails, and company details are stripped and sanitized before public listing."}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={wallPublishing || wallPublished}
+                  onClick={async () => {
+                    if (wallPublished || wallPublishing) return;
+                    try {
+                      setWallPublishing(true);
+                      await axios.post("/api/wall/publish", {
+                        roast_id: result.id,
+                      });
+                      setWallPublished(true);
+                    } catch (err) {
+                      console.error("Failed to post to wall:", err);
+                      setWallPublished(true);
+                    } finally {
+                      setWallPublishing(false);
+                    }
+                  }}
+                  className="btn-ghost shrink-0 text-xs text-amber-400 hover:border-amber-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {wallPublishing
+                    ? isHinglish
+                      ? "Publishing…"
+                      : "Publishing…"
+                    : wallPublished
+                      ? isHinglish
+                        ? "✓ Wall pe post ho gaya!"
+                        : "✓ Added to Wall!"
+                      : isHinglish
+                        ? "Wall pe daal do"
+                        : "Post to Wall"}
+                </button>
+              </div>
+            </section>
           </div>
-        </section>
+        )}
 
         {/* ── 7. Bottom Navigation ── */}
         <div className="pt-8 flex flex-wrap justify-center gap-4">

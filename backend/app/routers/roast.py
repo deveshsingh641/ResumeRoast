@@ -4,6 +4,7 @@ Roast router — handles resume upload, text extraction, deduplication, AI analy
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import re
 from typing import Optional
@@ -12,16 +13,22 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from app.core.limiter import limiter
 from app.db import database
 from app.i18n.mapping import DEFAULT_LANGUAGE, language_from_request
 from app.services import ai_analyzer, extractor
+from app.services.ai_analyzer import analyze_resume
 from app.services.certificate_service import generate_certificate_pdf, get_credential_title
+from app.services.pro_auth import get_authenticated_pro_email
+
+logger = logging.getLogger("roast")
 
 SAMPLE_ROAST_RESPONSE = {
     "id": "demo",
     "overall_score": 28,
     "band": "weak",
     "one_line_verdict": "Bhai resume hai ya suspense novel? 🕵️",
+    "experience_header_line": "TechCorp Labs — Software Engineer (2022–Present)",
     "issues": [
         {
             "quoted_text": "Responsible for building reusable UI components and collaborating across teams",
@@ -98,6 +105,7 @@ ENGLISH_SAMPLE_ROAST_RESPONSE = {
     "overall_score": 28,
     "band": "weak",
     "one_line_verdict": "Is this a resume or a mystery novel? Let's see some evidence 🕵️",
+    "experience_header_line": "TechCorp Labs — Software Engineer (2022–Present)",
     "issues": [
         {
             "quoted_text": "Responsible for building reusable UI components and collaborating across teams",
@@ -178,19 +186,18 @@ FREE_TIER_LIMIT = int(os.getenv("FREE_TIER_DAILY_LIMIT", "1"))
 def _device_fingerprint(request: Request) -> str:
     """
     Generate a semi-stable anonymous fingerprint from IP + User-Agent.
-    Gracefully falls back to client host if forwarded headers are absent.
+    Binds client IP, User-Agent, and any custom ID to prevent header rotation bypass.
     """
-    custom_fp = request.headers.get("X-Device-Fingerprint")
-    if custom_fp:
-        return custom_fp
     forwarded = request.headers.get("X-Forwarded-For")
     ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "127.0.0.1")
     ua = request.headers.get("User-Agent", "standard-browser")
-    raw = f"{ip}:{ua}"
+    custom_fp = (request.headers.get("X-Device-Fingerprint") or "").strip()
+    raw = f"{ip}:{ua}:{custom_fp}" if custom_fp else f"{ip}:{ua}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
 @router.post("/roast")
+@limiter.limit("10/minute")
 async def create_roast(
     request: Request,
     file: UploadFile = File(...),
@@ -222,17 +229,28 @@ async def create_roast(
         )
 
     # 2. Rate-limit & Pro subscription check (server-enforced)
-    user_email = request.headers.get("X-User-Email") or request.query_params.get("email")
+    forwarded = request.headers.get("X-Forwarded-For")
+    client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "127.0.0.1")
+    ip_key = f"ip:{client_ip}"
+
+    auth_pro_email = get_authenticated_pro_email(request)
     is_pro = False
-    if user_email:
-        clean_email = user_email.strip().lower()
-        is_pro = (database.get_user_subscription(clean_email) == "pro")
+    if auth_pro_email:
+        clean_email = auth_pro_email.strip().lower()
+        sub_status = database.get_user_subscription(clean_email)
+        if sub_status == "pro":
+            is_pro = True
+    elif request.headers.get("X-User-Email") or request.query_params.get("email"):
+        unauth_email = (request.headers.get("X-User-Email") or request.query_params.get("email") or "").strip().lower()
+        if database.get_user_subscription(unauth_email) == "pro":
+            logger.warning(f"Unauthenticated Pro claim blocked for {unauth_email}: Missing cryptographic Pro token.")
 
     is_free_tier = not is_pro
     fingerprint = _device_fingerprint(request)
-    usage_count = database.get_usage_count(fingerprint)
+    fp_usage = database.get_usage_count(fingerprint)
+    ip_usage = database.get_usage_count(ip_key)
 
-    if is_free_tier and usage_count >= FREE_TIER_LIMIT:
+    if is_free_tier and (fp_usage >= FREE_TIER_LIMIT or ip_usage >= FREE_TIER_LIMIT):
         raise HTTPException(
             status_code=429,
             detail={
@@ -275,6 +293,7 @@ async def create_roast(
                     "overall_score": existing_roast["overall_score"],
                     "band": existing_roast.get("band", "mid"),
                     "one_line_verdict": existing_roast.get("one_line_verdict", ""),
+                    "experience_header_line": existing_roast.get("experience_header_line"),
                     "issues": issues[:3] if is_free_tier else issues,
                     "total_issues": len(issues),
                     "strengths": strengths,
@@ -295,7 +314,7 @@ async def create_roast(
 
     # 5. AI analysis
     try:
-        analysis = ai_analyzer.analyze_resume(resume_text, language=lang)
+        analysis = analyze_resume(resume_text, language=lang)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
@@ -306,8 +325,9 @@ async def create_roast(
             detail="Our AI grader encountered an unexpected error. Please try again in a few moments.",
         )
 
-    # 6. Increment usage counter
+    # 6. Increment usage counters (both device fingerprint and client IP)
     database.increment_usage(fingerprint)
+    database.increment_usage(ip_key)
 
     # 7. Store result
     roast_id = database.save_roast(
@@ -318,6 +338,7 @@ async def create_roast(
         strengths=analysis["strengths"],
         device_fingerprint=fingerprint,
         resume_text=resume_text,
+        experience_header_line=analysis.get("experience_header_line"),
     )
 
     # Register in dedup cache
@@ -334,6 +355,7 @@ async def create_roast(
             "overall_score": analysis["overall_score"],
             "band": analysis["band"],
             "one_line_verdict": analysis["one_line_verdict"],
+            "experience_header_line": analysis.get("experience_header_line"),
             "issues": visible_issues,
             "total_issues": len(all_issues),
             "strengths": analysis["strengths"],
@@ -352,11 +374,16 @@ async def get_demo_roast(request: Request) -> JSONResponse:
 
 @router.get("/roast/{roast_id}")
 async def get_roast(roast_id: str, request: Request, email: Optional[str] = None) -> JSONResponse:
-    # Check if request comes with Pro user identification
-    user_email = email or request.headers.get("X-User-Email")
+    # Check if request comes with cryptographically verified Pro token
+    auth_pro_email = get_authenticated_pro_email(request)
     is_pro = False
-    if user_email:
-        is_pro = (database.get_user_subscription(user_email.strip().lower()) == "pro")
+    if auth_pro_email:
+        clean_email = auth_pro_email.strip().lower()
+        is_pro = (database.get_user_subscription(clean_email) == "pro")
+    elif email or request.headers.get("X-User-Email"):
+        unauth_email = (email or request.headers.get("X-User-Email") or "").strip().lower()
+        if database.get_user_subscription(unauth_email) == "pro":
+            logger.warning(f"Unauthenticated Pro claim on GET /roast blocked for {unauth_email}")
 
     if roast_id in ("demo", "demo-roast", "sample-roast-1"):
         lang = language_from_request(request)
@@ -400,6 +427,7 @@ async def get_roast(roast_id: str, request: Request, email: Optional[str] = None
             "overall_score": row["overall_score"],
             "band": row["band"],
             "one_line_verdict": row["one_line_verdict"],
+            "experience_header_line": row.get("experience_header_line"),
             "issues": visible_issues,
             "total_issues": len(issues),
             "strengths": strengths,

@@ -12,10 +12,12 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.core.limiter import limiter
 from app.db import database
 from app.i18n.mapping import DEFAULT_LANGUAGE, language_from_request
 from app.services import extractor
 from app.services.jd_match_service import SAMPLE_JDS, analyze_jd_match
+from app.services.pro_auth import get_authenticated_pro_email
 
 logger = logging.getLogger("match")
 router = APIRouter(prefix="/api", tags=["match"])
@@ -44,6 +46,7 @@ async def get_sample_jds() -> JSONResponse:
 
 
 @router.post("/match")
+@limiter.limit("10/minute")
 async def match_resume_with_jd(
     request: Request,
     file: Optional[UploadFile] = File(None),
@@ -123,11 +126,15 @@ async def match_resume_with_jd(
     lang = language or language_from_request(request)
 
     # 4. Determine user tier (Free vs Pro)
-    user_email = request.headers.get("x-user-email") or request.cookies.get("user_email")
+    auth_pro_email = get_authenticated_pro_email(request)
     is_pro = False
-    if user_email:
-        sub_status = database.get_user_subscription(user_email)
-        is_pro = sub_status == "pro"
+    if auth_pro_email:
+        sub_status = database.get_user_subscription(auth_pro_email)
+        is_pro = (sub_status == "pro")
+    elif request.headers.get("x-user-email"):
+        unauth = request.headers.get("x-user-email", "").strip().lower()
+        if database.get_user_subscription(unauth) == "pro":
+            logger.warning(f"Unauthenticated Pro claim on /match blocked for {unauth}")
 
     # 5. Run AI Match analysis
     try:

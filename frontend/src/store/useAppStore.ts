@@ -20,6 +20,7 @@ export interface RoastResult {
   overall_score: number;
   band: ScoreBand;
   one_line_verdict: string;
+  experience_header_line?: string | null;
   issues: Issue[];
   total_issues: number;
   strengths: string[];

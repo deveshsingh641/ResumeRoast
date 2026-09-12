@@ -14,6 +14,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from app.core.limiter import limiter
 from app.db import database
 from app.services.admin_auth import apply_secure_admin_headers, verify_admin_access
 from app.services.email_notifier import send_suggestion_alert
@@ -48,6 +49,7 @@ class SuggestionStatusUpdateRequest(BaseModel):
 
 
 @router.post("/api/suggestions")
+@limiter.limit("10/minute")
 async def create_suggestion(
     payload: SuggestionCreateRequest,
     request: Request,

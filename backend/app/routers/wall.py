@@ -10,9 +10,11 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.core.limiter import limiter
 from app.db import database
 from app.routers.roast import _device_fingerprint
 from app.services import wall_service
+from app.services.admin_auth import verify_admin_access
 
 router = APIRouter(prefix="/api/wall", tags=["wall"])
 
@@ -22,6 +24,7 @@ class PublishRequest(BaseModel):
 
 
 @router.post("/publish")
+@limiter.limit("10/minute")
 async def publish_to_wall(req: PublishRequest, request: Request) -> JSONResponse:
     """
     Publish an existing roast to the public Wall of Shame or Wall of Fame with full anonymization.
@@ -98,7 +101,8 @@ async def get_wall(
 
 
 @router.post("/{entry_id}/flag")
-async def flag_entry(entry_id: str) -> JSONResponse:
+@limiter.limit("10/minute")
+async def flag_entry(entry_id: str, request: Request) -> JSONResponse:
     """
     Flag an entry for community moderation. Auto-hides after 3 flags.
     """
@@ -116,10 +120,18 @@ async def flag_entry(entry_id: str) -> JSONResponse:
 
 
 @router.post("/admin/{entry_id}/hide")
-async def admin_hide_entry(entry_id: str, hidden: bool = True) -> JSONResponse:
+@limiter.limit("20/minute")
+async def admin_hide_entry(entry_id: str, request: Request, hidden: bool = True) -> JSONResponse:
     """
     Admin moderation endpoint to hide/unhide flagged entries.
+    Requires verified founder admin access.
     """
+    if not verify_admin_access(request):
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized: Founder admin access is required to moderate wall entries.",
+        )
+
     success = database.hide_wall_entry(entry_id, hidden=hidden)
     if not success:
         raise HTTPException(status_code=404, detail="Wall entry not found.")

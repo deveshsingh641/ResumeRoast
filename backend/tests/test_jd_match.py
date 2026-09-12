@@ -83,12 +83,27 @@ class TestJDMatch(unittest.TestCase):
         - Low-latency query tuning, ACID guarantees, and distributed systems.
         """
         # Set Pro user in database
+        from app.services.pro_auth import create_pro_token
         database.create_or_get_user("pro_tester@example.com")
         database.update_subscription("pro_tester@example.com", "pro")
 
-        resp = self.client.post(
+        # 1. Unauthenticated claim via header must NOT grant Pro access
+        unauth_resp = self.client.post(
             "/api/match",
             headers={"x-user-email": "pro_tester@example.com"},
+            json={
+                "resume_text": resume_sample,
+                "job_description": jd_sample,
+            },
+        )
+        self.assertEqual(unauth_resp.status_code, 200)
+        self.assertFalse(unauth_resp.json()["is_pro"])
+
+        # 2. Authenticated claim via cryptographic X-Pro-Token unlocks Pro
+        token = create_pro_token("pro_tester@example.com")
+        resp = self.client.post(
+            "/api/match",
+            headers={"X-Pro-Token": token},
             json={
                 "resume_text": resume_sample,
                 "job_description": jd_sample,

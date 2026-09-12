@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
+from app.core.limiter import limiter
 from app.db import database
 from app.services.admin_auth import apply_secure_admin_headers, verify_admin_access
 
@@ -465,6 +466,7 @@ def _render_dashboard_html(request: Request) -> str:
 
 
 @router.post("/api/track")
+@limiter.limit("60/minute")
 async def track_page_visit(payload: TrackRequest, request: Request) -> JSONResponse:
     """
     Asynchronous first-party analytics hit.
@@ -505,6 +507,7 @@ async def get_stats(request: Request, format: Optional[str] = None):
 
 
 @router.post("/stats/login")
+@limiter.limit("10/minute")
 async def post_stats_login(request: Request):
     """Process founder login form with brute-force defense."""
     form_data = await request.form()
@@ -642,6 +645,7 @@ async def get_founder_metrics(request: Request) -> JSONResponse:
 
 
 @router.post("/api/admin/user/override-pro")
+@limiter.limit("10/minute")
 async def override_user_pro_status(payload: AdminOverrideRequest, request: Request) -> JSONResponse:
     """
     Support Override Tool (Section 4.2).

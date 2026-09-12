@@ -136,6 +136,7 @@ OUTPUT SCHEMA (return exactly this JSON structure):
   "overall_score": <integer 0-100>,
   "band": <"weak" | "mid" | "strong">,
   "one_line_verdict": "<string, under 12 words — catchy Hinglish roast headline with 1 emoji>",
+  "experience_header_line": "<string or null: the candidate's most recent job title, company name, and employment dates extracted exactly as written on the resume, e.g. 'Software Engineer @ Acme Corp (2022–Present)' — or null if student/fresher/no experience section>",
   "issues": [
     {
       "quoted_text": "<exact substring from the resume in original text>",

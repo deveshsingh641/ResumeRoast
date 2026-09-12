@@ -378,6 +378,9 @@ export default function CheckoutModal({
         });
 
         try {
+          if (data.pro_token) {
+            localStorage.setItem("resumeroast_pro_token", data.pro_token);
+          }
           localStorage.setItem("resumeroast_is_pro", "true");
           localStorage.setItem("resumeroast_user_email", userEmail);
         } catch {}
@@ -436,6 +439,9 @@ export default function CheckoutModal({
       });
 
       try {
+        if (data.pro_token) {
+          localStorage.setItem("resumeroast_pro_token", data.pro_token);
+        }
         localStorage.setItem("resumeroast_is_pro", "true");
         localStorage.setItem(
           "resumeroast_user_email",

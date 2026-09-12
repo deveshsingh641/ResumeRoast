@@ -5,7 +5,6 @@ import { normalizeLang } from "@/i18n/detector";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import axios from "axios";
 import ScoreStamp from "@/components/ScoreStamp";
-import PaperMockup from "@/components/PaperMockup";
 import { IssueList } from "@/components/IssueCard";
 import BattleShareCard from "@/components/BattleShareCard";
 import DeskClutter from "@/components/DeskClutter";

@@ -20,6 +20,9 @@ from pydantic import BaseModel
 import stripe
 
 from app.db import database
+from app.core.limiter import limiter
+from app.services.pro_auth import create_pro_token, get_authenticated_pro_email
+from app.services.admin_auth import verify_admin_access
 
 logger = logging.getLogger("payment")
 router = APIRouter(prefix="/api", tags=["payment"])
@@ -258,7 +261,8 @@ async def billing_public_config() -> JSONResponse:
 @router.post("/billing/create-order")
 @router.post("/payment/create-order")
 @router.post("/payment/create-checkout-session")
-async def create_razorpay_order(payload: CreateOrderRequest) -> JSONResponse:
+@limiter.limit("20/minute")
+async def create_razorpay_order(payload: CreateOrderRequest, request: Request) -> JSONResponse:
     """
     Create a Razorpay Order for in-page Standard Checkout.
     Validates amount >= 100 paise.
@@ -414,7 +418,8 @@ async def create_razorpay_order(payload: CreateOrderRequest) -> JSONResponse:
 @router.post("/verify-payment")
 @router.post("/billing/verify-payment")
 @router.post("/payment/verify-payment")
-async def verify_razorpay_payment(payload: VerifyPaymentRequest) -> JSONResponse:
+@limiter.limit("20/minute")
+async def verify_razorpay_payment(payload: VerifyPaymentRequest, request: Request) -> JSONResponse:
     """
     Verify the cryptographic HMAC-SHA256 signature returned by Razorpay Checkout.
     Algorithm: HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
@@ -455,33 +460,54 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest) -> JSONResponse
         logger.info(f"Payment {payment_id} already verified (idempotent skip for {email}).")
         database.create_or_get_user(email)
         database.update_subscription(email, "pro", customer_id=payment_id)
-        return JSONResponse(
+        pro_token = create_pro_token(email)
+        resp = JSONResponse(
             content={
                 "status": "success",
                 "is_pro": True,
                 "idempotent": True,
+                "pro_token": pro_token,
                 "message": "Payment already verified successfully. Pro access is active!",
                 "order_id": order_id,
                 "payment_id": payment_id,
             }
         )
+        resp.set_cookie("resumeroast_pro_token", pro_token, max_age=30*86400, httponly=True, samesite="lax")
+        return resp
 
-    # 1. Developer Simulation Mode Approval
-    if order_id.startswith("order_sim_") or not rzp["is_configured"]:
+    # 1. Developer Simulation Mode Approval (STRICTLY when Razorpay keys are not configured)
+    if not rzp["is_configured"]:
+        if not order_id.startswith("order_sim_"):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid simulation order ID format.",
+            )
         logger.info(f"Approving developer simulation payment for {email}")
         database.create_or_get_user(email)
         database.update_subscription(email, "pro", customer_id=f"sim_{payment_id}")
         if payment_id:
             _processed_payments.add(payment_id)
-        return JSONResponse(
+        pro_token = create_pro_token(email)
+        resp = JSONResponse(
             content={
                 "status": "success",
                 "is_pro": True,
                 "simulated": True,
+                "pro_token": pro_token,
                 "message": "Payment verified in simulation mode. Pro access unlocked!",
                 "order_id": order_id,
                 "payment_id": payment_id,
             }
+        )
+        resp.set_cookie("resumeroast_pro_token", pro_token, max_age=30*86400, httponly=True, samesite="lax")
+        return resp
+
+    # Section 0B Defense: When keys ARE configured, strictly reject any simulation prefix!
+    if order_id.startswith("order_sim_") or payment_id.startswith("pay_sim_"):
+        logger.warning(f"Payment bypass attempt rejected: simulation credentials sent when Razorpay is active for {email}")
+        raise HTTPException(
+            status_code=400,
+            detail="Simulation payment credentials are not permitted when Razorpay live/test configuration is active.",
         )
 
     # 2. Cryptographic HMAC-SHA256 Verification: HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
@@ -510,16 +536,20 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest) -> JSONResponse
             _processed_payments.add(payment_id)
         logger.info(f"Successfully verified Razorpay payment and upgraded {email} to Pro.")
 
-        return JSONResponse(
+        pro_token = create_pro_token(email)
+        resp = JSONResponse(
             content={
                 "status": "success",
                 "is_pro": True,
                 "simulated": False,
+                "pro_token": pro_token,
                 "message": "Payment verified successfully. Pro access is now active!",
                 "order_id": order_id,
                 "payment_id": payment_id,
             }
         )
+        resp.set_cookie("resumeroast_pro_token", pro_token, max_age=30*86400, httponly=True, samesite="lax")
+        return resp
     except HTTPException:
         raise
     except Exception as e:
@@ -606,7 +636,8 @@ async def razorpay_webhook(
 @router.post("/reconcile")
 @router.post("/billing/reconcile")
 @router.post("/payment/reconcile")
-async def reconcile_payment(payload: ReconcilePaymentRequest) -> JSONResponse:
+@limiter.limit("20/minute")
+async def reconcile_payment(payload: ReconcilePaymentRequest, request: Request) -> JSONResponse:
     """
     Fallback reconciliation endpoint:
     If a network failure interrupted client-side verification,
@@ -626,18 +657,29 @@ async def reconcile_payment(payload: ReconcilePaymentRequest) -> JSONResponse:
         )
 
     rzp = get_razorpay_config()
-    if not rzp["is_configured"] or (payment_id and payment_id.startswith("pay_sim_")) or (order_id and order_id.startswith("order_sim_")):
+    if not rzp["is_configured"]:
         database.create_or_get_user(email)
         database.update_subscription(email, "pro", customer_id=payment_id or order_id)
-        return JSONResponse(
+        pro_token = create_pro_token(email)
+        resp = JSONResponse(
             content={
                 "status": "reconciled",
                 "is_pro": True,
                 "simulated": True,
+                "pro_token": pro_token,
                 "payment_id": payment_id,
                 "order_id": order_id,
                 "message": "Payment verified in simulation mode. Pro access unlocked!",
             }
+        )
+        resp.set_cookie("resumeroast_pro_token", pro_token, max_age=30*86400, httponly=True, samesite="lax")
+        return resp
+
+    # Reject simulation credentials when Razorpay is configured
+    if (order_id and order_id.startswith("order_sim_")) or (payment_id and payment_id.startswith("pay_sim_")):
+        raise HTTPException(
+            status_code=400,
+            detail="Simulation payment credentials cannot be reconciled when live/test Razorpay is active.",
         )
 
     try:
@@ -672,15 +714,19 @@ async def reconcile_payment(payload: ReconcilePaymentRequest) -> JSONResponse:
             if payment_id:
                 _processed_payments.add(payment_id)
             logger.info(f"Reconciliation successfully upgraded {email} to Pro via {payment_id}.")
-            return JSONResponse(
+            pro_token = create_pro_token(email)
+            resp = JSONResponse(
                 content={
                     "status": "reconciled",
                     "is_pro": True,
+                    "pro_token": pro_token,
                     "payment_id": payment_id,
                     "order_id": order_id,
                     "message": "Payment verified with Razorpay. Pro access is active!",
                 }
             )
+            resp.set_cookie("resumeroast_pro_token", pro_token, max_age=30*86400, httponly=True, samesite="lax")
+            return resp
         else:
             raise HTTPException(
                 status_code=400,
@@ -802,27 +848,52 @@ async def stripe_webhook(
 # 5. Subscription Status & Cancellation
 # ---------------------------------------------------------------------------
 @router.post("/subscription/cancel")
-async def cancel_subscription(payload: CancelRequest) -> JSONResponse:
-    """Cancel subscription for user email."""
+@limiter.limit("5/minute")
+async def cancel_subscription(payload: CancelRequest, request: Request) -> JSONResponse:
+    """Cancel subscription for user email. Requires signed token ownership or admin authorization."""
     email = payload.email.strip().lower()
+    auth_email = get_authenticated_pro_email(request)
+    is_admin = verify_admin_access(request)
+
+    if not is_admin and auth_email != email:
+        logger.warning(f"Unauthorized cancellation attempt for {email} from IP {request.client.host if request.client else 'unknown'}")
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized: A valid session token or admin authorization is required to cancel this subscription.",
+        )
+
     database.update_subscription(email, "free")
-    return JSONResponse(
+    resp = JSONResponse(
         content={
             "status": "cancelled",
             "message": "Subscription cancelled. Access will revert to standard free tier.",
         }
     )
+    resp.delete_cookie("resumeroast_pro_token")
+    return resp
 
 
 @router.get("/subscription/status")
-async def check_subscription_status(email: str) -> JSONResponse:
+async def check_subscription_status(email: str, request: Request) -> JSONResponse:
     """Check subscription status for given email."""
     clean_email = email.strip().lower()
     status = database.get_user_subscription(clean_email)
+    auth_email = get_authenticated_pro_email(request)
+    is_admin = verify_admin_access(request)
+
+    # Return full account record only to the verified owner or admin
+    if auth_email == clean_email or is_admin:
+        return JSONResponse(
+            content={
+                "email": clean_email,
+                "subscription_status": status,
+                "is_pro": status == "pro",
+            }
+        )
+
+    # Third-party unauthenticated query returns boolean only (prevents account enumeration)
     return JSONResponse(
         content={
-            "email": clean_email,
-            "subscription_status": status,
             "is_pro": status == "pro",
         }
     )

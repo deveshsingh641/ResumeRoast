@@ -109,10 +109,21 @@ class TestResumeRoastEdgeCases(unittest.TestCase):
         self.assertIn("signature", response.json()["detail"].lower())
 
     def test_cancel_subscription(self):
-        """Cancelling subscription updates status cleanly."""
+        """Cancelling subscription requires ownership token and updates status cleanly."""
+        from app.services.pro_auth import create_pro_token
+        # Unauthenticated cancellation must be rejected with 401
+        unauth_resp = self.client.post(
+            "/api/subscription/cancel",
+            json={"email": "candidate@example.com"},
+        )
+        self.assertEqual(unauth_resp.status_code, 401)
+
+        # Authenticated cancellation with valid token succeeds
+        token = create_pro_token("candidate@example.com")
         response = self.client.post(
             "/api/subscription/cancel",
             json={"email": "candidate@example.com"},
+            headers={"X-Pro-Token": token},
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "cancelled")

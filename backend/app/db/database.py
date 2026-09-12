@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS roasts (
     voice_script TEXT,
     voice_audio_path TEXT,
     resume_text TEXT,
+    experience_header_line TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
     expires_at TIMESTAMPTZ
 );
@@ -223,6 +224,7 @@ def init_db() -> None:
                 cur.execute(SCHEMA_SQL)
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT;")
                 cur.execute("ALTER TABLE roasts ADD COLUMN IF NOT EXISTS resume_text TEXT;")
+                cur.execute("ALTER TABLE roasts ADD COLUMN IF NOT EXISTS experience_header_line TEXT;")
                 cur.execute("CREATE TABLE IF NOT EXISTS pro_waitlist (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE NOT NULL, source TEXT NOT NULL DEFAULT 'pricing', user_id UUID REFERENCES users(id) ON DELETE SET NULL, created_at TIMESTAMPTZ DEFAULT now());")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_pro_waitlist_email ON pro_waitlist (email);")
                 cur.execute("CREATE TABLE IF NOT EXISTS suggestions (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), text TEXT NOT NULL, category TEXT DEFAULT 'feedback', email TEXT, user_id UUID REFERENCES users(id) ON DELETE SET NULL, status TEXT NOT NULL DEFAULT 'new', device_fingerprint TEXT, created_at TIMESTAMPTZ DEFAULT now());")
@@ -265,6 +267,7 @@ def save_roast(
     user_id: Optional[str] = None,
     device_fingerprint: Optional[str] = None,
     resume_text: Optional[str] = None,
+    experience_header_line: Optional[str] = None,
 ) -> str:
     """Persist a roast result and return its UUID string."""
     roast_id = str(uuid4())
@@ -285,6 +288,7 @@ def save_roast(
             "issues": issues,
             "strengths": strengths,
             "resume_text": resume_text,
+            "experience_header_line": experience_header_line,
             "created_at": now_utc.isoformat(),
             "expires_at": expires_at,
         }
@@ -296,8 +300,8 @@ def save_roast(
                 """
                 INSERT INTO roasts
                   (id, user_id, device_fingerprint, overall_score, band,
-                   one_line_verdict, issues, strengths, expires_at, resume_text)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   one_line_verdict, issues, strengths, expires_at, resume_text, experience_header_line)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     roast_id,
@@ -310,6 +314,7 @@ def save_roast(
                     json.dumps(strengths),
                     expires_at,
                     resume_text,
+                    experience_header_line,
                 ),
             )
         conn.commit()
@@ -729,7 +734,7 @@ def save_battle(
     """Save a comparative battle result."""
     battle_id = str(uuid4())
     now_utc = datetime.now(timezone.utc)
-    expires_at = (now_utc + timedelta(days=ANONYMOUS_ROAST_EXPIRY_DAYS)).isoformat()
+    expires_at = (now_utc + timedelta(days=ANONYMOUS_ROAST_EXPIRY_DAYS)).isoformat() if ANONYMOUS_ROAST_EXPIRY_DAYS > 0 else None
 
     data = {
         "id": battle_id,
