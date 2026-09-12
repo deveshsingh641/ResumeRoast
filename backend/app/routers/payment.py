@@ -466,7 +466,6 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest, request: Reques
                 "status": "success",
                 "is_pro": True,
                 "idempotent": True,
-                "pro_token": pro_token,
                 "message": "Payment already verified successfully. Pro access is active!",
                 "order_id": order_id,
                 "payment_id": payment_id,
@@ -493,7 +492,6 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest, request: Reques
                 "status": "success",
                 "is_pro": True,
                 "simulated": True,
-                "pro_token": pro_token,
                 "message": "Payment verified in simulation mode. Pro access unlocked!",
                 "order_id": order_id,
                 "payment_id": payment_id,
@@ -542,7 +540,6 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest, request: Reques
                 "status": "success",
                 "is_pro": True,
                 "simulated": False,
-                "pro_token": pro_token,
                 "message": "Payment verified successfully. Pro access is now active!",
                 "order_id": order_id,
                 "payment_id": payment_id,
@@ -666,7 +663,6 @@ async def reconcile_payment(payload: ReconcilePaymentRequest, request: Request) 
                 "status": "reconciled",
                 "is_pro": True,
                 "simulated": True,
-                "pro_token": pro_token,
                 "payment_id": payment_id,
                 "order_id": order_id,
                 "message": "Payment verified in simulation mode. Pro access unlocked!",
@@ -719,7 +715,6 @@ async def reconcile_payment(payload: ReconcilePaymentRequest, request: Request) 
                 content={
                     "status": "reconciled",
                     "is_pro": True,
-                    "pro_token": pro_token,
                     "payment_id": payment_id,
                     "order_id": order_id,
                     "message": "Payment verified with Razorpay. Pro access is active!",
@@ -874,8 +869,9 @@ async def cancel_subscription(payload: CancelRequest, request: Request) -> JSONR
 
 
 @router.get("/subscription/status")
+@limiter.limit("20/minute")
 async def check_subscription_status(email: str, request: Request) -> JSONResponse:
-    """Check subscription status for given email."""
+    """Check subscription status for given email. Rate-limited and requires authentication to prevent enumeration."""
     clean_email = email.strip().lower()
     status = database.get_user_subscription(clean_email)
     auth_email = get_authenticated_pro_email(request)
@@ -888,13 +884,15 @@ async def check_subscription_status(email: str, request: Request) -> JSONRespons
                 "email": clean_email,
                 "subscription_status": status,
                 "is_pro": status == "pro",
+                "authenticated": True,
             }
         )
 
-    # Third-party unauthenticated query returns boolean only (prevents account enumeration)
+    # Third-party unauthenticated query returns generic false (eliminates customer enumeration)
     return JSONResponse(
         content={
-            "is_pro": status == "pro",
+            "is_pro": False,
+            "authenticated": False,
         }
     )
 
@@ -907,7 +905,8 @@ class ManualUpgradeRequest(BaseModel):
 
 
 @router.post("/payment/manual-request")
-async def manual_payment_request(payload: ManualUpgradeRequest) -> JSONResponse:
+@limiter.limit("10/minute")
+async def manual_payment_request(payload: ManualUpgradeRequest, request: Request) -> JSONResponse:
     """
     Early Adopter Manual UPI Transfer Stopgap.
     Allows users who transfer directly via personal UPI while Razorpay automated KYC

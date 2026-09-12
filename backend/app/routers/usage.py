@@ -17,6 +17,7 @@ from app.services.pro_auth import get_authenticated_pro_email
 router = APIRouter(prefix="/api", tags=["usage"])
 
 FREE_TIER_LIMIT = int(os.getenv("FREE_TIER_DAILY_LIMIT", "1"))
+IP_SHARED_LIMIT = int(os.getenv("IP_SHARED_DAILY_LIMIT", "10"))
 
 
 def _device_fingerprint(request: Request) -> str:
@@ -42,7 +43,10 @@ async def get_usage(request: Request, email: Optional[str] = None) -> JSONRespon
     client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "127.0.0.1")
     fingerprint = _device_fingerprint(request)
 
-    used = max(database.get_usage_count(fingerprint), database.get_usage_count(f"ip:{client_ip}"))
+    fp_usage = database.get_usage_count(fingerprint)
+    ip_usage = database.get_usage_count(f"ip:{client_ip}")
+    # Fingerprint check is primary (1/day); shared-IP threshold (10/day) acts as backstop against header rotation abuse
+    used = fp_usage if ip_usage < IP_SHARED_LIMIT else max(fp_usage, FREE_TIER_LIMIT)
     remaining = 999999 if is_pro else max(0, FREE_TIER_LIMIT - used)
     limit = 999999 if is_pro else FREE_TIER_LIMIT
 

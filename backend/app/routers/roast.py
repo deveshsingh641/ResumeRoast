@@ -181,6 +181,7 @@ router = APIRouter(prefix="/api", tags=["roast"])
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 FREE_TIER_LIMIT = int(os.getenv("FREE_TIER_DAILY_LIMIT", "1"))
+IP_SHARED_LIMIT = int(os.getenv("IP_SHARED_DAILY_LIMIT", "10"))
 
 
 def _device_fingerprint(request: Request) -> str:
@@ -250,15 +251,20 @@ async def create_roast(
     fp_usage = database.get_usage_count(fingerprint)
     ip_usage = database.get_usage_count(ip_key)
 
-    if is_free_tier and (fp_usage >= FREE_TIER_LIMIT or ip_usage >= FREE_TIER_LIMIT):
+    # Section 0C: Per-device fingerprint limit (1/day) protects individual quotas,
+    # while shared-IP limit (IP_SHARED_LIMIT, default 10/day) prevents header rotation abuse
+    # without blocking normal shared CGNAT or hostel/office networks.
+    if is_free_tier and (fp_usage >= FREE_TIER_LIMIT or ip_usage >= IP_SHARED_LIMIT):
+        limit_msg = (
+            f"You have used your {FREE_TIER_LIMIT} free roast for today. Upgrade to Pro for unlimited daily roasts."
+            if fp_usage >= FREE_TIER_LIMIT
+            else f"Daily free limit reached for this network ({IP_SHARED_LIMIT} free roasts). Upgrade to Pro for unlimited daily roasts."
+        )
         raise HTTPException(
             status_code=429,
             detail={
                 "error": "daily_limit_reached",
-                "message": (
-                    f"You have used your {FREE_TIER_LIMIT} free roast for today. "
-                    "Upgrade to Pro for unlimited daily roasts."
-                ),
+                "message": limit_msg,
                 "upgrade_url": "/pricing",
             },
         )

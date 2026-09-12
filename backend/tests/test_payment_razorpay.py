@@ -160,8 +160,9 @@ class TestPaymentRazorpay(unittest.TestCase):
             status = database.get_user_subscription(email)
             self.assertEqual(status, "pro")
 
-            # Check subscription status route with authenticated token
-            token = data.get("pro_token")
+            # Check subscription status route with authenticated token from HttpOnly cookie
+            token = response.cookies.get("resumeroast_pro_token")
+            self.assertIsNotNone(token)
             status_resp = self.client.get(f"/api/subscription/status?email={email}", headers={"X-Pro-Token": token})
             self.assertEqual(status_resp.status_code, 200)
             self.assertTrue(status_resp.json()["is_pro"])

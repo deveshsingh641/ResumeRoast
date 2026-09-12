@@ -19,13 +19,13 @@ from fastapi import Request
 logger = logging.getLogger("security.pro_auth")
 
 def _get_signing_key() -> bytes:
-    """Retrieve secret key for signing entitlement tokens."""
-    key = (
-        os.getenv("TOKEN_SECRET_KEY", "").strip()
-        or os.getenv("ADMIN_SECRET_KEY", "").strip()
-        or os.getenv("RAZORPAY_KEY_SECRET", "").strip()
-        or "resumeroast_entitlement_signing_secret_2026"
-    )
+    """
+    Retrieve secret key for signing entitlement tokens.
+    Strictly requires TOKEN_SECRET_KEY to prevent fallback to known or reused keys.
+    """
+    key = os.getenv("TOKEN_SECRET_KEY", "").strip()
+    if not key:
+        raise RuntimeError("TOKEN_SECRET_KEY must be configured in environment for Pro entitlement tokens.")
     return key.encode("utf-8")
 
 

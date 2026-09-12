@@ -46,6 +46,9 @@ class RoastResult(BaseModel):
     overall_score: int = Field(ge=0, le=100)
     band: ScoreBand
     one_line_verdict: str = Field(description="The roast headline, under 12 words")
+    experience_header_line: Optional[str] = Field(
+        default=None, description="Cleaned company/role experience line extracted from candidate resume"
+    )
     issues: list[Issue]
     strengths: list[str]
 
@@ -57,6 +60,7 @@ class RoastRecord(BaseModel):
     overall_score: int
     band: ScoreBand
     one_line_verdict: str
+    experience_header_line: Optional[str] = None
     issues: list[Issue]
     strengths: list[str]
     created_at: str
@@ -74,6 +78,7 @@ class RoastResponse(BaseModel):
     overall_score: int
     band: ScoreBand
     one_line_verdict: str
+    experience_header_line: Optional[str] = None
     issues: list[Issue]
     strengths: list[str]
     is_truncated: bool = False  # True if free tier truncated issues to 3

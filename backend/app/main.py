@@ -68,8 +68,10 @@ def validate_startup_environment() -> None:
             active_providers.append("Anthropic")
         logger.info(f"AI Providers active: {', '.join(active_providers)}")
 
-    # Section 0D & Section 1: In production, enforce critical founder & payment secrets
+    # In production, enforce critical founder, token signing & payment secrets
     admin_key = os.getenv("ADMIN_SECRET_KEY", "").strip()
+    token_key = os.getenv("TOKEN_SECRET_KEY", "").strip()
+    rzp_key_id = os.getenv("RAZORPAY_KEY_ID", "").strip()
     rzp_secret = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
     rzp_webhook = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
 
@@ -78,10 +80,25 @@ def validate_startup_environment() -> None:
             raise RuntimeError(
                 "CRITICAL STARTUP CONFIGURATION ERROR: ADMIN_SECRET_KEY must be set in production to protect founder dashboard!"
             )
-        if not rzp_secret:
-            logger.warning("Production warning: RAZORPAY_KEY_SECRET is not set in environment.")
-        if not rzp_webhook:
-            logger.warning("Production warning: RAZORPAY_WEBHOOK_SECRET is not set in environment.")
+        if not token_key:
+            raise RuntimeError(
+                "CRITICAL STARTUP CONFIGURATION ERROR: TOKEN_SECRET_KEY must be set in production to cryptographically secure Pro entitlement tokens!"
+            )
+        # If Razorpay live mode is enabled, key secret and webhook secret are strictly mandatory
+        if rzp_key_id.startswith("rzp_live_"):
+            if not rzp_secret:
+                raise RuntimeError(
+                    "CRITICAL STARTUP CONFIGURATION ERROR: RAZORPAY_KEY_SECRET must be set when running live Razorpay payments!"
+                )
+            if not rzp_webhook:
+                raise RuntimeError(
+                    "CRITICAL STARTUP CONFIGURATION ERROR: RAZORPAY_WEBHOOK_SECRET must be set when running live Razorpay payments!"
+                )
+        else:
+            if not rzp_secret:
+                logger.warning("Production warning: RAZORPAY_KEY_SECRET is not set in environment.")
+            if not rzp_webhook:
+                logger.warning("Production warning: RAZORPAY_WEBHOOK_SECRET is not set in environment.")
 
 
 @asynccontextmanager

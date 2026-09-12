@@ -12,14 +12,16 @@ if (import.meta.env.VITE_API_URL) {
 
 axios.defaults.withCredentials = true;
 
-// Automatically attach authenticated Pro token, user email and current language preference to API requests
+// Rely solely on HttpOnly cookie (withCredentials=true) for Pro authentication.
+// Attach user email and current language preference to API requests.
+try {
+  localStorage.removeItem("resumeroast_pro_token");
+  localStorage.removeItem("resumeroast_is_pro");
+} catch {}
+
 axios.interceptors.request.use((config) => {
   config.headers = config.headers || {};
   try {
-    const proToken = localStorage.getItem("resumeroast_pro_token");
-    if (proToken) {
-      config.headers["X-Pro-Token"] = proToken;
-    }
     const userEmail = localStorage.getItem("resumeroast_user_email");
     if (userEmail) {
       config.headers["X-User-Email"] = userEmail;
