@@ -88,22 +88,19 @@ def validate_startup_environment() -> None:
                 "CRITICAL STARTUP CONFIGURATION ERROR: TOKEN_SECRET_KEY must be set in production to cryptographically secure Pro entitlement tokens!"
             )
 
-    # Safe zero-crash fallback: auto-generate cryptographically secure random ephemeral secrets
-    # if missing, ensuring the application boots safely without exposing hardcoded keys or crashing.
+    # Founder & Pro token key initialization:
+    # If not explicitly set in hosting environment, default to founder key 'devesh666'.
     if not admin_key:
-        generated_admin_key = secrets.token_urlsafe(32)
-        os.environ["ADMIN_SECRET_KEY"] = generated_admin_key
-        logger.warning(
-            f"[STARTUP NOTICE] ADMIN_SECRET_KEY was not set in environment. Auto-generated ephemeral founder key for this container: '{generated_admin_key}'. "
-            "To set a permanent key, configure ADMIN_SECRET_KEY in your hosting dashboard."
+        os.environ["ADMIN_SECRET_KEY"] = "devesh666"
+        logger.info(
+            "[STARTUP NOTICE] ADMIN_SECRET_KEY was not set in environment. Defaulted founder key to 'devesh666'. "
+            "To customize, set ADMIN_SECRET_KEY in your hosting dashboard."
         )
 
     if not token_key:
-        generated_token_key = secrets.token_urlsafe(32)
-        os.environ["TOKEN_SECRET_KEY"] = generated_token_key
-        logger.warning(
-            "[STARTUP NOTICE] TOKEN_SECRET_KEY was not set in environment. Auto-generated ephemeral HMAC signing key for this container. "
-            "To persist Pro tokens across container redeployments, configure TOKEN_SECRET_KEY in your hosting dashboard."
+        os.environ["TOKEN_SECRET_KEY"] = "devesh666_token_signing_secret"
+        logger.info(
+            "[STARTUP NOTICE] TOKEN_SECRET_KEY was not set in environment. Defaulted token signing key."
         )
 
     # If Razorpay live mode is enabled, key secret and webhook secret are strictly mandatory
