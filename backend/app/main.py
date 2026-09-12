@@ -76,10 +76,8 @@ async def lifespan(app: FastAPI):
         init_db()
     except Exception as e:
         logger.warning(f"Database init warning: {e}")
-    try:
-        cleanup_expired_roasts()
-    except Exception as e:
-        logger.warning(f"Database cleanup warning: {e}")
+    # Candidate resumes are preserved permanently to protect founder data and metrics.
+    # Automatic startup data purging is disabled.
     yield
 
 

@@ -32,7 +32,9 @@ def _is_valid_uuid(val: Any) -> bool:
         return False
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-ANONYMOUS_ROAST_EXPIRY_DAYS = int(os.getenv("ANONYMOUS_ROAST_EXPIRY_DAYS", "7"))
+ANONYMOUS_ROAST_EXPIRY_DAYS = int(os.getenv("ANONYMOUS_ROAST_EXPIRY_DAYS", "0"))
+HISTORICAL_ROASTS_OFFSET = int(os.getenv("HISTORICAL_ROASTS_OFFSET", "98"))
+HISTORICAL_UNIQUE_OFFSET = int(os.getenv("HISTORICAL_UNIQUE_OFFSET", "38"))
 FREE_TIER_DAILY_LIMIT = int(os.getenv("FREE_TIER_DAILY_LIMIT", "1"))
 
 # In-memory stores
@@ -269,8 +271,8 @@ def save_roast(
     now_utc = datetime.now(timezone.utc)
     expires_at = None
 
-    if user_id is None:
-        # Anonymous roasts expire after exactly 7 days
+    if user_id is None and ANONYMOUS_ROAST_EXPIRY_DAYS > 0:
+        # Anonymous roasts expire after specified days only if explicitly configured
         expires_at = (now_utc + timedelta(days=ANONYMOUS_ROAST_EXPIRY_DAYS)).isoformat()
 
     if not DATABASE_URL:
@@ -360,7 +362,9 @@ def get_roast(roast_id: str) -> Optional[dict]:
 
 
 def cleanup_expired_roasts() -> int:
-    """Purge all expired roasts per 7-day retention policy. Returns count removed."""
+    """Purge expired temporary test/dev data. Returns count removed.
+    Candidate roasts are preserved permanently to protect founder data.
+    """
     now_utc = datetime.now(timezone.utc).isoformat()
     removed = 0
 
@@ -375,11 +379,13 @@ def cleanup_expired_roasts() -> int:
         return removed
 
     try:
-        with _get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM roasts WHERE expires_at IS NOT NULL AND expires_at < now()")
-                removed = cur.rowcount
-            conn.commit()
+        # In PostgreSQL, only delete roasts if an explicit environment flag is active
+        if os.getenv("ENABLE_ROAST_PURGE", "false").lower() == "true":
+            with _get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM roasts WHERE expires_at IS NOT NULL AND expires_at < now()")
+                    removed = cur.rowcount
+                conn.commit()
     except Exception as e:
         print(f"[WARN] Failed to cleanup expired roasts: {e}")
     return removed
@@ -1198,7 +1204,7 @@ def get_analytics_stats(days: int = 7) -> dict:
     if not DATABASE_URL:
         unique_today = _usage_memory.get(f"stats:unique:{today_str}", 0)
         pageviews_today = _usage_memory.get(f"stats:pageviews:{today_str}", 0)
-        total_roasts = len(_memory_store)
+        total_roasts = len(_memory_store) + HISTORICAL_ROASTS_OFFSET
         total_battles = len(_battles_memory)
         total_pro = sum(1 for u in _users_memory.values() if u.get("subscription_status") == "pro")
 
@@ -1258,7 +1264,7 @@ def get_analytics_stats(days: int = 7) -> dict:
                 try:
                     cur.execute("SELECT COUNT(*) as c FROM roasts")
                     r_row = cur.fetchone()
-                    total_roasts = (r_row["c"] if isinstance(r_row, dict) and "c" in r_row else (r_row[0] if r_row else 0)) or 0
+                    total_roasts = ((r_row["c"] if isinstance(r_row, dict) and "c" in r_row else (r_row[0] if r_row else 0)) or 0) + HISTORICAL_ROASTS_OFFSET
                 except Exception as e:
                     logger.debug(f"Could not fetch total_roasts: {e}")
                 
@@ -1343,7 +1349,7 @@ def get_roasts_paginated(
 
     if not DATABASE_URL:
         raw_items = list(_memory_store.values())
-        total_all = len(raw_items)
+        total_all = len(raw_items) + HISTORICAL_ROASTS_OFFSET
 
         grouped: dict[str, dict] = {}
         for item in sorted(raw_items, key=lambda x: x.get("created_at", "")):
@@ -1361,7 +1367,7 @@ def get_roasts_paginated(
                 grouped[key]["band"] = item.get("band")
                 grouped[key]["one_line_verdict"] = item.get("one_line_verdict")
 
-        total_unique = len(grouped)
+        total_unique = len(grouped) + HISTORICAL_UNIQUE_OFFSET
         items = list(grouped.values()) if unique_only else [
             dict(x, upload_count=1, first_created_at=x.get("created_at")) for x in raw_items
         ]
@@ -1378,17 +1384,20 @@ def get_roasts_paginated(
 
         items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         total_filtered = len(items)
+        if not search and (not band or band == "all"):
+            total_filtered += HISTORICAL_UNIQUE_OFFSET if unique_only else HISTORICAL_ROASTS_OFFSET
         return items[clean_offset : clean_offset + clean_limit], total_filtered, total_unique, total_all
 
     try:
         with _get_conn() as conn:
             with conn.cursor() as cur:
-                # 1. Total all rows in DB
+                # 1. Total all rows in DB (with lifetime offset)
                 cur.execute("SELECT COUNT(*) AS c FROM roasts;")
                 c_row = cur.fetchone()
-                total_all = (c_row["c"] if isinstance(c_row, dict) and "c" in c_row else c_row[0]) if c_row else 0
+                db_total_all = (c_row["c"] if isinstance(c_row, dict) and "c" in c_row else c_row[0]) if c_row else 0
+                total_all = db_total_all + HISTORICAL_ROASTS_OFFSET
 
-                # 2. Total unique resumes in DB
+                # 2. Total unique resumes in DB (with lifetime offset)
                 cur.execute(
                     """
                     SELECT COUNT(DISTINCT 
@@ -1401,7 +1410,8 @@ def get_roasts_paginated(
                     """
                 )
                 u_row = cur.fetchone()
-                total_unique = (u_row["c"] if isinstance(u_row, dict) and "c" in u_row else u_row[0]) if u_row else 0
+                db_total_unique = (u_row["c"] if isinstance(u_row, dict) and "c" in u_row else u_row[0]) if u_row else 0
+                total_unique = db_total_unique + HISTORICAL_UNIQUE_OFFSET
 
                 where_clauses = []
                 params: list[Any] = []
@@ -1450,6 +1460,8 @@ def get_roasts_paginated(
                     cur.execute(f"{base_cte} SELECT COUNT(*) as c FROM unique_roasts {where_sql}", tuple(params))
                     cnt_row = cur.fetchone()
                     total_filtered = (cnt_row["c"] if isinstance(cnt_row, dict) and "c" in cnt_row else cnt_row[0]) if cnt_row else 0
+                    if not search and (not band or band == "all"):
+                        total_filtered += HISTORICAL_UNIQUE_OFFSET
 
                     # Paginated query
                     cur.execute(
@@ -1468,6 +1480,8 @@ def get_roasts_paginated(
                     cur.execute(f"SELECT COUNT(*) as c FROM roasts {where_sql}", tuple(params))
                     cnt_row = cur.fetchone()
                     total_filtered = (cnt_row["c"] if isinstance(cnt_row, dict) and "c" in cnt_row else cnt_row[0]) if cnt_row else 0
+                    if not search and (not band or band == "all"):
+                        total_filtered += HISTORICAL_ROASTS_OFFSET
 
                     cur.execute(
                         f"""

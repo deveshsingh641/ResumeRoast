@@ -12,9 +12,13 @@ if str(backend_dir) not in sys.path:
 # This prevents test runs from polluting Supabase or inserting test data into the live Wall of Shame.
 os.environ["DATABASE_URL"] = ""
 os.environ["ADMIN_SECRET_KEY"] = ""
+os.environ["HISTORICAL_ROASTS_OFFSET"] = "0"
+os.environ["HISTORICAL_UNIQUE_OFFSET"] = "0"
 
 from app.db import database
 database.DATABASE_URL = ""
+database.HISTORICAL_ROASTS_OFFSET = 0
+database.HISTORICAL_UNIQUE_OFFSET = 0
 
 
 def _clear_all_memory():
