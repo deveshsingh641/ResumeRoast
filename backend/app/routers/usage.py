@@ -1,7 +1,7 @@
 """
 Usage router — returns current user's remaining free roasts today.
 """
-from __future__ import annotations
+
 
 import hashlib
 import os

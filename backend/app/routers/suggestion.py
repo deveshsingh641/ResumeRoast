@@ -2,7 +2,7 @@
 Suggestion Box Router — Low-friction, responsive feedback and feature ideas.
 Includes honeypot bot defense, per-IP rate limiting, and admin review triage.
 """
-from __future__ import annotations
+
 
 import hashlib
 import hmac

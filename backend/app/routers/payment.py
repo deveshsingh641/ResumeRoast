@@ -2,7 +2,7 @@
 Payment and Billing Router — supports India-first Razorpay in-page checkout
 (UPI, QR, Netbanking, Cards) as primary provider, with Stripe and test simulation fallbacks.
 """
-from __future__ import annotations
+
 
 import collections
 from datetime import datetime, timezone

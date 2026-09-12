@@ -2,7 +2,7 @@
 Pro Waitlist Router — Captures interested users while payment gateway is in pre-launch / KYC review.
 Supports frictionless email capture, deduplication, user_id linking, and source tracking.
 """
-from __future__ import annotations
+
 
 import logging
 import re

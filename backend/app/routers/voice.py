@@ -1,7 +1,7 @@
 """
 Voice Note Roast Router — generates and serves WhatsApp-style Hinglish voice roasts.
 """
-from __future__ import annotations
+
 
 import json
 import os

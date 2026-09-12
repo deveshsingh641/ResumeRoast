@@ -1,7 +1,7 @@
 """
 Wall of Shame / Wall of Fame Router — Opt-in public feed of anonymized roasts.
 """
-from __future__ import annotations
+
 
 import json
 from typing import Optional

@@ -1,7 +1,7 @@
 """
 Match Router — Endpoints for Job Description (JD) Match Mode & ATS Reality Check.
 """
-from __future__ import annotations
+
 
 import logging
 import os

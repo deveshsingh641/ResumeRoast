@@ -3,7 +3,7 @@ Country-based language detection and user language preference endpoints.
 Provides first-visit auto-detection via headers (CF-IPCountry, etc.)
 and persistence of user preferences in the database.
 """
-from __future__ import annotations
+
 
 import logging
 from typing import Optional

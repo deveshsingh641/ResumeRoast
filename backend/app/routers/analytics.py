@@ -4,7 +4,6 @@ Ad-blocker proof: runs directly on the first-party domain with no third-party sc
 Anonymizes visitors using daily SHA-256 hashes without storing personal IP addresses.
 Includes private founder authentication gate for /stats dashboard.
 """
-from __future__ import annotations
 
 import hashlib
 import hmac

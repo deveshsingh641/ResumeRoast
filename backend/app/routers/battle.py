@@ -1,7 +1,7 @@
 """
 Roast Battle Router — 1-on-1 resume comparison endpoint with comparative AI refereeing.
 """
-from __future__ import annotations
+
 
 import json
 import os

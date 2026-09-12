@@ -1,7 +1,7 @@
 """
 Roast router — handles resume upload, text extraction, deduplication, AI analysis, and retrieval.
 """
-from __future__ import annotations
+
 
 import hashlib
 import logging
