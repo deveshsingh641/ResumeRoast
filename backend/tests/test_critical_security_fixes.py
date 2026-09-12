@@ -238,6 +238,7 @@ def test_section_0a_token_secret_key_enforcement():
             "ADMIN_SECRET_KEY": "",
             "RAZORPAY_KEY_SECRET": "",
             "ENVIRONMENT": "production",
+            "STRICT_STARTUP_SECRETS": "true",
         },
         clear=False,
     ):

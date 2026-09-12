@@ -23,4 +23,8 @@ services:
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
       - key: ADMIN_SECRET_KEY
-        sync: false
+        generateValue: true
+      - key: TOKEN_SECRET_KEY
+        generateValue: true
+      - key: IP_SHARED_DAILY_LIMIT
+        value: 10
