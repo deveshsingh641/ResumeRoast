@@ -95,6 +95,7 @@ def get_authenticated_pro_email(request: Request) -> Optional[str]:
     1. X-Pro-Token header
     2. Authorization: Bearer <token>
     3. Cookie: resumeroast_pro_token
+    4. Founder/Admin verification via verify_admin_access (ADMIN_SECRET_KEY)
     """
     token = request.headers.get("X-Pro-Token")
     if not token:
@@ -104,4 +105,22 @@ def get_authenticated_pro_email(request: Request) -> Optional[str]:
     if not token:
         token = request.cookies.get("resumeroast_pro_token")
 
-    return verify_pro_token(token)
+    verified = verify_pro_token(token)
+    if verified:
+        return verified
+
+    # Founder/Admin bypass: if request has valid founder authentication via ADMIN_SECRET_KEY
+    try:
+        from app.services.admin_auth import verify_admin_access
+        if verify_admin_access(request):
+            founder_email = (
+                request.headers.get("X-User-Email")
+                or os.getenv("ADMIN_NOTIFICATION_EMAIL")
+                or os.getenv("FOUNDER_EMAIL")
+                or "deveshsingh20666@gmail.com"
+            ).strip().lower()
+            return founder_email
+    except Exception:
+        pass
+
+    return None

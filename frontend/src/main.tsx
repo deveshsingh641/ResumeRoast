@@ -6,19 +6,15 @@ import "./i18n";
 import { getCurrentLanguage } from "./i18n";
 import App from "./App";
 
+import { useAppStore } from "./store/useAppStore";
+
 if (import.meta.env.VITE_API_URL) {
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 }
 
 axios.defaults.withCredentials = true;
 
-// Rely solely on HttpOnly cookie (withCredentials=true) for Pro authentication.
-// Attach user email and current language preference to API requests.
-try {
-  localStorage.removeItem("resumeroast_pro_token");
-  localStorage.removeItem("resumeroast_is_pro");
-} catch {}
-
+// Attach authentication tokens (Pro token, Founder admin key, email, language) to API requests
 axios.interceptors.request.use((config) => {
   config.headers = config.headers || {};
   try {
@@ -26,10 +22,38 @@ axios.interceptors.request.use((config) => {
     if (userEmail) {
       config.headers["X-User-Email"] = userEmail;
     }
+
+    const proToken =
+      localStorage.getItem("resumeroast_pro_token") ||
+      sessionStorage.getItem("resumeroast_pro_token");
+    if (proToken) {
+      config.headers["X-Pro-Token"] = proToken;
+    }
+
+    const adminKey =
+      sessionStorage.getItem("rr_admin_key") ||
+      localStorage.getItem("rr_admin_key");
+    if (adminKey) {
+      config.headers["X-Admin-Key"] = adminKey;
+    }
+
     config.headers["X-Language"] = getCurrentLanguage();
   } catch {}
   return config;
 });
+
+// Sync usage and Pro entitlement on initial boot
+try {
+  axios
+    .get("/api/usage")
+    .then((res) => {
+      if (res.data) {
+        useAppStore.getState().setUsage(res.data);
+      }
+    })
+    .catch(() => {});
+} catch {}
+
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

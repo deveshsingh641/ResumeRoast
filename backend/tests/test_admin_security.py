@@ -102,3 +102,31 @@ def test_candidate_resumes_deduplication():
     assert data_a["unique_only"] is False
     assert data_a["total"] == data_u["total_all"]
 
+
+def test_activate_founder_pro_endpoint():
+    client = TestClient(app)
+
+    # 1. Unauthenticated activation attempt fails
+    r_unauth = client.post("/api/admin/founder/activate-pro")
+    assert r_unauth.status_code == 401
+
+    # 2. Authorized activation with admin key succeeds
+    r_auth = client.post(
+        "/api/admin/founder/activate-pro",
+        headers={"X-Admin-Key": "ultra_secure_founder_key_2026"},
+    )
+    assert r_auth.status_code == 200
+    data = r_auth.json()
+    assert data["ok"] is True
+    assert data["is_pro"] is True
+    assert "token" in data
+    assert "resumeroast_pro_token" in r_auth.cookies
+
+    # 3. Requesting usage with the issued cookie returns is_pro=True
+    r_usage = client.get("/api/usage", cookies=r_auth.cookies)
+    assert r_usage.status_code == 200
+    usage_data = r_usage.json()
+    assert usage_data["is_pro"] is True
+    assert usage_data["remaining"] == 999999
+
+

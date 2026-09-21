@@ -517,13 +517,24 @@ def update_subscription(email: str, status: str, customer_id: Optional[str] = No
 
 def get_user_subscription(email: str) -> str:
     """Check subscription status for user email."""
+    if not email:
+        return "free"
+    clean_email = email.strip().lower()
+    founder_emails = {
+        (os.getenv("ADMIN_NOTIFICATION_EMAIL") or "deveshsingh20666@gmail.com").strip().lower(),
+        (os.getenv("FOUNDER_EMAIL") or "").strip().lower(),
+    }
+    founder_emails.discard("")
+    if clean_email in founder_emails:
+        return "pro"
+
     if not DATABASE_URL:
-        user = _users_memory.get(email)
+        user = _users_memory.get(clean_email)
         return user["subscription_status"] if user else "free"
 
     with _get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT subscription_status FROM users WHERE email = %s", (email,))
+            cur.execute("SELECT subscription_status FROM users WHERE email = %s", (clean_email,))
             row = cur.fetchone()
             return row["subscription_status"] if row else "free"
 

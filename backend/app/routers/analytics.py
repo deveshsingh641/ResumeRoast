@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from app.core.limiter import limiter
 from app.db import database
 from app.services.admin_auth import apply_secure_admin_headers, verify_admin_access
+from app.services.pro_auth import create_pro_token
 
 logger = logging.getLogger("analytics")
 router = APIRouter(tags=["analytics"])
@@ -33,6 +34,11 @@ class AdminOverrideRequest(BaseModel):
     email: str
     action: str = "grant_pro"  # "grant_pro" | "revoke_pro"
     reason: Optional[str] = "Manual support override"
+
+
+class FounderActivateRequest(BaseModel):
+    admin_key: Optional[str] = None
+
 
 
 def _get_client_hash(request: Request) -> str:
@@ -671,3 +677,66 @@ async def override_user_pro_status(payload: AdminOverrideRequest, request: Reque
         }
     )
     return apply_secure_admin_headers(response)
+
+
+@router.post("/api/admin/founder/activate-pro")
+@limiter.limit("10/minute")
+async def activate_founder_pro(request: Request, payload: Optional[FounderActivateRequest] = None) -> JSONResponse:
+    """
+    Founder VIP Pass Activation:
+    Issues a 10-year signed Pro Entitlement token and sets the resumeroast_pro_token HttpOnly cookie.
+    Validates founder identity via ADMIN_SECRET_KEY.
+    """
+    explicit_key = payload.admin_key if payload else None
+    if not verify_admin_access(request, explicit_key=explicit_key):
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized: Valid founder secret key required to activate Founder VIP access.",
+        )
+
+    founder_email = (
+        os.getenv("ADMIN_NOTIFICATION_EMAIL")
+        or os.getenv("FOUNDER_EMAIL")
+        or "deveshsingh20666@gmail.com"
+    ).strip().lower()
+
+    database.update_subscription(founder_email, "pro")
+    # Generate 10-year tamper-proof token
+    pro_token = create_pro_token(founder_email, expires_in_days=3650)
+
+    logger.info(f"[FOUNDER_VIP_ACTIVATED] Lifetime Pro access activated on device for {founder_email}")
+
+    response = JSONResponse(
+        content={
+            "ok": True,
+            "email": founder_email,
+            "is_pro": True,
+            "token": pro_token,
+            "message": f"👑 Founder VIP Pro successfully activated for {founder_email}!",
+        }
+    )
+
+    is_prod = os.getenv("ENVIRONMENT") == "production"
+    # Set HttpOnly cookie for seamless authentication across all endpoints
+    response.set_cookie(
+        key="resumeroast_pro_token",
+        value=pro_token,
+        httponly=True,
+        secure=is_prod,
+        samesite="lax",
+        max_age=3650 * 86400,
+    )
+
+    admin_key = os.getenv("ADMIN_SECRET_KEY", "").strip()
+    if admin_key:
+        response.set_cookie(
+            key="rr_admin_key",
+            value=admin_key,
+            httponly=False,
+            secure=is_prod,
+            samesite="lax",
+            max_age=3650 * 86400,
+        )
+
+    return apply_secure_admin_headers(response)
+

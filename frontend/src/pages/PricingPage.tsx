@@ -100,6 +100,43 @@ export default function PricingPage() {
     };
   }, []);
 
+  // Auto-activate Founder VIP Pro if secret key is passed in URL
+  useEffect(() => {
+    const keyParam =
+      searchParams.get("key") ||
+      searchParams.get("admin_key") ||
+      sessionStorage.getItem("rr_admin_key") ||
+      localStorage.getItem("rr_admin_key");
+    if (keyParam && !usage?.is_pro) {
+      axios
+        .post(
+          "/api/admin/founder/activate-pro",
+          { admin_key: keyParam.trim() },
+          { headers: { "X-Admin-Key": keyParam.trim() } },
+        )
+        .then((res) => {
+          if (res.data?.ok) {
+            if (res.data.token) {
+              localStorage.setItem("resumeroast_pro_token", res.data.token);
+              sessionStorage.setItem("resumeroast_pro_token", res.data.token);
+            }
+            if (res.data.email) {
+              localStorage.setItem("resumeroast_user_email", res.data.email);
+            }
+            localStorage.setItem("rr_admin_key", keyParam.trim());
+            setUsage({
+              used: 0,
+              remaining: 999999,
+              limit: 999999,
+              is_pro: true,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [searchParams, usage?.is_pro]);
+
+
   // Escape key closes modals
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -602,6 +639,31 @@ export default function PricingPage() {
       </header>
 
       <div className="max-w-[960px] mx-auto px-4">
+        {/* Active Pro Notification Banner */}
+        {usage?.is_pro && (
+          <div className="mb-8 p-4 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 rounded-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-amber-950/20">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">👑</span>
+              <div>
+                <p className="font-display text-sm text-paper font-bold tracking-tight">
+                  PRO VIP ACCESS ACTIVE ON THIS BROWSER
+                </p>
+                <p className="font-mono text-xs text-amber-300/80">
+                  Unlimited Roasts & Full Job Description Match are fully unlocked.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link to="/roast" className="btn-primary !text-xs !py-1.5 !px-3">
+                Go to Roast 🔥
+              </Link>
+              <Link to="/match" className="btn-ghost !text-xs !py-1.5 !px-3">
+                Go to Match 🎯
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Title */}
         <div className="text-center mb-12">
           <p className="section-label mb-3">
@@ -829,14 +891,58 @@ export default function PricingPage() {
             )}
 
             {/* Test Mode Entry point for developer / admin */}
-            <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-tan-dim">
-              <span>Admin / gateway testing?</span>
+            <div className="mt-6 pt-4 border-t border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between text-[11px] font-mono text-tan-dim gap-2">
+              <div className="flex items-center gap-2">
+                <span>Admin / gateway testing?</span>
+                <button
+                  type="button"
+                  onClick={() => navigate("/pricing?test_checkout=true")}
+                  className="text-ember hover:underline"
+                >
+                  Open Test Mode Harness →
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => navigate("/pricing?test_checkout=true")}
-                className="text-ember hover:underline"
+                onClick={() => {
+                  const key = prompt("Enter Founder Secret Key to activate Pro access:");
+                  if (key && key.trim()) {
+                    axios
+                      .post(
+                        "/api/admin/founder/activate-pro",
+                        { admin_key: key.trim() },
+                        { headers: { "X-Admin-Key": key.trim() } },
+                      )
+                      .then((res) => {
+                        if (res.data?.ok) {
+                          if (res.data.token) {
+                            localStorage.setItem("resumeroast_pro_token", res.data.token);
+                            sessionStorage.setItem("resumeroast_pro_token", res.data.token);
+                          }
+                          if (res.data.email) {
+                            localStorage.setItem("resumeroast_user_email", res.data.email);
+                          }
+                          localStorage.setItem("rr_admin_key", key.trim());
+                          sessionStorage.setItem("rr_admin_key", key.trim());
+                          setUsage({
+                            used: 0,
+                            remaining: 999999,
+                            limit: 999999,
+                            is_pro: true,
+                          });
+                          alert("👑 Founder VIP Pro successfully unlocked on this browser!");
+                          navigate(returnUrl || "/roast");
+                        }
+                      })
+                      .catch((err) => {
+                        alert(err.response?.data?.detail || "Invalid founder secret key.");
+                      });
+                  }
+                }}
+                className="text-amber-400 hover:text-amber-300 font-bold hover:underline flex items-center gap-1 cursor-pointer"
               >
-                Open Razorpay Test Mode Harness →
+                👑 Founder Unlock (Instant Pro) →
               </button>
             </div>
           </div>

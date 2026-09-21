@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { usePageTitle } from "@/utils/usePageTitle";
+import { useAppStore } from "@/store/useAppStore";
+
 
 interface MetricsSummary {
   total_roasts_all_time: number;
@@ -85,6 +87,55 @@ export default function FounderDashboardPage() {
   } | null>(null);
   const [overrideLoading, setOverrideLoading] = useState(false);
 
+  // Founder Pro VIP State
+  const [activatingPro, setActivatingPro] = useState(false);
+  const [founderProMsg, setFounderProMsg] = useState<{
+    text: string;
+    ok: boolean;
+  } | null>(null);
+
+  const handleActivateFounderPro = async (customKey?: string) => {
+    const keyToUse = customKey || adminKey;
+    if (!keyToUse) return;
+    setActivatingPro(true);
+    setFounderProMsg(null);
+    try {
+      const { data } = await axios.post(
+        "/api/admin/founder/activate-pro",
+        { admin_key: keyToUse },
+        { headers: { "X-Admin-Key": keyToUse } },
+      );
+      if (data && data.ok) {
+        if (data.token) {
+          localStorage.setItem("resumeroast_pro_token", data.token);
+          sessionStorage.setItem("resumeroast_pro_token", data.token);
+        }
+        if (data.email) {
+          localStorage.setItem("resumeroast_user_email", data.email);
+        }
+        localStorage.setItem("rr_admin_key", keyToUse);
+        sessionStorage.setItem("rr_admin_key", keyToUse);
+        useAppStore.getState().setUsage({
+          used: 0,
+          remaining: 999999,
+          limit: 999999,
+          is_pro: true,
+        });
+        setFounderProMsg({
+          text: `👑 Founder VIP Pro active for ${data.email}! You have lifetime unlimited access on this device.`,
+          ok: true,
+        });
+      }
+    } catch (err: any) {
+      setFounderProMsg({
+        text: `✗ ${err.response?.data?.detail || err.message || "Failed to activate Pro"}`,
+        ok: false,
+      });
+    } finally {
+      setActivatingPro(false);
+    }
+  };
+
   // Load paginated roasts
   const loadRoasts = async (
     keyToUse: string,
@@ -163,6 +214,10 @@ export default function FounderDashboardPage() {
       // Success: store strictly in temporary browser session
       setIsAuthenticated(true);
       sessionStorage.setItem("rr_admin_key", keyToUse);
+      localStorage.setItem("rr_admin_key", keyToUse);
+
+      // Auto-sync Founder VIP Pro on device
+      handleActivateFounderPro(keyToUse);
     } catch (err: any) {
       console.warn("Founder auth check:", err.response?.status);
       setIsAuthenticated(false);
@@ -359,6 +414,60 @@ export default function FounderDashboardPage() {
           </button>
         </div>
       </header>
+
+      {/* ── Founder VIP Entitlement Panel ── */}
+      <div className="mb-6 p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg shadow-amber-950/20">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-2xl shrink-0">
+            👑
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-display text-base sm:text-lg text-paper font-semibold">
+                Founder VIP Pro Entitlement
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider">
+                Lifetime Pro Active
+              </span>
+            </div>
+            <p className="font-mono text-xs text-tan-dim mt-0.5">
+              Account: <span className="text-paper font-bold">deveshsingh20666@gmail.com</span> · Unlimited Roasts · Full JD Match · No Limits
+            </p>
+            {founderProMsg && (
+              <div
+                className={`mt-2 text-xs font-mono font-semibold ${
+                  founderProMsg.ok ? "text-emerald-400" : "text-red-400"
+                }`}
+              >
+                {founderProMsg.text}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+          <Link
+            to="/roast"
+            className="px-3 py-1.5 rounded text-xs font-mono font-bold bg-white/5 hover:bg-white/10 text-paper border border-white/10 transition"
+          >
+            Go Roast 🔥
+          </Link>
+          <Link
+            to="/match"
+            className="px-3 py-1.5 rounded text-xs font-mono font-bold bg-white/5 hover:bg-white/10 text-paper border border-white/10 transition"
+          >
+            Go Match 🎯
+          </Link>
+          <button
+            type="button"
+            onClick={() => handleActivateFounderPro()}
+            disabled={activatingPro}
+            className="px-3 py-1.5 rounded text-xs font-mono font-bold bg-amber-500 hover:bg-amber-400 text-black border border-amber-400 transition cursor-pointer flex items-center gap-1.5"
+          >
+            {activatingPro ? "Syncing..." : "⚡ Sync Pro on this Browser"}
+          </button>
+        </div>
+      </div>
 
       {/* ── Section 1: Top Hero Metric Cards (100% Real Live Counters) ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
