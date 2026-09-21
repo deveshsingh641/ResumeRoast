@@ -32,6 +32,14 @@ NON_RESUME_ANTI_PATTERNS = [
     # Academic exams & question papers
     (r"\b(?:question\s+paper|time\s+allowed|maximum\s+marks|total\s+marks|attempt\s+any|answer\s+all\s+questions|section\s+-[a-z]\s+carries|q\s*\.\s*\d+\b)", "academic_exam"),
     (r"\b(?:course\s+code|semester\s+examination|syllabus\s+for|course\s+outline|lecture\s+notes|module\s+[ivx\d]+|unit\s+[ivx\d]+)\b", "course_material"),
+    # Admit cards, Hall tickets, Exam passes
+    (r"\b(?:admit\s+card|hall\s+ticket|examination\s+hall\s+ticket|roll\s+no(?:umber)?\s*[:\.]|enrollment\s+no(?:umber)?\s*[:\.]|reporting\s+time\s*[:\.]|gate\s+closing\s+time|test\s+cent(?:er|re)\s+code|examination\s+cent(?:er|re)|invigilator(?:'s)?\s+signature|candidate(?:'s)?\s+signature|instructions?\s+for\s+(?:the\s+)?candidates?|thumb\s+impression|ball\s*point\s+pen|electronic\s+gadgets?\s+(?:are\s+)?(?:strictly\s+)?prohibited|provisional\s+admit\s+card|application\s+no(?:umber)?\s*[:\.]|centre\s+code\s*[:\d])\b", "admit_card"),
+    # Marksheets, Transcripts, Grade cards
+    (r"\b(?:marksheet|mark\s+sheet|grade\s+card|score\s+card|marks\s+statement|provisional\s+certificate|statement\s+of\s+marks|semester\s+grade\s+point\s+average|controller\s+of\s+examinations|result\s*:\s*(?:pass|fail|promoted)|credits?\s+earned\s*[:\d]|theory\s+marks|practical\s+marks)\b", "marksheet"),
+    # Government IDs
+    (r"\b(?:aadhaar|pan\s+card|voter\s+id|driving\s+licen[cs]e|passport\s+number|income\s+tax\s+department|unique\s+identification\s+authority\s+of\s+india|election\s+commission\s+of\s+india)\b", "government_id"),
+    # Official letters & Salary slips
+    (r"\b(?:offer\s+letter|appointment\s+letter|relieving\s+letter|experience\s+certificate|bonafide\s+certificate|salary\s+slip|pay\s+slip|ctc\s+breakup|dear\s+[a-z\s]+,?\s*\n.*(?:pleased\s+to\s+offer|appointment\s+as|relieved\s+from\s+duties))\b", "official_letter"),
     # Scientific / academic paper formatting
     (r"\b(?:abstract\s*\n|keywords:\s*|references\s*\n\s*\[1\]|bibliography\s*\n\s*\[1\]|et\s+al\.,?\s*\d{4})\b", "research_paper"),
     (r"\b(?:theorem\s+\d|lemma\s+\d|corollary\s+\d|proof:\s*|qed\b)", "math_proof"),
@@ -94,6 +102,30 @@ def validate_is_resume(text: str, filename: str = "", lang: str = "en") -> tuple
             return True, ""
 
     # Filename indicators for obvious non-resumes
+    if any(k in fn_lower for k in ["admit", "hall_ticket", "hallticket", "roll_no", "exam_pass"]):
+        msg = (
+            "Uploaded document Admit Card ya Hall Ticket lag raha hai. Resume Roast par sirf candidate resumes aur CVs allowed hain."
+            if lang == "hi-IN"
+            else "The uploaded document appears to be an Admit Card or Hall Ticket. Resume Roast only accepts candidate resumes and CVs."
+        )
+        return False, msg
+
+    if any(k in fn_lower for k in ["marksheet", "scorecard", "gradecard", "transcript"]):
+        msg = (
+            "Uploaded document Marksheet ya Scorecard lag raha hai. Resume Roast par sirf candidate resumes aur CVs allowed hain."
+            if lang == "hi-IN"
+            else "The uploaded document appears to be an academic marksheet or scorecard. Resume Roast only accepts candidate resumes and CVs."
+        )
+        return False, msg
+
+    if any(k in fn_lower for k in ["aadhaar", "pan_card", "pancard", "voter_id", "passport"]):
+        msg = (
+            "Uploaded document Government ID lag raha hai. Kripya apna valid resume upload karein."
+            if lang == "hi-IN"
+            else "The uploaded document appears to be a Government ID. For privacy and safety, please upload your resume or CV."
+        )
+        return False, msg
+
     if any(k in fn_lower for k in ["invoice", "receipt", "billing", "statement"]):
         has_any_resume_header = any(
             re.search(pat, text_lower)
@@ -128,6 +160,63 @@ def validate_is_resume(text: str, filename: str = "", lang: str = "en") -> tuple
         if re.search(pat, text_lower):
             anti_matches.append(tag)
 
+    # Immediate disqualification if strong non-resume document signature matched
+    if "admit_card" in anti_matches:
+        msg = (
+            "Uploaded document Admit Card ya Hall Ticket lag raha hai. Resume Roast par sirf candidate resumes aur CVs allowed hain."
+            if lang == "hi-IN"
+            else "The uploaded document appears to be an Admit Card or Hall Ticket. Resume Roast only accepts candidate resumes and CVs."
+        )
+        return False, msg
+
+    if "marksheet" in anti_matches:
+        msg = (
+            "Uploaded document Marksheet ya Scorecard lag raha hai. Resume Roast par sirf candidate resumes aur CVs allowed hain."
+            if lang == "hi-IN"
+            else "The uploaded document appears to be an academic marksheet or scorecard. Resume Roast only accepts candidate resumes and CVs."
+        )
+        return False, msg
+
+    if "government_id" in anti_matches:
+        msg = (
+            "Uploaded document Government ID lag raha hai. Kripya privacy ke liye identity documents upload na karein aur resume upload karein."
+            if lang == "hi-IN"
+            else "The uploaded document appears to be a Government ID. For privacy and safety, please upload your resume or CV."
+        )
+        return False, msg
+
+    if "academic_exam" in anti_matches or "course_material" in anti_matches:
+        msg = (
+            "Uploaded document question paper ya course notes lag raha hai. Resume Roast par sirf resumes aur CVs allowed hain."
+            if lang == "hi-IN"
+            else "The uploaded document appears to be academic course notes or an exam paper. Resume Roast only accepts candidate resumes and CVs."
+        )
+        return False, msg
+
+    if "invoice" in anti_matches:
+        msg = (
+            "Uploaded document invoice ya bill lag raha hai. Kripya apna valid resume upload karein."
+            if lang == "hi-IN"
+            else "The uploaded document appears to be an invoice or receipt. Please upload a valid resume."
+        )
+        return False, msg
+
+    if "presentation_slide" in anti_matches:
+        msg = (
+            "Uploaded document presentation slides lag raha hai. Kripya apna resume PDF ya DOCX mein upload karein."
+            if lang == "hi-IN"
+            else "The uploaded document appears to be a slide deck. Please upload your personal resume or CV."
+        )
+        return False, msg
+
+    if "recipe" in anti_matches:
+        msg = (
+            "Uploaded document resume nahi lag raha hai. Kripya apna valid resume ya CV upload karein."
+            if lang == "hi-IN"
+            else "The uploaded document does not appear to be a resume. Resume Roast only accepts candidate resumes and CVs."
+        )
+        return False, msg
+
     # 3. Calculate structural resume confidence score
     confidence_score = 0
 
@@ -161,25 +250,10 @@ def validate_is_resume(text: str, filename: str = "", lang: str = "en") -> tuple
     elif role_matches >= 1:
         confidence_score += 8
 
-    # D. Deduct heavily for anti-patterns
-    if "academic_exam" in anti_matches:
-        confidence_score -= 45
-    if "course_material" in anti_matches:
-        confidence_score -= 40
-    if "research_paper" in anti_matches:
-        confidence_score -= 35
-    if "invoice" in anti_matches:
-        confidence_score -= 50
-    if "presentation_slide" in anti_matches:
-        confidence_score -= 35
-    if "recipe" in anti_matches:
-        confidence_score -= 50
-
     # Decision rule:
     # A valid resume must have:
     # 1. At least 2 recognized resume sections (or 1 major section like experience/education + contact info)
-    # 2. Total confidence score >= 35
-    # 3. No overriding anti-pattern score collapse
+    # 2. Total confidence score >= 30
     is_valid = True
     if sections_matched == 0:
         is_valid = False
@@ -189,30 +263,11 @@ def validate_is_resume(text: str, filename: str = "", lang: str = "en") -> tuple
         is_valid = False
 
     if not is_valid:
-        if "academic_exam" in anti_matches or "course_material" in anti_matches:
-            msg = (
-                "Uploaded document question paper ya course notes lag raha hai. Resume Roast par sirf resumes aur CVs allowed hain."
-                if lang == "hi-IN"
-                else "The uploaded document appears to be academic course notes or an exam paper. Resume Roast only accepts candidate resumes and CVs."
-            )
-        elif "invoice" in anti_matches:
-            msg = (
-                "Uploaded document invoice ya bill lag raha hai. Kripya apna valid resume upload karein."
-                if lang == "hi-IN"
-                else "The uploaded document appears to be an invoice or receipt. Please upload a valid resume."
-            )
-        elif "presentation_slide" in anti_matches:
-            msg = (
-                "Uploaded document presentation slides lag raha hai. Kripya apna resume PDF ya DOCX mein upload karein."
-                if lang == "hi-IN"
-                else "The uploaded document appears to be a slide deck. Please upload your personal resume or CV."
-            )
-        else:
-            msg = (
-                "Uploaded document resume nahi lag raha hai. Kripya apna valid resume ya CV upload karein jisme Experience, Education, Skills, ya Projects shamil hon."
-                if lang == "hi-IN"
-                else "The uploaded document does not appear to be a resume. Resume Roast only accepts resumes or CVs containing sections like Experience, Education, Skills, or Projects."
-            )
+        msg = (
+            "Uploaded document resume nahi lag raha hai. Kripya apna valid resume ya CV upload karein jisme Experience, Education, Skills, ya Projects shamil hon."
+            if lang == "hi-IN"
+            else "The uploaded document does not appear to be a resume. Resume Roast only accepts resumes or CVs containing sections like Experience, Education, Skills, or Projects."
+        )
         return False, msg
 
     return True, ""

@@ -162,6 +162,44 @@ def test_short_document_rejected():
     assert "too short" in err_empty
 
 
+def test_admit_card_rejected():
+    admit_text = """
+    NATIONAL TESTING AGENCY - JEE MAIN 2024
+    PROVISIONAL ADMIT CARD
+    Roll Number: DL01092384 | Candidate's Name: Rahul Kumar
+    Date of Examination: 12-04-2024
+    Reporting Time: 07:30 AM | Gate Closing Time: 08:30 AM
+    Test Centre Code: 11029 | Centre: Tech Zone Noida
+    Important Instructions for Candidates:
+    1. Candidate must bring admit card with passport photo.
+    2. Electronic gadgets, mobile phones are strictly prohibited.
+    3. Invigilator's signature and Candidate's signature required.
+    """
+    is_valid, err = validate_is_resume(admit_text, filename="jee_admit_card.pdf", lang="en")
+    assert is_valid is False
+    assert "Admit Card or Hall Ticket" in err
+
+    is_valid_hi, err_hi = validate_is_resume(admit_text, filename="admit_card.pdf", lang="hi-IN")
+    assert is_valid_hi is False
+    assert "Admit Card ya Hall Ticket" in err_hi
+
+
+def test_marksheet_rejected():
+    marksheet_text = """
+    CENTRAL BOARD OF SECONDARY EDUCATION
+    SENIOR SCHOOL CERTIFICATE EXAMINATION 2023
+    MARKS STATEMENT & CUMULATIVE GRADE CARD
+    Roll No: 12658932 | Candidate Name: Priya Sharma
+    Theory Marks: Physics 88, Chemistry 91, Mathematics 95
+    Practical Marks: Physics 29, Chemistry 30
+    Total Marks Obtained: 458 / 500
+    Result: PASS | Controller of Examinations
+    """
+    is_valid, err = validate_is_resume(marksheet_text, filename="class12_marksheet.pdf", lang="en")
+    assert is_valid is False
+    assert "marksheet or scorecard" in err
+
+
 def test_hinglish_rejection_message():
     is_valid, err = validate_is_resume(SAMPLE_EXAM_PAPER, filename="exam.pdf", lang="hi-IN")
     assert is_valid is False
