@@ -22,10 +22,15 @@ function validateFile(file: File, isHinglish = false): string | null {
       : "That file is empty (0 bytes). Please upload a complete resume document.";
   }
   const ext = "." + file.name.split(".").pop()?.toLowerCase();
+  if ([".ppt", ".pptx", ".pps", ".ppsx", ".key"].includes(ext)) {
+    return isHinglish
+      ? "Presentation slides (.ppt/.pptx) supported nahi hain. Kripya apna resume PDF ya DOCX format mein upload karein."
+      : "Presentation slides (.ppt/.pptx) are not accepted. Resume Roast only grades candidate resumes in PDF or Word (DOCX) format.";
+  }
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     return isHinglish
-      ? "Sirf PDF aur DOCX formats supported hain. Text-based documents upload karein."
-      : "Only PDF and DOCX files are supported. Please ensure your file has selectable text.";
+      ? "Sirf PDF aur DOCX formats supported hain. Text-based resume document upload karein."
+      : "Only PDF and DOCX files are supported. Please ensure your resume is in PDF or Word (DOCX) format.";
   }
   if (file.size > MAX_SIZE) {
     return isHinglish

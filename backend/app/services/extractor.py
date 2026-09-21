@@ -27,22 +27,40 @@ def validate_file_signature(file_bytes: bytes, filename: str) -> str:
     if file_bytes.startswith(b"%PDF"):
         return "pdf"
 
+    # Check for presentation slides (.ppt / .pptx)
+    fn_lower = filename.lower()
+    if fn_lower.endswith((".ppt", ".pptx", ".pps", ".ppsx", ".key")):
+        raise ValueError(
+            "Presentation slides (.ppt/.pptx) are not accepted. Resume Roast only grades candidate resumes in PDF or Word (DOCX) format."
+        )
+
     # DOCX magic byte check (Zip container PK\x03\x04 or PK\x05\x06 or PK\x07\x08)
     if file_bytes.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")):
-        # Verify it actually contains Word document structure
+        # Verify it actually contains Word document structure, not PowerPoint or Excel
         try:
             with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
                 namelist = zf.namelist()
-                if any("word/document.xml" in name or "[Content_Types].xml" in name for name in namelist):
+                if any("ppt/" in name for name in namelist):
+                    raise ValueError(
+                        "Presentation slides (.ppt/.pptx) are not accepted. Resume Roast only grades candidate resumes in PDF or Word (DOCX) format."
+                    )
+                if any("xl/" in name for name in namelist):
+                    raise ValueError(
+                        "Spreadsheets (.xls/.xlsx) are not accepted. Resume Roast only grades candidate resumes in PDF or Word (DOCX) format."
+                    )
+                if any("word/document.xml" in name for name in namelist):
                     return "docx"
+        except ValueError:
+            raise
         except Exception:
             raise ValueError(
                 "This Word document appears corrupted or invalid. Try re-exporting it from Word or Google Docs."
             )
-        return "docx"
+        raise ValueError(
+            "This file appears to be a zip archive or non-Word document. Please upload your resume in PDF or standard DOCX format."
+        )
 
     # If extension claims to be pdf/docx but signature fails:
-    fn_lower = filename.lower()
     if fn_lower.endswith(".pdf"):
         raise ValueError(
             "This file has a .pdf extension, but does not appear to be a valid PDF. Make sure it wasn't renamed from another format."

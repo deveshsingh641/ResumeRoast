@@ -402,20 +402,31 @@ def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "", 
         },
     }
 
-    candidate_models = [os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), "gemini-flash-latest"]
+    preferred_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    models_to_try = [
+        preferred_model,
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-flash",
+        "gemini-flash-latest",
+        "gemini-3.6-flash",
+    ]
+    candidate_models = list(dict.fromkeys(models_to_try))
     last_err = None
-    with httpx.Client(timeout=45.0) as client:
+    with httpx.Client(timeout=20.0) as client:
         for model in candidate_models:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
             try:
                 response = client.post(url, json=payload)
-                if response.status_code == 404:
+                if response.status_code in (404, 429, 503):
+                    logger.warning(f"Gemini model {model} returned status {response.status_code}, trying fallback candidate model.")
                     continue
                 response.raise_for_status()
                 data = response.json()
                 raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
                 return _extract_json(raw_text)
             except Exception as e:
+                logger.warning(f"Gemini model {model} call failed ({type(e).__name__}: {e}), trying fallback candidate model.")
                 last_err = e
         if last_err:
             raise last_err
@@ -857,12 +868,59 @@ def _generate_grounded_verdict(
     """
     Produces an authentically grounded, domain- and tool-aware verdict that
     uniquely reflects the specific resume's content, avoiding repetitive generic lines.
+    Integrates candidate score band, primary weakness category, and extracted tools.
     """
     tool = _extract_tool(resume_text)
     t_name = tool.title() if tool else None
-    content_hash_num = int(hashlib.sha256(resume_text.strip().encode("utf-8")).hexdigest()[:8], 16)
+    content_hash_num = int(
+        hashlib.sha256(f"{resume_text.strip()[:300]}:{band}:{top_cat}:{len(resume_text)}".encode("utf-8")).hexdigest()[:8],
+        16,
+    )
+
+    candidates: list[str] = []
 
     if lang == "hi-IN":
+        # 1. Tool-aware candidates tailored to band & flaw
+        if t_name:
+            if band == "strong":
+                candidates.extend([
+                    f"'{t_name}' pe kaam kaafi solid lag raha hai boss, bas architecture scale aur business ROI quantify kar do 🏆",
+                    f"Senior-level chops dikh rahe hain '{t_name}' mein — throughput aur cost savings metrics daaloge toh top-tier shortlist pakka 🚀",
+                    f"'{t_name}' ka stack standout hai guru, bas high-level impact ko executive style mein present karo 💼",
+                    f"Solid portfolio hai boss — '{t_name}' systems ki latency aur cost reduction stats highlight karo ⚡",
+                    f"Engineering foundation '{t_name}' ke saath majboot hai, bas leadership aur scale par spotlight daalo 🌟",
+                ])
+            elif band == "mid":
+                if top_cat == "no-metrics":
+                    candidates.extend([
+                        f"'{t_name}' pe kaam toh kiya hai boss, par production load, latency ya user base ke numbers gayab hain 📉",
+                        f"'{t_name}' experience dikhta hai bhai, par duty list lag rahi hai — impact aur benchmark data daalo 📊",
+                        f"Code shuru kiya '{t_name}' mein sahi hai, par kitna time ya paisa bachaya company ka? Proof do 👀",
+                        f"'{t_name}' stack use kiya acha hai, par scale kitna kiya? Numbers chhupa kyu rahe ho 📈",
+                    ])
+                elif top_cat == "buzzword":
+                    candidates.extend([
+                        f"'{t_name}' stack sahi hai, par LinkedIn ke generic buzzwords ne poore resume ka maza kharab kar diya 🤖",
+                        f"Heavy corporate jargon hatao aur seedha bolo '{t_name}' se kya live deploy kiya 🎯",
+                        f"'{t_name}' ka experience dikhta hai, par buzzwords chhodke exact metrics aur features do 🎯",
+                        f"Har doosra banda '{t_name}' ke aage generic lines chipkata hai, apna unique role batao 💡",
+                    ])
+                else:
+                    candidates.extend([
+                        f"'{t_name}' pe kaam achha hai par formatting aur structure itna bigda hai ki recruiter 5 second mein chhod dega 📐",
+                        f"Skills mein '{t_name}' standout hai boss, bas bullet points ko concise aur impact-oriented banao ✂️",
+                        f"Technical scope '{t_name}' ke saath acha hai, par bullet presentation thodi scattered lag rahi hai 📑",
+                    ])
+            else:  # weak
+                candidates.extend([
+                    f"'{t_name}' likha toh hai bhai, par lagta hai YouTube tutorial dekh kar project copy kiya hai 🛑",
+                    f"Bhai resume hai ya college syllabus? '{t_name}' ke saath live production projects aur links dikhao 🛠️",
+                    f"Sirf '{t_name}' keyword daalne se ATS shortlist nahi karega, end-to-end impact dikhana padega 🚨",
+                    f"'{t_name}' ka mention hai par depth bilkul gayab hai — live deployed projects dikhao bhai 🔗",
+                    f"'{t_name}' projects mein actual architecture aur user scale gayab hai — rewrite zaroori hai ⚠️",
+                ])
+
+        # 2. Domain-specific candidates
         domain_verdicts = {
             "culinary": [
                 "Chef ka haath toh dikh raha hai boss, par inventory aur food cost ke numbers gayab hain 🍳",
@@ -893,16 +951,57 @@ def _generate_grounded_verdict(
                 "Figma screens sundar hain, par usability testing aur conversion gains quantify karo 🖌️",
             ],
             "engineering": [
-                f"'{t_name}' stack toh solid use kiya hai bhai, par production scale aur metrics gayab hain 📉" if t_name else "Engineering experience solid hai, par system throughput aur scale metrics gayab hain 💻",
-                f"'{t_name}' pe kaam kiya achha hai boss, par latency aur user numbers quantify karo 🚀" if t_name else "Clean technical foundation, par latency aur reliability ke numbers missing hain ⚙️",
+                "Engineering experience solid hai, par system throughput aur scale metrics gayab hain 💻",
+                "Clean technical foundation, par latency aur reliability ke numbers missing hain ⚙️",
             ],
         }
-        tool_options = [
-            f"'{t_name}' stack toh use kiya hai bhai, par production scale aur metrics missing hain 📉",
-            f"'{t_name}' pe kaam kiya sahi hai boss, par impact numbers aur scale quantify karo 🚀",
-            f"'{t_name}' ka experience dikhta hai, par buzzwords chhodke exact metrics do 🎯",
-        ] if t_name else []
+        if domain in domain_verdicts:
+            candidates.extend(domain_verdicts[domain])
+
     else:
+        # English candidates
+        # 1. Tool-aware candidates tailored to band & flaw
+        if t_name:
+            if band == "strong":
+                candidates.extend([
+                    f"Impressive technical firepower with '{t_name}', but high-level throughput and scale numbers will push this to elite tier 🏆",
+                    f"Senior-level chops in '{t_name}' are clear — add team mentorship and system resilience metrics to lock in top offers 🚀",
+                    f"Solid architectural ownership with '{t_name}'; back up your accomplishments with concrete business ROI 💼",
+                    f"High-impact technical execution in '{t_name}' — highlight query latency cuts and uptime SLAs to stand out to hiring directors ⚡",
+                    f"Battle-tested depth in '{t_name}' is evident — quantify production reliability and cost optimizations for maximum impact 🎯",
+                ])
+            elif band == "mid":
+                if top_cat == "no-metrics":
+                    candidates.extend([
+                        f"Solid practical exposure to '{t_name}', but hiring managers see zero request volume, latency, or scale figures 📉",
+                        f"You clearly know '{t_name}', but your bullets read like a job description rather than shipped business outcomes 📊",
+                        f"Using '{t_name}' in production is great, but swap vague duties for benchmark percentages and latency cuts ⏱️",
+                        f"Clear technical foundation in '{t_name}' — quantify user throughput and query optimizations to get interviews 🚀",
+                        f"Hands-on execution with '{t_name}' is visible, but claims without measurable outcomes leave recruiters guessing 📈",
+                    ])
+                elif top_cat == "buzzword":
+                    candidates.extend([
+                        f"Decent grasp of '{t_name}', but buried under generic corporate jargon and recycled LinkedIn clichés 🤖",
+                        f"Cut the buzzword fluff around '{t_name}' — speak like an engineer who ships, not a corporate brochure 💡",
+                        f"Every resume pairs '{t_name}' with 'leveraged synergies'; highlight your actual technical decisions instead 🎯",
+                        f"Demonstrated proficiency in '{t_name}', but pair it with authentic problem-solving rather than buzzwords 🎯",
+                    ])
+                else:
+                    candidates.extend([
+                        f"Promising track record in '{t_name}', but cluttered layout and unpolished bullets dilute the impact 📐",
+                        f"Solid hands-on foundation in '{t_name}' — streamline your formatting so ATS scanners and recruiters parse it fast 📑",
+                        f"Hands-on expertise with '{t_name}' is there, but tight editing and cleaner bullet hierarchy will elevate it ✂️",
+                    ])
+            else:  # weak
+                candidates.extend([
+                    f"Mentioned '{t_name}', but reads like a tutorial summary rather than authentic production ownership 🛑",
+                    f"Sparse project scope around '{t_name}' — hiring managers will wonder if you shipped code or just watched videos 📺",
+                    f"Needs an overhaul: pair '{t_name}' with complete end-to-end architectures and verifiable live demo links 🛠️",
+                    f"Listing '{t_name}' without deep project context won't survive ATS filters or first-round recruiter scans 🚨",
+                    f"Early exposure to '{t_name}' is visible, but vague bullet points leave hiring managers with too many questions ❓",
+                ])
+
+        # 2. Domain-specific candidates
         domain_verdicts = {
             "culinary": [
                 "Culinary experience is clear, but recipes don't convince hiring managers without food cost numbers 🍳",
@@ -933,42 +1032,43 @@ def _generate_grounded_verdict(
                 "Thoughtful UX workflows, but needs hard metrics on user drop-off reduction and adoption 🖌️",
             ],
             "engineering": [
-                f"Solid technical arsenal with '{t_name}', but production throughput and scale numbers went missing 📉" if t_name else "Engineering experience is visible, but system throughput and scale metrics went missing 💻",
-                f"Hands-on expertise with '{t_name}', but needs quantifiable uptime and latency metrics 🚀" if t_name else "Clean technical foundation, but lacks concrete latency and reliability metrics ⚙️",
+                "Engineering experience is visible, but system throughput and scale metrics went missing 💻",
+                "Clean technical foundation, but lacks concrete latency and reliability metrics ⚙️",
             ],
         }
-        tool_options = [
-            f"Solid technical arsenal with '{t_name}', but production throughput and scale numbers went missing 📉",
-            f"Hands-on expertise with '{t_name}', but needs quantifiable uptime and latency metrics 🚀",
-            f"Demonstrated proficiency in '{t_name}', but pair it with measurable impact rather than buzzwords 🎯",
-        ] if t_name else []
+        if domain in domain_verdicts:
+            candidates.extend(domain_verdicts[domain])
 
-    if tool_options and domain in ("engineering", "general"):
-        return tool_options[content_hash_num % len(tool_options)]
-
-    if domain in domain_verdicts:
-        pool = domain_verdicts[domain]
-        return pool[content_hash_num % len(pool)]
-
+    # 3. Always blend in general pool candidates for this specific band & top weakness
     lang_pool = VERDICT_POOLS.get(lang, VERDICT_POOLS["en"])
     if band == "strong":
-        candidates = lang_pool.get("strong", [])
+        candidates.extend(lang_pool.get("strong", []))
     elif band == "mid":
         if top_cat == "no-metrics":
-            candidates = lang_pool.get("mid_metrics", lang_pool["mid_general"])
+            candidates.extend(lang_pool.get("mid_metrics", lang_pool["mid_general"]))
         elif top_cat == "buzzword":
-            candidates = lang_pool.get("mid_buzzwords", lang_pool["mid_general"])
+            candidates.extend(lang_pool.get("mid_buzzwords", lang_pool["mid_general"]))
         else:
-            candidates = lang_pool.get("mid_general", [])
+            candidates.extend(lang_pool.get("mid_general", []))
     else:
         if top_cat == "no-metrics":
-            candidates = lang_pool.get("weak_metrics", lang_pool["weak_general"])
+            candidates.extend(lang_pool.get("weak_metrics", lang_pool["weak_general"]))
         elif top_cat == "buzzword":
-            candidates = lang_pool.get("weak_buzzwords", lang_pool["weak_general"])
+            candidates.extend(lang_pool.get("weak_buzzwords", lang_pool["weak_general"]))
         else:
-            candidates = lang_pool.get("weak_general", [])
+            candidates.extend(lang_pool.get("weak_general", []))
 
-    return candidates[content_hash_num % len(candidates)] if candidates else "Resume needs focused improvements."
+    # De-duplicate while preserving order
+    unique_candidates = list(dict.fromkeys(c for c in candidates if c))
+
+    if unique_candidates:
+        recent_verdicts = set(anti_repeat_memory.get_recent_roasts("verdict"))
+        fresh_candidates = [c for c in unique_candidates if c not in recent_verdicts]
+        pool = fresh_candidates if fresh_candidates else unique_candidates
+        chosen = pool[content_hash_num % len(pool)]
+        anti_repeat_memory.record_roast("verdict", chosen)
+        return chosen
+    return "Resume needs focused improvements."
 
 
 def _generate_fallback_roast(
@@ -1557,7 +1657,15 @@ def generate_roast_comeback(
     # 1. Attempt LLM generation via Gemini
     gemini_key = os.getenv("GEMINI_API_KEY", "")
     if gemini_key:
-        candidate_models = [os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), "gemini-flash-latest"]
+        preferred_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+        candidate_models = list(dict.fromkeys([
+            preferred_model,
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-flash-latest",
+            "gemini-3.6-flash",
+        ]))
         for model in candidate_models:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"

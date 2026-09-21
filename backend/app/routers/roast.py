@@ -20,6 +20,7 @@ from app.services import ai_analyzer, extractor
 from app.services.ai_analyzer import analyze_resume
 from app.services.certificate_service import generate_certificate_pdf, get_credential_title
 from app.services.pro_auth import get_authenticated_pro_email
+from app.services.resume_validator import validate_is_resume
 
 logger = logging.getLogger("roast")
 
@@ -317,6 +318,11 @@ async def create_roast(
             status_code=500,
             detail="Failed to read your document. Try exporting it fresh as a PDF or standard DOCX.",
         )
+
+    # 4b. Validate document is a genuine resume/CV (reject random subject PDFs, exam papers, syllabus, invoices)
+    is_resume, resume_err = validate_is_resume(resume_text, filename=filename, lang=lang)
+    if not is_resume:
+        raise HTTPException(status_code=422, detail=resume_err)
 
     # 5. AI analysis
     try:
