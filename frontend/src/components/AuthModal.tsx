@@ -134,12 +134,12 @@ export default function AuthModal({
           </div>
           <div>
             <h3 className="font-display text-lg font-bold text-white tracking-tight">
-              {isHinglish ? "Sign In / Sync Pro Plan" : "Sign In & Sync Pro Plan"}
+              {isHinglish ? "Account Sign In" : "Account Sign In"}
             </h3>
             <p className="font-mono text-xs text-tan-dim mt-0.5">
               {isHinglish
-                ? "Apna checkout email enter karein aur Pro plan sync karein."
-                : "Enter your email to activate Pro and sync your plan across devices."}
+                ? "Email daalein. Free tier ho ya Pro, aapka account yahan se sync ho jayega."
+                : "Enter your email to sign in, save your profile, or sync your Pro plan across devices."}
             </p>
           </div>
         </div>
@@ -188,19 +188,19 @@ export default function AuthModal({
           >
             {loading
               ? isHinglish
-                ? "Verifying..."
-                : "Checking account..."
+                ? "Signing in..."
+                : "Signing in..."
               : isHinglish
-                ? "Sign In & Sync Pro ⚡"
-                : "Sign In & Sync Pro ⚡"}
+                ? "Continue with Email →"
+                : "Continue with Email →"}
           </button>
         </form>
 
-        <div className="mt-5 pt-4 border-t border-white/[0.08] text-center text-xs font-mono text-tan-dim">
+        <div className="mt-5 pt-4 border-t border-white/[0.08] text-center text-xs font-mono text-tan-dim leading-relaxed">
           <span>
             {isHinglish
-              ? "Agar Pro abhi nahi liya hai, toh aap standard Free tier me login honge."
-              : "No password required. If you purchased Pro, it unlocks instantly on this device."}
+              ? "Password ki zaroorat nahi hai. Agar Pro liya hua hai toh unlimited roasts instantly unlock ho jayenge."
+              : "Zero password needed. Free accounts get 1 daily roast, and Pro accounts unlock unlimited access automatically."}
           </span>
         </div>
       </div>
