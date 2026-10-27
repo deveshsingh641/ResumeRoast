@@ -70,3 +70,20 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Documents, reports, presentations, and media dumps
+*.docx
+*.pptx
+*.pdf
+~$*
+pptx_dump.txt
+template_dump.txt
+presentation_assets/
+presentation_preview/
+report_preview_pages/
+report_preview_pages_hq/
+screen/
+extracted_template_media/
+generated_diagrams/
+archive/
+certifications/

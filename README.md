@@ -171,8 +171,6 @@ FastAPI provides automated interactive OpenAPI documentation at `/docs`:
 
 ## 🚢 Deployment
 
-Detailed production deployment instructions are documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). For operational procedures, load testing, and runbooks, see [docs/OPERATIONAL_RUNBOOK.md](docs/OPERATIONAL_RUNBOOK.md):
-
 - **Backend:** Ready for deployment on [Render](https://render.com) using the included `backend/Dockerfile` or native Python runtime with `Procfile`.
 - **Frontend:** Instant one-click deployment on [Vercel](https://vercel.com) with root directory set to `frontend` and output directory `dist`.
 - **Docker:** Production container configs included in `docker-compose.yml`.
