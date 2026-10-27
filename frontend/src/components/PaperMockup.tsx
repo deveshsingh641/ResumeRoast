@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 import type { Issue } from "@/store/useAppStore";
 import { getHinglishTag } from "@/utils/categoryTags";
 
@@ -45,6 +47,8 @@ export default function PaperMockup({
   controlledMarkStep,
   xRayMode = false,
 }: PaperMockupProps) {
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   // If custom issues passed from real resume, populate bullets from issues
   let finalBullet1Text = bullet1Text;
   let finalBullet1Annotated = bullet1Annotated;
@@ -283,7 +287,7 @@ export default function PaperMockup({
         {((companyLine && companyLine.trim() !== "") || (experienceHeader && experienceHeader.trim() !== "")) && (
           <div className="relative mb-3 text-left">
             <p className="font-mono text-xs font-semibold uppercase tracking-widest text-ink/60">
-              {experienceHeader || "EXPERIENCE (KAAM KA RECORD)"}
+              {experienceHeader || (isHinglish ? "EXPERIENCE (KAAM KA RECORD)" : "RECENT EXPERIENCE")}
             </p>
             {companyLine && companyLine.trim() !== "" && (
               <p className="font-body text-sm font-medium text-ink mt-1">

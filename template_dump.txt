@@ -1,0 +1,219 @@
+Paragraphs (126):
+P0 [Normal] align=CENTER (1): Internship Report
+    Runs: ['Internship' fn=Arial sz=16.0 b=True i=None] [' Report' fn=Arial sz=16.0 b=True i=None]
+P1 [Normal] align=None: 
+P2 [Normal] align=CENTER (1): on
+    Runs: ['on' fn=Arial sz=14.0 b=True i=None]
+P3 [Normal] align=CENTER (1): 
+P4 [Normal] align=CENTER (1): <Title of Project>
+    Runs: ['<' fn=Arial sz=18.0 b=True i=None] ['Title of Project' fn=Arial sz=18.0 b=True i=None] ['>' fn=Arial sz=18.0 b=True i=None]
+P5 [Normal] align=CENTER (1): 
+P6 [Normal] align=CENTER (1): Submitted as Internship Report
+    Runs: ['Submitted as ' fn=Arial sz=14.0 b=True i=None] ['Internship' fn=Arial sz=14.0 b=True i=None] [' Report' fn=Arial sz=14.0 b=True i=None]
+P7 [Normal] align=None: 
+P8 [Normal] align=CENTER (1): for 
+    Runs: ['for' fn=Arial sz=14.0 b=True i=None] [' ' fn=Arial sz=22.0 b=True i=None]
+P9 [Normal] align=CENTER (1): MINI PROJECT / Internship
+    Runs: ['MINI PROJECT ' fn=Arial sz=22.0 b=True i=None] ['/ Internship' fn=Arial sz=22.0 b=True i=None]
+P10 [Normal] align=CENTER (1): (BIT/BCS-752)
+    Runs: ['(' fn=Arial sz=22.0 b=True i=None] ['BIT/' fn=Arial sz=22.0 b=True i=None] ['BCS' fn=Arial sz=22.0 b=True i=None] ['-752' fn=Arial sz=22.0 b=True i=None] [')' fn=Arial sz=22.0 b=True i=None]
+P11 [Normal] align=None: 
+P12 [Normal] align=None: 
+P13 [Normal] align=CENTER (1): Session 2026-27
+    Runs: ['Session 202' fn=Arial sz=12.0 b=True i=None] ['6' fn=Arial sz=12.0 b=True i=None] ['-2' fn=Arial sz=12.0 b=True i=None] ['7' fn=Arial sz=12.0 b=True i=None]
+P14 [Normal] align=CENTER (1): in
+    Runs: ['in' fn=Arial sz=12.0 b=True i=None]
+P15 [Normal] align=CENTER (1): 
+P16 [Normal] align=CENTER (1): Computer Engineering/Information Technology
+    Runs: ['C' fn=Arial sz=18.0 b=True i=None] ['omputer Engineering/Information Technology' fn=Arial sz=18.0 b=True i=None]
+P17 [Normal] align=None: 
+P18 [Normal] align=CENTER (1): By
+    Runs: ['By' fn=Arial sz=12.0 b=True i=None]
+P19 [Normal] align=CENTER (1): <STUDENT NAME>
+    Runs: ['<STUDENT NAME>' fn=Arial sz=14.0 b=True i=None]
+P20 [Normal] align=CENTER (1): <Roll Number>
+    Runs: ['<Roll Number>' fn=Arial sz=14.0 b=True i=None]
+P21 [Normal] align=CENTER (1): 
+P22 [Normal] align=None: 
+P23 [Normal] align=CENTER (1): Submitted to
+    Runs: ['Submitted' fn=Arial sz=14.0 b=True i=None] [' to' fn=Arial sz=14.0 b=True i=None]
+P24 [Normal] align=CENTER (1): 
+P25 [Normal] align=CENTER (1): <Internship Coordinator>
+    Runs: ['<' fn=Arial sz=14.0 b=True i=None] ['Internship Coordinator' fn=Arial sz=14.0 b=True i=None] ['>' fn=Arial sz=14.0 b=True i=None]
+P26 [Normal] align=None: 
+P27 [Normal] align=None: 
+P28 [Normal] align=CENTER (1): 
+P29 [Normal] align=CENTER (1): AFFILIATED TO
+    Runs: ['AFFILIATED TO' fn=Arial sz=12.0 b=True i=None]
+P30 [Normal] align=CENTER (1): DR. A.P.J. ABDUL KALAM TECHNICAL UNIVERSITY, U.P., LUCKNOW 
+    Runs: ['DR. A.P.J. ABDUL KALAM TECHNICAL UNIVERSITY, U.P., LUCKNOW ' fn=Arial sz=None b=True i=None]
+P31 [Normal] align=CENTER (1): (Formerly UPTU)
+    Runs: ['(Formerly UPTU)' fn=Arial sz=None b=True i=None]
+P32 [Normal] align=CENTER (1): 
+P33 [Normal] align=None: 
+    Runs: ['' fn=Arial sz=18.0 b=True i=None]
+P34 [Normal] align=CENTER (1): INTERNSHIP CERTIFICATE
+    Runs: ['INTERNSHIP CERTIFICATE' fn=Times New Roman sz=14.0 b=True i=None]
+P35 [Normal] align=None: 
+P36 [Normal] align=None: 
+P37 [Normal] align=None: 
+P38 [Normal] align=None: 
+P39 [Normal] align=None: 
+P40 [Normal] align=None: 
+P41 [Normal] align=None: 
+P42 [Normal] align=None: 
+P43 [Normal] align=None: 
+P44 [Normal] align=None: 
+P45 [Normal] align=None: 
+P46 [Normal] align=None: 
+P47 [Normal] align=None: 
+P48 [Normal] align=None: 
+P49 [Normal] align=None: 
+P50 [Normal] align=None: 
+P51 [Normal] align=None: 
+P52 [Normal] align=None: 
+P53 [Normal] align=None: 
+P54 [Normal] align=None: 
+P55 [Normal] align=None: 
+P56 [Normal] align=None: 
+P57 [Normal] align=None: 
+P58 [Normal] align=None: 
+P59 [Normal] align=None: 
+P60 [Normal] align=None: 
+P61 [Normal] align=None: 
+P62 [Normal] align=None: 
+P63 [Normal] align=None: 
+P64 [Normal] align=None: 
+P65 [Normal] align=None: 
+P66 [Normal] align=None: 
+P67 [Normal] align=CENTER (1): STUDENT’S DECLARATION
+    Runs: ['S' fn=Times New Roman sz=14.0 b=True i=None] ['TUDENT’S ' fn=Times New Roman sz=14.0 b=True i=None] ['DECLARATION' fn=Times New Roman sz=14.0 b=True i=None]
+P68 [Normal] align=JUSTIFY (3): We hereby declare that the Internship Report entitled “[Title of Internship/Project]”, submitted in partial fulfillment of the requirements for the award of the degree of Bachelor of Technology (B.Tech.), is our original work carried out during the internship period under the guidance of Internship coordinator Dr. Anamika Goel.
+    Runs: ['We hereby declare that the Internship Report entitled “[Title of Internship/Project]”, submitted in partial fulfillment of the requirements for the award of the degree of Bachelor of Technology (B.Tech.), is our original work carried out during the internship period under the guidance of' fn=Arial sz=None b=None i=None] [' Internship coordinator' fn=Arial sz=None b=None i=None] [' ' fn=Arial sz=None b=None i=None] ['Dr. Anamika Goel' fn=Arial sz=None b=None i=None] ['.' fn=Arial sz=None b=None i=None]
+P69 [Normal] align=JUSTIFY (3): 
+P70 [Normal] align=JUSTIFY (3): We further declare that, to the best of our knowledge and belief, this report contains no material previously published or written by any other person, nor any material that has been submitted, in whole or in substantial part, for the award of any other degree, diploma, or academic qualification from this or any other university/institution, except where due acknowledgment has been made in the report.
+    Runs: ['We further declare that, to the best of our knowledge and belief, this report contains no material previously published or written by any other person, nor any material that has been submitted, in whole or in substantial part, for the award of any other degree, diploma, or academic qualification from this or any other university/institution, except where due acknowledgment has been made in the report.' fn=Arial sz=None b=None i=None]
+P71 [Normal] align=JUSTIFY (3): 
+P72 [Normal] align=JUSTIFY (3): All sources of information, references, and contributions of others have been duly acknowledged wherever applicable.
+    Runs: ['All sources of information, references, and contributions of others have been duly acknowledged wherever applicable.' fn=Arial sz=None b=None i=None]
+P73 [Normal] align=None: 
+P74 [Normal] align=None: Dated:	          			                    					Signature of students
+    Runs: ['Dated:' fn=Arial sz=10.0 b=True i=None] ['	' fn=Arial sz=10.0 b=None i=None] ['          ' fn=Arial sz=10.0 b=None i=None] ['	' fn=Arial sz=10.0 b=None i=None] ['	' fn=Arial sz=10.0 b=None i=None] ['	' fn=Arial sz=10.0 b=None i=None] ['                    ' fn=Arial sz=10.0 b=None i=None] ['	' fn=Arial sz=10.0 b=None i=None] ['	' fn=Arial sz=10.0 b=None i=None] ['	' fn=Arial sz=10.0 b=None i=None] ['	' fn=Arial sz=10.0 b=None i=None] ['	' fn=Arial sz=10.0 b=None i=None] ['Signature of students' fn=Arial sz=10.0 b=True i=None]
+P75 [Normal] align=RIGHT (2): Name: <student name>
+    Runs: ['Name: ' fn=Arial sz=10.0 b=True i=None] ['<student name>' fn=Arial sz=10.0 b=True i=None]
+P76 [Normal] align=RIGHT (2): Roll No: <student roll no>
+    Runs: ['Roll No: <student roll no>' fn=Arial sz=10.0 b=True i=None]
+P77 [Normal] align=RIGHT (2): Department: CE/IT
+    Runs: ['Department:' fn=Arial sz=10.0 b=True i=None] [' C' fn=Arial sz=10.0 b=True i=None] ['E/IT' fn=Arial sz=10.0 b=True i=None]
+P78 [Normal] align=RIGHT (2): 
+P79 [Normal] align=RIGHT (2): 
+P80 [Heading 2] align=None: This is to certify that the above statement made by the candidates is correct to the best of my knowledge.
+    Runs: ['This is to certify that the above statement made by the candidates is correct to the best of my knowledge.' fn=Arial sz=None b=False i=None]
+P81 [Heading 2] align=CENTER (1): ACKNOWLEDGEMENT
+    Runs: ['ACKNOWLEDGEMENT' fn=Times New Roman sz=14.0 b=None i=None]
+P82 [IEEE Abstract] align=None: 
+P83 [Normal] align=None: 
+P84 [Normal] align=JUSTIFY (3): It gives us a great sense of pleasure to present the Internship Report undertaken as a part of the B.Tech. curriculum. We express our sincere gratitude to the Internship Coordinator, Department of Computer Engineering/Information Technology , ABES Engineering College, Ghaziabad, for providing us with valuable guidance, support, and encouragement throughout the internship. The continuous support and coordination provided during the internship period played an important role in the successful completion of our internship and preparation of this report.
+    Runs: ['It gives us a great sense of pleasure to present the Internship Report undertaken as a part of the B.Tech. curriculum. We express our sincere gratitude to the Internship Coordinator, Department of Compute' fn=Arial sz=None b=None i=None] ['r Engineering/Information Technology ' fn=Arial sz=None b=None i=None] [', ABES Engineering College, Ghaziabad, for providing us with valuable guidance, support, and encouragement throughout the internship. The continuous support and coordination provided during the internship period played an important role in the successful completion of our internship and preparation of this report.' fn=Arial sz=None b=None i=None]
+P85 [Normal] align=JUSTIFY (3): We also take this opportunity to express our sincere gratitude to Associate Professor, Dr. Deepali Dev, Head of the Department of Computer Science & Engineering-AIML, ABES Engineering College, Ghaziabad, for her valuable support, encouragement, and assistance throughout the internship.
+    Runs: ['We also take this opportunity to express our sincere gratitude to Associate Professor, Dr. Deepali Dev, Head of the Department of Computer Science & Engineering-AIML, ABES Engineering College, Ghaziabad, for her valuable support, encouragement, and assistance throughout the internship.' fn=Arial sz=None b=None i=None]
+P86 [Normal] align=JUSTIFY (3): We would also like to express our sincere thanks to our Industry Mentor/Supervisor and the organization where we completed our internship for providing us with the opportunity to gain practical knowledge and exposure to a professional work environment. Their valuable guidance, technical insights, and support helped us enhance our skills and successfully accomplish the objectives of the internship.
+    Runs: ['We would also like to express our sincere thanks to our Industry Mentor/Supervisor and the organization where we completed our internship for providing us with the opportunity to gain practical knowledge and exposure to a professional work environment. Their valuable guidance, technical insights, and support helped us enhance our skills and successfully accomplish the objectives of the internship.' fn=Arial sz=None b=None i=None]
+P87 [Normal] align=JUSTIFY (3): We sincerely acknowledge and appreciate the support of everyone who contributed to the successful completion of our internship.
+    Runs: ['We sincerely acknowledge and appreciate the support of everyone who contributed to the successful completion of our internship.' fn=Arial sz=None b=None i=None]
+P88 [Normal] align=JUSTIFY (3): Signature:	
+    Runs: ['Signature:' fn=Arial sz=None b=None i=True] ['	' fn=Arial sz=None b=None i=True]
+P89 [Normal] align=JUSTIFY (3): Name	:
+    Runs: ['Name' fn=Arial sz=None b=None i=True] ['	:' fn=Arial sz=None b=None i=True]
+P90 [Normal] align=JUSTIFY (3): Roll No.:
+    Runs: ['Roll No.:' fn=Arial sz=None b=None i=True]
+P91 [Normal] align=JUSTIFY (3): Date	:
+    Runs: ['Date' fn=Arial sz=None b=None i=True] ['	:' fn=Arial sz=None b=None i=True]
+P92 [Normal] align=JUSTIFY (3): 
+P93 [Normal] align=CENTER (1): 
+    Runs: ['' fn=Arial sz=None b=True i=None]
+P94 [Normal] align=CENTER (1): ABSTRACT
+    Runs: ['ABSTRACT' fn=Times New Roman sz=14.0 b=True i=None]
+P95 [Heading 1] align=None: 
+P96 [Heading 1] align=None: 
+P97 [Heading 1] align=None: 
+P98 [Normal] align=None: 
+P99 [Normal] align=None: 
+P100 [Normal] align=None: 
+P101 [Normal] align=None: 
+P102 [Normal] align=None: 
+P103 [Normal] align=None: 
+P104 [Normal] align=None: 
+P105 [Normal] align=None: 
+P106 [Normal] align=None: 
+P107 [Normal] align=None: 
+P108 [Normal] align=None: 
+P109 [Normal] align=None: 
+P110 [Normal] align=None: 
+P111 [Normal] align=None: 
+P112 [Normal] align=None: 
+P113 [Normal] align=None: 
+P114 [Normal] align=None: 
+P115 [Normal] align=None: 
+P116 [Normal] align=None: 
+P117 [Normal] align=None: 
+P118 [Normal] align=None: 
+P119 [Normal] align=None: 
+P120 [Normal] align=None: 
+P121 [Normal] align=CENTER (1): TABLE OF CONTENT
+    Runs: ['TABLE OF CONTENT' fn=Times New Roman sz=14.0 b=True i=None]
+P122 [Normal] align=None: 
+P123 [Normal] align=None: 
+P124 [Heading 1] align=None: General Formatting Standards
+    Runs: ['General Formatting Standards' fn=None sz=None b=None i=None]
+P125 [Normal] align=None: 
+
+Tables (4):
+
+--- Table 0 (1x3) ---
+  Row 0:  | ABES ENGINEERING COLLEGE, GHAZIABAD | 
+
+--- Table 1 (1x2) ---
+  Row 0:  Signature of HOD Dr. Deepali Dev HOD-Department of CSE-AIML Date............................         |     Signature of Internship-Coordinator Dr. Anamika Goel Associate Professor CSE-AIML Date............................      
+
+--- Table 2 (21x3) ---
+  Row 0:  | Title                                                                                           Page No. | Title                                                                                           Page No.
+  Row 1:  | Internship Certificate | ii
+  Row 2:  | Student Declaration | iii
+  Row 3:  | Acknowledgement | iv
+  Row 4:  | Abstract | v
+  Row 5:  | Table of Content | vi
+  Row 6:  | List of Table | vii
+  Row 7:  | List of Figure | viii
+  Row 8:  | List of Symbol | ix
+  Row 9:  | List of Abbreviation | x
+  Row 10: CHAPTER 1 INTERNSHIP & COMPANY OVERVIEW | CHAPTER 1 INTERNSHIP & COMPANY OVERVIEW | 1 – 2
+  Row 11: CHAPTER 2 PROJECT INTRODUCTION | CHAPTER 2 PROJECT INTRODUCTION | 3-7
+  Row 12:  | 2.1 Introduction | 
+  Row 13:  | 2.2 Problem statement | 
+  Row 14:  | 2.3 Objectives | 
+  Row 15: CHAPTER 3 BACKGROUND/EXISTING APPROACH | CHAPTER 3 BACKGROUND/EXISTING APPROACH | 8-10
+  Row 16: Chapter 4 PROPOSED APPROACH & METHODOLOGY | Chapter 4 PROPOSED APPROACH & METHODOLOGY | 11-20
+  Row 17: CHAPTER 5 IMPLEMENTATION & DEMONSTRATION | CHAPTER 5 IMPLEMENTATION & DEMONSTRATION | 21-25
+  Row 18: CHAPTER 6 RESULT ANALYSIS/PERFORMANCE METRICS | CHAPTER 6 RESULT ANALYSIS/PERFORMANCE METRICS | 26-28
+  Row 19: CHAPTER 7 CHALLENGES FACED | CHAPTER 7 CHALLENGES FACED | 29-30
+  Row 20: CHAPTER 8 KEY LEARNINGS FROM INTERNSHIP | CHAPTER 8 KEY LEARNINGS FROM INTERNSHIP | 31-32
+
+--- Table 3 (13x2) ---
+  Row 0: Item | Recommended Standard
+  Row 1: Paper size | A4
+  Row 2: Margins | Left 1.15 in, Right 0.90 in, Top 0.80 in, Bottom 0.75 in
+  Row 3: Body font | Times New Roman, 12 pt
+  Row 4: Chapter heading | 14 pt, bold
+  Row 5: Section heading | 13, bold
+  Row 6: Line spacing | 1.15, use one style consistently
+  Row 7: Paragraph alignment | Justified
+  Row 8: Page numbering | Roman numerals for preliminary pages, Arabic numerals from Chapter 1 onward
+  Row 9: Figures | Numbered sequentially, caption below the figure
+  Row 10: Tables | Numbered sequentially, caption above the table
+  Row 11: References | IEEE citation and reference format
+  Row 12: File format | Submit as PDF unless the department specifically requests DOCX
+
+Inline shapes: 2
+Shape 0: type=WD_INLINE_SHAPE_TYPE.PICTURE, width=561975, height=790575
+Shape 1: type=WD_INLINE_SHAPE_TYPE.PICTURE, width=804497, height=952500

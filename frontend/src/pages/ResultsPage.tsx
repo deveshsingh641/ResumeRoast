@@ -57,7 +57,8 @@ export default function ResultsPage() {
   const [result, setLocalResult] = useState<ExtendedRoastResult | null>(
     storeResult,
   );
-  const [loading, setLoading] = useState(!storeResult && id !== "demo");
+  const isDemoId = !id || id === "demo" || id === "demo-roast" || id === "sample-roast-1";
+  const [loading, setLoading] = useState(!storeResult && !isDemoId);
   const [error, setError] = useState<string | null>(null);
   const [downloadingCert, setDownloadingCert] = useState(false);
   const [downloadingFixed, setDownloadingFixed] = useState(false);
@@ -179,7 +180,7 @@ export default function ResultsPage() {
   };
 
   useEffect(() => {
-    if (id === "demo" || !id) {
+    if (isDemoId) {
       setLocalResult(getSampleRoastData(lang));
       setLoading(false);
       return;
@@ -563,7 +564,7 @@ export default function ResultsPage() {
 
           <IssueList
             issues={result.issues}
-            totalIssues={result.total_issues}
+            totalIssues={result.total_issues ?? result.issues?.length ?? 0}
             isTruncated={result.is_truncated}
             roastId={result.id}
           />
@@ -579,8 +580,8 @@ export default function ResultsPage() {
               <div>
                 <p className="font-display text-lg sm:text-xl text-paper mb-1">
                   {isHinglish
-                    ? `${result.total_issues - result.issues.length} aur galtiyaan desk ke neeche chhipi hain.`
-                    : `${result.total_issues - result.issues.length} more critical flaws hidden below the desk.`}
+                    ? `${(result.total_issues ?? result.issues.length) - result.issues.length} aur galtiyaan desk ke neeche chhipi hain.`
+                    : `${(result.total_issues ?? result.issues.length) - result.issues.length} more critical flaws hidden below the desk.`}
                 </p>
                 <p className="font-mono text-xs text-tan leading-relaxed">
                   {isHinglish

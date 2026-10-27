@@ -232,11 +232,26 @@ class AntiRepeatMemory:
         self,
         categories: Optional[list[str]] = None,
         sample_size: int = DEFAULT_EXCLUSION_SAMPLE,
+        language: str = "hi-IN",
     ) -> str:
         """
         Formats the dynamic exclusion block to be injected into AI analysis prompts.
+        Supports language-aware exclusions so English prompts don't receive Hindi lines.
         """
-        exclusions = self.get_sample_exclusions(categories=categories, sample_size=sample_size)
+        norm_lang = "en" if str(language).lower().startswith("en") else "hi-IN"
+        if norm_lang == "en":
+            from app.prompts.joke_banks import ENGLISH_JOKE_BANKS
+            pool: list[str] = []
+            target_cats = categories if categories else list(ENGLISH_JOKE_BANKS.keys())
+            for cat in target_cats:
+                pool.extend(ENGLISH_JOKE_BANKS.get(cat, []))
+            if not pool:
+                return ""
+            sample_k = min(sample_size, len(pool))
+            exclusions = random.sample(pool, sample_k)
+        else:
+            exclusions = self.get_sample_exclusions(categories=categories, sample_size=sample_size)
+
         if not exclusions:
             return ""
 

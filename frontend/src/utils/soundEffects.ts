@@ -20,6 +20,16 @@ function getAudioContext(): AudioContext | null {
   return audioCtx;
 }
 
+if (typeof window !== "undefined") {
+  const unlockAudio = () => {
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
+  };
+  window.addEventListener("pointerdown", unlockAudio, { once: true, passive: true });
+  window.addEventListener("keydown", unlockAudio, { once: true, passive: true });
+}
+
 export function isSoundEnabled(): boolean {
   if (typeof window === "undefined") return false;
   return localStorage.getItem("resume_roast_sound_enabled") === "true";

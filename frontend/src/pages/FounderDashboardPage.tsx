@@ -15,6 +15,36 @@ interface MetricsSummary {
   estimated_mrr_inr: number;
 }
 
+interface InfrastructureInfo {
+  is_pooled: boolean;
+  database_configured: boolean;
+  database_label: string;
+  database_status: string;
+}
+
+interface AIProviderInfo {
+  name: string;
+  model: string;
+  tier: string;
+  spend_usd: number;
+}
+
+interface PaymentGatewayInfo {
+  configured: boolean;
+  mode: string;
+  status_label: string;
+  sub_label: string;
+  webhook_configured: boolean;
+  monthly_inr: number;
+  annual_inr: number;
+}
+
+interface WaitlistEntry {
+  id?: string;
+  email: string;
+  created_at?: string;
+}
+
 interface RoastItem {
   id: string;
   overall_score: number;
@@ -57,6 +87,11 @@ export default function FounderDashboardPage() {
   // Dashboard state
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
+  const [infrastructure, setInfrastructure] = useState<InfrastructureInfo | null>(null);
+  const [aiProvider, setAiProvider] = useState<AIProviderInfo | null>(null);
+  const [paymentGateway, setPaymentGateway] = useState<PaymentGatewayInfo | null>(null);
+  const [recentWaitlist, setRecentWaitlist] = useState<WaitlistEntry[]>([]);
+  const [showWaitlist, setShowWaitlist] = useState(false);
   const [trafficHistory, setTrafficHistory] = useState<TrafficDay[]>([]);
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
   const [topPaths, setTopPaths] = useState<
@@ -186,6 +221,10 @@ export default function FounderDashboardPage() {
       if (metricsData && metricsData.ok) {
         setMetrics(metricsData.summary);
         setTrafficHistory(metricsData.traffic_7d || []);
+        if (metricsData.infrastructure) setInfrastructure(metricsData.infrastructure);
+        if (metricsData.ai_provider) setAiProvider(metricsData.ai_provider);
+        if (metricsData.payment_gateway) setPaymentGateway(metricsData.payment_gateway);
+        if (metricsData.recent_waitlist) setRecentWaitlist(metricsData.recent_waitlist);
       }
 
       // 2. Fetch paginated roasts
@@ -215,6 +254,11 @@ export default function FounderDashboardPage() {
       setIsAuthenticated(true);
       sessionStorage.setItem("rr_admin_key", keyToUse);
       localStorage.setItem("rr_admin_key", keyToUse);
+
+      // Clean key query param from address bar to prevent leaking secret in history or screen share
+      if (window.location.search.includes("key=")) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
 
       // Auto-sync Founder VIP Pro on device
       handleActivateFounderPro(keyToUse);
@@ -470,7 +514,7 @@ export default function FounderDashboardPage() {
       </div>
 
       {/* ── Section 1: Top Hero Metric Cards (100% Real Live Counters) ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         {/* Visitors Today */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
           <div className="text-[11px] font-mono text-tan-dim uppercase">
@@ -511,6 +555,33 @@ export default function FounderDashboardPage() {
           </div>
         </div>
 
+        {/* Active Pro Subscribers */}
+        <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
+          <div className="text-[11px] font-mono text-tan-dim uppercase">
+            Active Pro Subscribers
+          </div>
+          <div className="text-3xl font-extrabold text-amber-300 mt-1 font-display">
+            {metrics?.pro_subscribers ?? 0}
+          </div>
+          <div className="text-[11px] text-emerald-400 font-mono mt-2 flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            Paying VIP members
+          </div>
+        </div>
+
+        {/* Estimated MRR */}
+        <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
+          <div className="text-[11px] font-mono text-tan-dim uppercase">
+            Estimated MRR
+          </div>
+          <div className="text-3xl font-extrabold text-emerald-400 mt-1 font-display">
+            ₹{((metrics?.estimated_mrr_inr ?? 0)).toLocaleString("en-IN")}
+          </div>
+          <div className="text-[11px] text-tan-dim font-mono mt-2">
+            Monthly recurring revenue
+          </div>
+        </div>
+
         {/* Live User Suggestions */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
           <div className="text-[11px] font-mono text-tan-dim uppercase">
@@ -526,7 +597,7 @@ export default function FounderDashboardPage() {
       </div>
 
       {/* ── Section 2: Infrastructure & Commercial Readiness ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         {/* VIP Pro Waitlist */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
           <div className="text-[11px] font-mono text-tan-dim uppercase">
@@ -535,21 +606,30 @@ export default function FounderDashboardPage() {
           <div className="text-3xl font-extrabold text-amber-300 mt-1 font-display">
             {metrics?.waitlist_signups ?? 0}
           </div>
-          <div className="text-[11px] text-amber-400 font-mono mt-2">
-            ● Warmed launch leads
+          <div className="text-[11px] font-mono mt-2 flex items-center justify-between">
+            <span className="text-amber-400">● Warmed leads</span>
+            {recentWaitlist.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowWaitlist(!showWaitlist)}
+                className="text-amber-300 hover:text-white underline cursor-pointer text-[10px]"
+              >
+                {showWaitlist ? "Hide leads" : `View (${recentWaitlist.length}) ↗`}
+              </button>
+            )}
           </div>
         </div>
 
         {/* AI Provider & Cost */}
         <div className="bg-[#1A1613] p-5 rounded-lg border border-white/10">
           <div className="text-[11px] font-mono text-tan-dim uppercase">
-            AI Provider & Cost
+            AI Provider & Model
           </div>
-          <div className="text-base font-bold text-sky-400 mt-1 font-mono">
-            Gemini 2.5 Flash
+          <div className="text-base font-bold text-sky-400 mt-1 font-mono truncate" title={aiProvider?.name || "Gemini gemini-3.5-flash-lite"}>
+            {aiProvider?.name || "Gemini gemini-3.5-flash-lite"}
           </div>
-          <div className="text-[11px] text-emerald-400 font-mono mt-2">
-            Free API Tier ($0.00 spend)
+          <div className="text-[11px] text-emerald-400 font-mono mt-2 truncate">
+            {aiProvider?.tier || "Free API Tier ($0.00 spend)"}
           </div>
         </div>
 
@@ -558,12 +638,12 @@ export default function FounderDashboardPage() {
           <div className="text-[11px] font-mono text-tan-dim uppercase">
             Database Status
           </div>
-          <div className="text-base font-bold text-emerald-400 mt-1 font-mono flex items-center gap-1.5">
+          <div className="text-base font-bold text-emerald-400 mt-1 font-mono flex items-center gap-1.5 truncate">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-            Supabase Active
+            {infrastructure?.database_status || "Supabase Active"}
           </div>
-          <div className="text-[11px] text-tan-dim font-mono mt-2 truncate">
-            aws-0-ap-northeast-1
+          <div className="text-[11px] text-tan-dim font-mono mt-2 truncate" title={infrastructure?.database_label || "aws-0-ap-northeast-1"}>
+            {infrastructure?.database_label || "aws-0-ap-northeast-1"}
           </div>
         </div>
 
@@ -572,14 +652,64 @@ export default function FounderDashboardPage() {
           <div className="text-[11px] font-mono text-tan-dim uppercase">
             Pro Commercial Tier
           </div>
-          <div className="text-base font-bold text-amber-400 mt-1 font-mono">
-            Launching Soon
+          <div className="text-base font-bold text-emerald-400 mt-1 font-mono flex items-center gap-1.5 truncate">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+            {paymentGateway?.status_label || "Active (Test Mode)"}
           </div>
-          <div className="text-[11px] text-tan-dim font-mono mt-2">
-            Razorpay KYC in review
+          <div className="text-[11px] text-tan-dim font-mono mt-2 truncate" title={paymentGateway?.sub_label || "Razorpay Test · ₹99/mo, ₹799/yr"}>
+            {paymentGateway?.sub_label || "Razorpay Test · ₹99/mo, ₹799/yr"}
           </div>
         </div>
       </div>
+
+      {/* ── Expandable Waitlist Leads Panel ── */}
+      {showWaitlist && recentWaitlist.length > 0 && (
+        <div className="mb-6 bg-[#1A1613] rounded-lg border border-amber-500/30 p-5 overflow-hidden animate-fadeIn">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+            <div>
+              <h2 className="font-bold text-sm tracking-wide text-white font-mono uppercase flex items-center gap-2">
+                <span>🔥 VIP Pro Waitlist Leads ({recentWaitlist.length})</span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  Ready to Convert
+                </span>
+              </h2>
+              <p className="text-xs text-tan-dim font-mono mt-0.5">
+                Prospective Pro subscribers with captured emails
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowWaitlist(false)}
+              className="text-xs font-mono text-stone-400 hover:text-white px-2 py-1 rounded bg-white/5 border border-white/10 cursor-pointer"
+            >
+              ✕ Close
+            </button>
+          </div>
+          <div className="divide-y divide-white/5 max-h-60 overflow-y-auto">
+            {recentWaitlist.map((entry, idx) => (
+              <div key={idx} className="py-2.5 flex items-center justify-between text-xs font-mono">
+                <div className="flex items-center gap-2">
+                  <span className="text-stone-500 font-bold">#{idx + 1}</span>
+                  <span className="text-amber-300 font-bold">{entry.email}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-tan-dim">
+                    {entry.created_at ? entry.created_at.slice(0, 19).replace("T", " ") : "Recent"} UTC
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(entry.email)}
+                    className="px-2 py-0.5 rounded text-[10px] bg-white/5 hover:bg-white/10 text-stone-300 border border-white/10 transition cursor-pointer"
+                  >
+                    Copy Email
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       {/* ── Section 3: Customer Support Pro Override Panel ── */}
       <div className="mb-8 bg-[#1A1613] rounded-lg border border-white/10 p-5">

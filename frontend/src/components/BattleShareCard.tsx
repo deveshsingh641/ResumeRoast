@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import html2canvas from "html2canvas";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 import ScoreStamp from "./ScoreStamp";
 import type { ScoreBand } from "@/store/useAppStore";
 
@@ -29,12 +31,16 @@ interface BattleShareCardProps {
 }
 
 export default function BattleShareCard({ battle }: BattleShareCardProps) {
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloaded, setDownloaded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const shareText = `Resume Roast Battle Result 🥊\nFighter 1: ${battle.fighter_1.overall_score}/100\nFighter 2: ${battle.fighter_2.overall_score}/100\n\nVerdict: "${battle.verdict}"\n\nBattle your friends at: https://resumeroast.app/battle`;
+  const shareText = isHinglish
+    ? `Resume Roast Battle Result 🥊\nFighter 1: ${battle.fighter_1.overall_score}/100\nFighter 2: ${battle.fighter_2.overall_score}/100\n\nVerdict: "${battle.verdict}"\n\nBattle your friends at: https://resumeroast.app/battle`
+    : `Resume Roast Battle Match 🥊\nFighter 1: ${battle.fighter_1.overall_score}/100\nFighter 2: ${battle.fighter_2.overall_score}/100\n\nReferee Verdict: "${battle.verdict}"\n\nChallenge your peers at: https://resumeroast.app/battle`;
 
   const generateCanvas = async () => {
     if (!cardRef.current) return null;
@@ -58,7 +64,8 @@ export default function BattleShareCard({ battle }: BattleShareCardProps) {
       const canvas = await generateCanvas();
       if (canvas) {
         const link = document.createElement("a");
-        link.download = `resume-battle-${battle.id.slice(0, 8)}.png`;
+        const battleIdSlug = (battle?.id || "battle").slice(0, 8);
+        link.download = `resume-battle-${battleIdSlug}.png`;
         link.href = canvas.toDataURL("image/png");
         link.click();
         setDownloaded(true);
@@ -70,7 +77,9 @@ export default function BattleShareCard({ battle }: BattleShareCardProps) {
       }
     } catch {
       if (navigator.clipboard) {
-        await navigator.clipboard.writeText(shareText);
+        try {
+          await navigator.clipboard.writeText(shareText);
+        } catch {}
       }
     } finally {
       setIsGenerating(false);
@@ -82,26 +91,29 @@ export default function BattleShareCard({ battle }: BattleShareCardProps) {
     try {
       const canvas = await generateCanvas();
       if (canvas && window.ClipboardItem && navigator.clipboard) {
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            try {
-              await navigator.clipboard.write([
-                new ClipboardItem({ "image/png": blob }),
-              ]);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 3000);
-            } catch {
-              await navigator.clipboard.writeText(shareText);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 3000);
-            }
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/png"),
+        );
+        if (blob) {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({ "image/png": blob }),
+            ]);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 3000);
+          } catch {
+            await navigator.clipboard.writeText(shareText);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 3000);
           }
-        });
+        }
       } else if (navigator.clipboard) {
         await navigator.clipboard.writeText(shareText);
         setCopied(true);
         setTimeout(() => setCopied(false), 3000);
       }
+    } catch {
+      // Fallback
     } finally {
       setIsGenerating(false);
     }

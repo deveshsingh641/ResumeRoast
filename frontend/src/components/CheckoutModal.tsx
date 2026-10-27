@@ -370,6 +370,13 @@ export default function CheckoutModal({
       });
 
       if (data.is_pro || data.status === "success") {
+        if (data.token) {
+          try {
+            localStorage.setItem("resumeroast_pro_token", data.token);
+            sessionStorage.setItem("resumeroast_pro_token", data.token);
+          } catch {}
+        }
+
         setUsage({
           used: usage?.used ?? 0,
           remaining: 999999,
@@ -426,6 +433,13 @@ export default function CheckoutModal({
         email: email.trim().toLowerCase(),
         plan: simulatedOrder.plan,
       });
+
+      if (data.token) {
+        try {
+          localStorage.setItem("resumeroast_pro_token", data.token);
+          sessionStorage.setItem("resumeroast_pro_token", data.token);
+        } catch {}
+      }
 
       setUsage({
         used: usage?.used ?? 0,

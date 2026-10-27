@@ -102,6 +102,26 @@ export default function PricingPage() {
 
   // Auto-activate Founder VIP Pro if secret key is passed in URL
   useEffect(() => {
+    // Ingest direct Pro activation token (?pro_token=... or ?token=...)
+    const proTokenParam = searchParams.get("pro_token") || searchParams.get("token");
+    if (proTokenParam && proTokenParam.trim()) {
+      const cleanToken = proTokenParam.trim();
+      localStorage.setItem("resumeroast_pro_token", cleanToken);
+      sessionStorage.setItem("resumeroast_pro_token", cleanToken);
+      setUsage({
+        used: 0,
+        remaining: 999999,
+        limit: 999999,
+        is_pro: true,
+      });
+      axios
+        .get("/api/usage")
+        .then((res) => {
+          if (res.data) setUsage(res.data);
+        })
+        .catch(() => {});
+    }
+
     const keyParam =
       searchParams.get("key") ||
       searchParams.get("admin_key") ||
@@ -551,6 +571,13 @@ export default function PricingPage() {
       });
 
       if (data.is_pro || data.status === "success") {
+        if (data.token) {
+          try {
+            localStorage.setItem("resumeroast_pro_token", data.token);
+            sessionStorage.setItem("resumeroast_pro_token", data.token);
+          } catch {}
+        }
+
         // Unlock Pro in global client store & localStorage
         setUsage({
           used: usage?.used ?? 0,

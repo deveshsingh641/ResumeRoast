@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 
 interface DeskClutterProps {
   stickyText?: string;
@@ -6,9 +8,12 @@ interface DeskClutterProps {
 }
 
 export default function DeskClutter({
-  stickyText = "friday se pehle fix kar le yaar!! 😭",
+  stickyText,
   stickyRotation = 4,
 }: DeskClutterProps) {
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
+  const finalStickyText = stickyText || (isHinglish ? "friday se pehle fix kar le yaar!! 😭" : "fix this before friday please!! 😭");
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isTouch, setIsTouch] = useState(false);
 
@@ -118,7 +123,7 @@ export default function DeskClutter({
           {/* Subtle pin/tape shadow at top */}
           <div className="w-8 h-2 bg-amber-400/30 mx-auto -mt-2.5 mb-1 rounded-[1px]" />
           <p className="font-handwritten text-base leading-tight font-bold text-[#8A2B1E]">
-            "{stickyText}"
+            "{finalStickyText}"
           </p>
         </div>
       </div>

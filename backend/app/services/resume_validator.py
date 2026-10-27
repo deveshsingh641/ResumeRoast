@@ -74,7 +74,7 @@ def validate_is_resume(text: str, filename: str = "", lang: str = "en") -> tuple
     fn_lower = filename.lower() if filename else ""
 
     # 1. Check for non-resume presentation extensions immediately
-    if fn_lower.endswith((".ppt", ".pptx", ".pps", ".ppsx", ".key")):
+    if fn_lower.endswith((".ppt", ".pptx", ".pps", ".ppsx", ".key", ".odp")):
         msg = (
             "Presentation slides (.ppt/.pptx) supported nahi hain. Kripya apna resume PDF ya DOCX format mein upload karein."
             if lang == "hi-IN"
@@ -101,30 +101,48 @@ def validate_is_resume(text: str, filename: str = "", lang: str = "en") -> tuple
         if is_mock_resume and not any(re.search(pat, text_lower) for pat, _ in NON_RESUME_ANTI_PATTERNS):
             return True, ""
 
-    # Filename indicators for obvious non-resumes
+    # Filename indicators for obvious non-resumes (guarded if document has genuine resume sections)
     if any(k in fn_lower for k in ["admit", "hall_ticket", "hallticket", "roll_no", "exam_pass"]):
-        msg = (
-            "Uploaded document Admit Card ya Hall Ticket lag raha hai. Resume Roast par sirf candidate resumes aur CVs allowed hain."
-            if lang == "hi-IN"
-            else "The uploaded document appears to be an Admit Card or Hall Ticket. Resume Roast only accepts candidate resumes and CVs."
+        has_any_resume_header = any(
+            re.search(pat, text_lower)
+            for patterns in RESUME_SECTIONS.values()
+            for pat in patterns
         )
-        return False, msg
+        if not has_any_resume_header:
+            msg = (
+                "Uploaded document Admit Card ya Hall Ticket lag raha hai. Resume Roast par sirf candidate resumes aur CVs allowed hain."
+                if lang == "hi-IN"
+                else "The uploaded document appears to be an Admit Card or Hall Ticket. Resume Roast only accepts candidate resumes and CVs."
+            )
+            return False, msg
 
     if any(k in fn_lower for k in ["marksheet", "scorecard", "gradecard", "transcript"]):
-        msg = (
-            "Uploaded document Marksheet ya Scorecard lag raha hai. Resume Roast par sirf candidate resumes aur CVs allowed hain."
-            if lang == "hi-IN"
-            else "The uploaded document appears to be an academic marksheet or scorecard. Resume Roast only accepts candidate resumes and CVs."
+        has_any_resume_header = any(
+            re.search(pat, text_lower)
+            for patterns in RESUME_SECTIONS.values()
+            for pat in patterns
         )
-        return False, msg
+        if not has_any_resume_header:
+            msg = (
+                "Uploaded document Marksheet ya Scorecard lag raha hai. Resume Roast par sirf candidate resumes aur CVs allowed hain."
+                if lang == "hi-IN"
+                else "The uploaded document appears to be an academic marksheet or scorecard. Resume Roast only accepts candidate resumes and CVs."
+            )
+            return False, msg
 
     if any(k in fn_lower for k in ["aadhaar", "pan_card", "pancard", "voter_id", "passport"]):
-        msg = (
-            "Uploaded document Government ID lag raha hai. Kripya apna valid resume upload karein."
-            if lang == "hi-IN"
-            else "The uploaded document appears to be a Government ID. For privacy and safety, please upload your resume or CV."
+        has_any_resume_header = any(
+            re.search(pat, text_lower)
+            for patterns in RESUME_SECTIONS.values()
+            for pat in patterns
         )
-        return False, msg
+        if not has_any_resume_header:
+            msg = (
+                "Uploaded document Government ID lag raha hai. Kripya apna valid resume upload karein."
+                if lang == "hi-IN"
+                else "The uploaded document appears to be a Government ID. For privacy and safety, please upload your resume or CV."
+            )
+            return False, msg
 
     if any(k in fn_lower for k in ["invoice", "receipt", "billing", "statement"]):
         has_any_resume_header = any(

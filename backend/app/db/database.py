@@ -80,6 +80,12 @@ def _get_conn():
         conn = pool_inst.getconn()
         try:
             yield conn
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            raise
         finally:
             try:
                 pool_inst.putconn(conn)
@@ -89,6 +95,12 @@ def _get_conn():
         conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
         try:
             yield conn
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            raise
         finally:
             try:
                 conn.close()
@@ -253,8 +265,13 @@ def check_dedup(content_hash: str) -> Optional[str]:
 
 
 def register_dedup(content_hash: str, roast_id: str) -> None:
-    """Register content hash for 60-second debounce window."""
-    _dedup_cache[content_hash] = (time.time(), roast_id)
+    """Register content hash for 60-second debounce window with bounded eviction."""
+    now = time.time()
+    if len(_dedup_cache) > 500:
+        stale = [k for k, v in _dedup_cache.items() if now - v[0] >= 60]
+        for k in stale:
+            _dedup_cache.pop(k, None)
+    _dedup_cache[content_hash] = (now, roast_id)
 
 
 def save_roast(
@@ -282,6 +299,7 @@ def save_roast(
         _memory_store[roast_id] = {
             "id": roast_id,
             "user_id": user_id,
+            "device_fingerprint": device_fingerprint,
             "overall_score": overall_score,
             "band": band,
             "one_line_verdict": one_line_verdict,
@@ -953,9 +971,9 @@ def get_wall_entries(
             if v["type"] == entry_type and not v.get("hidden", False)
         ]
         if sort_by == "score":
-            # For shame: lowest score first; for fame: highest score first
+            # For shame: lowest score first; for fame: highest score first (with created_at tiebreaker)
             reverse = (entry_type == "fame")
-            entries.sort(key=lambda x: x["score"], reverse=reverse)
+            entries.sort(key=lambda x: (x.get("score", 0), x.get("created_at", "")), reverse=reverse)
         else:
             entries.sort(key=lambda x: x.get("created_at", ""), reverse=True)
 
@@ -973,7 +991,7 @@ def get_wall_entries(
         with conn.cursor() as cur:
             order_clause = "created_at DESC"
             if sort_by == "score":
-                order_clause = "score DESC" if entry_type == "fame" else "score ASC"
+                order_clause = "score DESC, created_at DESC" if entry_type == "fame" else "score ASC, created_at DESC"
 
             cur.execute(
                 f"""
@@ -1018,7 +1036,7 @@ def get_wall_entries(
     }
 
 
-def flag_wall_entry(entry_id: str) -> dict:
+def flag_wall_entry(entry_id: str, device_fingerprint: Optional[str] = None) -> dict:
     """Flag a public wall entry. Auto-hides if flag count >= 3."""
     if not DATABASE_URL:
         entry = _wall_entries_memory.get(entry_id)

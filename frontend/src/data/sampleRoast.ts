@@ -687,21 +687,22 @@ export function getSampleResumes(language?: string): SampleResume[] {
 export function getDailyRotationIndex(
   resumes: SampleResume[] = SAMPLE_RESUMES,
 ): number {
+  if (!resumes || resumes.length === 0) return 0;
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 0);
   const diff = now.getTime() - start.getTime();
-  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const dayOfYear = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
   return dayOfYear % resumes.length;
 }
 
 export function getSampleRoastData(language?: string): ExtendedRoastResult {
   const list = getSampleResumes(language);
-  return list[0].roastData;
+  return list?.[0]?.roastData || rohanMehta.roastData;
 }
 
 export function getSampleResumeInfo(language?: string) {
   const list = getSampleResumes(language);
-  return list[0].resumeInfo;
+  return list?.[0]?.resumeInfo || rohanMehta.resumeInfo;
 }
 
 export const SAMPLE_ROAST_DATA: ExtendedRoastResult = rohanMehta.roastData;

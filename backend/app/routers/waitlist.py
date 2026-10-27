@@ -97,16 +97,26 @@ async def waitlist_stats() -> JSONResponse:
 
 
 @router.get("/waitlist/entries")
-async def waitlist_entries(limit: int = 100) -> JSONResponse:
+async def waitlist_entries(request: Request, limit: int = 100) -> JSONResponse:
     """
     Internal diagnostic view of recent waitlist participants (masked emails for privacy).
+    Protected by founder admin authentication.
     """
+    from app.services.admin_auth import verify_admin_access
+    if not verify_admin_access(request):
+        raise HTTPException(status_code=401, detail="Unauthorized: Founder access only")
+
     entries = database.get_waitlist_entries(limit=min(limit, 200))
     masked_entries = []
     for entry in entries:
         em = entry.get("email", "")
         parts = em.split("@")
-        masked_email = f"{parts[0][:3]}***@{parts[1]}" if len(parts) == 2 and len(parts[0]) > 3 else em
+        if len(parts) == 2:
+            uname, domain = parts
+            masked_uname = (uname[:2] + "***") if len(uname) > 2 else (uname[:1] + "***")
+            masked_email = f"{masked_uname}@{domain}"
+        else:
+            masked_email = "***"
         masked_entries.append({
             "id": entry.get("id"),
             "email_masked": masked_email,

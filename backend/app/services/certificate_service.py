@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import random
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -39,6 +40,15 @@ CREDENTIAL_TITLES = {
         "PhD in Not Wasting a Recruiter's Time",
     ],
 }
+
+
+def _sanitize_pdf_text(text: str) -> str:
+    """Strip emojis and characters not supported by standard PDF latin-1 font encoding."""
+    if not text:
+        return ""
+    # Filter to standard printable ASCII + Latin-1 supplement
+    cleaned = re.sub(r"[^\x20-\x7E\xA0-\xFF]", "", text)
+    return " ".join(cleaned.split())
 
 
 def get_credential_title(score: int, band: str, seed: Optional[str] = None) -> str:
@@ -157,7 +167,7 @@ def generate_certificate_pdf(
     # Candidate Name
     c.setFillColor(c_dark_ink)
     c.setFont("Times-Bold", 26)
-    name_display = candidate_name.upper().strip() or "ANONYMOUS CANDIDATE"
+    name_display = _sanitize_pdf_text(candidate_name.upper().strip()) or "ANONYMOUS CANDIDATE"
     c.drawCentredString(center_x, height - 156, name_display)
 
     # Subtle line under name
@@ -176,7 +186,7 @@ def generate_certificate_pdf(
     c.drawCentredString(center_x, height - 238, f"{score} / 100")
 
     # Discipline / Credential Title
-    credential_title = get_credential_title(score, band, roast_id)
+    credential_title = _sanitize_pdf_text(get_credential_title(score, band, roast_id))
     c.setFillColor(c_tan_muted)
     c.setFont("Times-Italic", 12)
     c.drawCentredString(center_x, height - 268, "in the discipline of")
@@ -188,8 +198,8 @@ def generate_certificate_pdf(
     # Official Verdict Quote
     c.setFillColor(c_dark_ink)
     c.setFont("Helvetica-Oblique", 11)
-    # Truncate verdict if excessively long to prevent layout overflow
-    clean_verdict = one_line_verdict.strip().replace('"', '')
+    # Truncate verdict if excessively long to prevent layout overflow and strip emojis
+    clean_verdict = _sanitize_pdf_text(one_line_verdict.strip().replace('"', ''))
     if len(clean_verdict) > 85:
         clean_verdict = clean_verdict[:82] + "..."
     c.drawCentredString(center_x, height - 334, f'Official Verdict: "{clean_verdict}"')

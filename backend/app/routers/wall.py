@@ -30,7 +30,11 @@ async def publish_to_wall(req: PublishRequest, request: Request) -> JSONResponse
     Publish an existing roast to the public Wall of Shame or Wall of Fame with full anonymization.
     Consent is explicit from the client.
     """
-    roast = database.get_roast(req.roast_id)
+    if req.roast_id in ("demo", "demo-roast", "sample-roast-1"):
+        from app.routers.roast import SAMPLE_ROAST_RESPONSE
+        roast = SAMPLE_ROAST_RESPONSE
+    else:
+        roast = database.get_roast(req.roast_id)
     if not roast:
         raise HTTPException(
             status_code=404,
@@ -106,7 +110,8 @@ async def flag_entry(entry_id: str, request: Request) -> JSONResponse:
     """
     Flag an entry for community moderation. Auto-hides after 3 flags.
     """
-    res = database.flag_wall_entry(entry_id)
+    fingerprint = _device_fingerprint(request)
+    res = database.flag_wall_entry(entry_id, device_fingerprint=fingerprint)
     if not res.get("found"):
         raise HTTPException(status_code=404, detail="Wall entry not found.")
 

@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 
 export default function LiveRoastCounter() {
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const [count, setCount] = useState(12847);
 
   useEffect(() => {
@@ -21,8 +25,11 @@ export default function LiveRoastCounter() {
         <strong className="text-amber-400 font-bold">
           {count.toLocaleString()}
         </strong>{" "}
-        resumes ab tak{" "}
-        <span className="text-paper font-semibold">bhun chuke hain</span> 🔥
+        {isHinglish ? "resumes ab tak " : "resumes roasted "}
+        <span className="text-paper font-semibold">
+          {isHinglish ? "bhun chuke hain" : "so far"}
+        </span>{" "}
+        🔥
       </span>
     </div>
   );

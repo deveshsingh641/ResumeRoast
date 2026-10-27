@@ -10,6 +10,7 @@ import logging
 import os
 import re
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 
 import httpx
 from dotenv import load_dotenv
@@ -136,34 +137,36 @@ def _generate_fallback_match(
     resume_lower = resume_text.lower()
     jd_lower = job_description.lower()
 
-    # Common Indian tech stacks to look for in JD
+    # Common Indian tech stacks to look for in JD (key, display, imp, optional regex)
     common_tech = [
-        ("react", "React.js", "critical"),
-        ("typescript", "TypeScript", "critical"),
-        ("next.js", "Next.js", "high"),
-        ("node", "Node.js", "critical"),
-        ("python", "Python", "critical"),
-        ("fastapi", "FastAPI", "high"),
-        ("go", "Golang", "critical"),
-        ("postgresql", "PostgreSQL", "critical"),
-        ("redis", "Redis", "high"),
-        ("docker", "Docker", "high"),
-        ("kubernetes", "Kubernetes (K8s)", "critical"),
-        ("kafka", "Apache Kafka", "critical"),
-        ("aws", "AWS Cloud", "high"),
-        ("tailwind", "Tailwind CSS", "nice-to-have"),
-        ("graphql", "GraphQL", "high"),
-        ("microservices", "Microservices Architecture", "critical"),
-        ("testing", "Unit & Integration Testing (Jest/Pytest)", "high"),
-        ("ci/cd", "CI/CD Pipelines", "high"),
-        ("grpc", "gRPC / Protobuf", "high"),
-        ("langchain", "LangChain / LLM APIs", "critical"),
+        ("react", "React.js", "critical", r"\b(?:react|react\.js|reactjs)\b"),
+        ("typescript", "TypeScript", "critical", r"\b(?:typescript|ts)\b"),
+        ("next.js", "Next.js", "high", r"\b(?:next\.js|nextjs)\b"),
+        ("node", "Node.js", "critical", r"\b(?:node\.js|nodejs|node\s+backend)\b"),
+        ("python", "Python", "critical", r"\bpython\b"),
+        ("fastapi", "FastAPI", "high", r"\bfastapi\b"),
+        ("golang", "Golang", "critical", r"\b(?:golang|go\s*lang|go\s+backend)\b"),
+        ("postgresql", "PostgreSQL", "critical", r"\b(?:postgres|postgresql|psql)\b"),
+        ("redis", "Redis", "high", r"\bredis\b"),
+        ("docker", "Docker", "high", r"\bdocker\b"),
+        ("kubernetes", "Kubernetes (K8s)", "critical", r"\b(?:kubernetes|k8s)\b"),
+        ("kafka", "Apache Kafka", "critical", r"\bkafka\b"),
+        ("aws", "AWS Cloud", "high", r"\b(?:aws|amazon\s+web\s+services)\b"),
+        ("tailwind", "Tailwind CSS", "nice-to-have", r"\btailwind\b"),
+        ("graphql", "GraphQL", "high", r"\bgraphql\b"),
+        ("microservices", "Microservices Architecture", "critical", r"\bmicroservices?\b"),
+        ("testing", "Automated Testing (Jest/Pytest)", "high", r"\b(?:automated\s+testing|unit\s+test(?:ing)?|jest|pytest|cypress|playwright)\b"),
+        ("ci/cd", "CI/CD Pipelines", "high", r"\b(?:ci\s*\/\s*cd|ci-cd|pipelines?)\b"),
+        ("grpc", "gRPC / Protobuf", "high", r"\b(?:grpc|protobuf)\b"),
+        ("langchain", "LangChain / LLM APIs", "critical", r"\b(?:langchain|llamaindex|llm\s+api)\b"),
     ]
 
     jd_keywords = []
-    for key, display, imp in common_tech:
-        if re.search(r"\b" + re.escape(key) + r"\b", jd_lower):
-            jd_keywords.append((key, display, imp))
+    for item in common_tech:
+        key, display, imp = item[0], item[1], item[2]
+        pat = item[3] if len(item) > 3 else r"\b" + re.escape(key) + r"\b"
+        if re.search(pat, jd_lower):
+            jd_keywords.append((key, display, imp, pat))
 
     # If few matched from predefined list, extract top capitalized words from JD
     if len(jd_keywords) < 3:
@@ -175,8 +178,10 @@ def _generate_fallback_match(
     matched_skills = []
     missing_keywords = []
 
-    for key, display, imp in jd_keywords:
-        if re.search(r"\b" + re.escape(key) + r"\b", resume_lower):
+    for item in jd_keywords:
+        key, display, imp = item[0], item[1], item[2]
+        pat = item[3] if len(item) > 3 else r"\b" + re.escape(key) + r"\b"
+        if re.search(pat, resume_lower):
             matched_skills.append(display)
         else:
             if is_hinglish:
@@ -273,9 +278,17 @@ def analyze_jd_match(
     gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
 
     if gemini_key:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-            prompt_content = f"""RESUME TEXT:
+        preferred_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+        candidate_models = list(dict.fromkeys([
+            preferred_model,
+            "gemini-3.5-flash-lite",
+            "gemini-3.6-flash",
+            "gemini-3.1-flash-lite",
+        ]))
+        for model in candidate_models:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                prompt_content = f"""RESUME TEXT:
 \"\"\"
 {resume_text[:6000]}
 \"\"\"
@@ -285,50 +298,52 @@ TARGET JOB DESCRIPTION:
 {job_description[:4000]}
 \"\"\"
 
+CURRENT REAL-WORLD DATE: {datetime.now().strftime("%B %Y")}
 LANGUAGE PREFERENCE: {language}
 """
-            payload = {
-                "contents": [
-                    {
-                        "parts": [
-                            {"text": JD_MATCH_SYSTEM_PROMPT},
-                            {"text": prompt_content},
-                        ]
-                    }
-                ],
-                "generationConfig": {
-                    "temperature": 0.2,
-                    "responseMimeType": "application/json",
-                },
-            }
-
-            with httpx.Client(timeout=25.0) as client:
-                res = client.post(url, json=payload)
-                if res.status_code == 200:
-                    data = res.json()
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        raw_text = candidates[0]["content"]["parts"][0]["text"]
-                        parsed = json.loads(raw_text)
-                        # Sanitize & validate
-                        match_score = int(max(0, min(100, parsed.get("match_score", 50))))
-                        ats_status = parsed.get("ats_status", "borderline")
-                        if ats_status not in ["rejected", "borderline", "shortlisted"]:
-                            ats_status = "rejected" if match_score < 50 else ("shortlisted" if match_score >= 75 else "borderline")
-
-                        return {
-                            "match_score": match_score,
-                            "ats_status": ats_status,
-                            "verdict": parsed.get("verdict", "ATS reality check completed."),
-                            "matched_skills": parsed.get("matched_skills", [])[:8],
-                            "missing_keywords": parsed.get("missing_keywords", [])[:8],
-                            "irrelevant_clutter": parsed.get("irrelevant_clutter", [])[:3],
-                            "tailored_bullet_rewrites": parsed.get("tailored_bullet_rewrites", [])[:4],
+                payload = {
+                    "contents": [
+                        {
+                            "parts": [
+                                {"text": JD_MATCH_SYSTEM_PROMPT},
+                                {"text": prompt_content},
+                            ]
                         }
-                else:
-                    logger.warning(f"Gemini API returned status {res.status_code}: {res.text[:200]}")
-        except Exception as e:
-            logger.warning(f"Gemini JD match failed, using smart fallback: {e}")
+                    ],
+                    "generationConfig": {
+                        "temperature": 0.2,
+                        "responseMimeType": "application/json",
+                    },
+                }
+
+                with httpx.Client(timeout=25.0) as client:
+                    res = client.post(url, json=payload)
+                    if res.status_code == 200:
+                        data = res.json()
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            raw_text = candidates[0]["content"]["parts"][0]["text"]
+                            from app.services.ai_analyzer import _extract_json
+                            parsed = _extract_json(raw_text)
+                            # Sanitize & validate
+                            match_score = int(max(0, min(100, parsed.get("match_score", 50))))
+                            ats_status = parsed.get("ats_status", "borderline")
+                            if ats_status not in ["rejected", "borderline", "shortlisted"]:
+                                ats_status = "rejected" if match_score < 50 else ("shortlisted" if match_score >= 75 else "borderline")
+
+                            return {
+                                "match_score": match_score,
+                                "ats_status": ats_status,
+                                "verdict": parsed.get("verdict", "ATS reality check completed."),
+                                "matched_skills": parsed.get("matched_skills", [])[:8],
+                                "missing_keywords": parsed.get("missing_keywords", [])[:8],
+                                "irrelevant_clutter": parsed.get("irrelevant_clutter", [])[:3],
+                                "tailored_bullet_rewrites": parsed.get("tailored_bullet_rewrites", [])[:4],
+                            }
+                    else:
+                        logger.warning(f"Gemini API model {model} returned status {res.status_code}: {res.text[:200]}")
+            except Exception as e:
+                logger.warning(f"Gemini JD match with {model} failed: {e}")
 
     # Fallback to local heuristic analyzer
     return _generate_fallback_match(resume_text, job_description, language=language)

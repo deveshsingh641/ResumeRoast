@@ -8,11 +8,39 @@ import App from "./App";
 
 import { useAppStore } from "./store/useAppStore";
 
+if (typeof window !== "undefined") {
+  window.addEventListener("unhandledrejection", (event) => {
+    console.warn("Unhandled promise rejection captured:", event.reason);
+  });
+}
+
 if (import.meta.env.VITE_API_URL) {
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 }
 
 axios.defaults.withCredentials = true;
+
+// Ingest pro_token from URL (?pro_token=... or ?token=...) on app boot (Magic link/restore flow)
+if (typeof window !== "undefined") {
+  try {
+    const searchParams = new URLSearchParams(window.location.search);
+    const tokenParam = searchParams.get("pro_token") || searchParams.get("token");
+    if (tokenParam && tokenParam.trim()) {
+      const cleanToken = tokenParam.trim();
+      localStorage.setItem("resumeroast_pro_token", cleanToken);
+      sessionStorage.setItem("resumeroast_pro_token", cleanToken);
+      searchParams.delete("pro_token");
+      searchParams.delete("token");
+      const cleanQuery = searchParams.toString();
+      const cleanUrl = window.location.pathname + (cleanQuery ? `?${cleanQuery}` : "") + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+    const emailParam = searchParams.get("email");
+    if (emailParam && emailParam.trim()) {
+      localStorage.setItem("resumeroast_user_email", emailParam.trim().toLowerCase());
+    }
+  } catch {}
+}
 
 // Attach authentication tokens (Pro token, Founder admin key, email, language) to API requests
 axios.interceptors.request.use((config) => {

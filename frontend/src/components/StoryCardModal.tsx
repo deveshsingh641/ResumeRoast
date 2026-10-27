@@ -1,5 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import html2canvas from "html2canvas";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 import type { RoastResult } from "@/store/useAppStore";
 import ScoreStamp from "./ScoreStamp";
 
@@ -14,10 +16,23 @@ export default function StoryCardModal({
   onClose,
   result,
 }: StoryCardModalProps) {
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const cardRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+
+  // Lock body scroll while modal is active
+  useEffect(() => {
+    if (isOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [isOpen]);
 
   // Escape key closes modal
   useEffect(() => {
@@ -34,6 +49,11 @@ export default function StoryCardModal({
 
   const topRoast = result.issues?.[0]?.roast || result.one_line_verdict;
   const worstQuote = result.issues?.[0]?.quoted_text || result.one_line_verdict;
+
+  const shareText = isHinglish
+    ? `Mera resume roast ho gaya 😂! Score: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\nCheck yours at https://resumeroast.app`
+    : `My resume just got roasted 😂! Score: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\nCheck yours at https://resumeroast.app`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   const generateCanvas = async () => {
     if (!cardRef.current) return null;
@@ -74,45 +94,34 @@ export default function StoryCardModal({
     try {
       const canvas = await generateCanvas();
       if (canvas && navigator.share && navigator.canShare) {
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            const file = new File(
-              [blob],
-              `resume-roast-story-${result.overall_score}.png`,
-              {
-                type: "image/png",
-              },
-            );
-            if (navigator.canShare({ files: [file] })) {
-              try {
-                await navigator.share({
-                  title: "Resume Roast 9:16 Story",
-                  text: `Mera resume roast ho gaya 😂! Score: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\nCheck yours at https://resumeroast.app`,
-                  files: [file],
-                });
-                setIsDownloading(false);
-                return;
-              } catch {
-                // fall through
-              }
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/png"),
+        );
+        if (blob) {
+          const file = new File(
+            [blob],
+            `resume-roast-story-${result.overall_score}.png`,
+            {
+              type: "image/png",
+            },
+          );
+          if (navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                title: "Resume Roast 9:16 Story",
+                text: shareText,
+                files: [file],
+              });
+              return;
+            } catch {
+              // fall through
             }
           }
-          window.open(
-            `https://api.whatsapp.com/send?text=${encodeURIComponent(
-              `Mera resume roast ho gaya 😂! Score: ${result.overall_score}/100\n"${result.one_line_verdict}"\nDekh tere resume ka kya banta hai 👉 https://resumeroast.app`,
-            )}`,
-            "_blank",
-          );
-          setIsDownloading(false);
-        });
-        return;
+        }
       }
-      window.open(
-        `https://api.whatsapp.com/send?text=${encodeURIComponent(
-          `Mera resume roast ho gaya 😂! Score: ${result.overall_score}/100\n"${result.one_line_verdict}"\nDekh tere resume ka kya banta hai 👉 https://resumeroast.app`,
-        )}`,
-        "_blank",
-      );
+      window.open(whatsappUrl, "_blank");
+    } catch {
+      window.open(whatsappUrl, "_blank");
     } finally {
       setIsDownloading(false);
     }

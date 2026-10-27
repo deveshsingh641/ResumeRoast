@@ -130,11 +130,14 @@ async def get_admin_suggestions(
     limit: int = 50,
     status: Optional[str] = None,
 ) -> JSONResponse:
-    """Admin-only list of submitted suggestions sorted newest first."""
     if not verify_admin_access(request):
         raise HTTPException(status_code=401, detail="Unauthorized admin access")
 
-    suggestions = database.get_suggestions(limit=min(max(limit, 1), 200), status=status)
+    clean_status = status.strip().lower() if status and status.strip() else None
+    if clean_status in ("all", "*"):
+        clean_status = None
+
+    suggestions = database.get_suggestions(limit=min(max(limit, 1), 200), status=clean_status)
     total_count = database.get_suggestion_count()
 
     response = JSONResponse(

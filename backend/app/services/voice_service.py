@@ -37,9 +37,9 @@ def build_voice_roast_script(
     """
     lang = normalize_language(language)
 
-    # Clean text from emojis and markdown formatting
+    # Clean text from emojis and markdown formatting (covers SMP and BMP emoji ranges)
     def _clean(t: str) -> str:
-        t = re.sub(r"[\U00010000-\U0010ffff]", "", t)
+        t = re.sub(r"[\U00010000-\U0010ffff\u2600-\u27BF\u2300-\u23FF\u2B50\u200D\uFE0F]", "", t)
         t = re.sub(r"[\*\_\#\`\"]", "", t)
         return " ".join(t.split())
 
@@ -124,40 +124,19 @@ def _synthesize_with_gtts(script_text: str, output_path: str, language: str = DE
 
 def _generate_synthetic_tone_mp3(output_path: str, duration_sec: int = 15) -> bool:
     """
-    Fallback audio generator: generates a valid silent/ambient audio wave file
-    if network TTS fails completely, ensuring API never crashes.
+    Fallback audio generator: generates a valid MP3 bitstream
+    if network TTS fails completely, ensuring HTML5 audio player never errors out.
     """
     try:
-        # Create a basic valid WAV
-        wav_path = output_path.replace(".mp3", ".wav")
-        sample_rate = 22050
-        num_samples = sample_rate * duration_sec
-
-        with wave.open(wav_path, "w") as wav_file:
-            wav_file.setnchannels(1)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(sample_rate)
-
-            # Generate warm soothing tone burst + spoken pulse
-            frames = bytearray()
-            for i in range(num_samples):
-                t = i / sample_rate
-                # Subtle voice-like modulated frequency
-                val = int(3000 * math.sin(2 * math.pi * 220 * t) * math.exp(-0.0001 * i))
-                frames.extend(struct.pack("<h", max(-32767, min(32767, val))))
-            wav_file.writeframes(frames)
-
-        # Rename or write as audio output
-        with open(wav_path, "rb") as rf:
-            wav_bytes = rf.read()
+        # Valid MPEG-1 Layer 3 128kbps 44.1kHz frame (417 bytes per frame)
+        frame_header = b"\xff\xfb\x90\x64"
+        frame_payload = b"\x00" * 413
+        single_frame = frame_header + frame_payload
+        # ~38.28 frames per second
+        total_frames = int(38.28 * max(1, duration_sec))
         with open(output_path, "wb") as wf:
-            wf.write(wav_bytes)
-
-        if os.path.exists(wav_path) and wav_path != output_path:
-            try:
-                os.remove(wav_path)
-            except Exception:
-                pass
+            for _ in range(total_frames):
+                wf.write(single_frame)
         return True
     except Exception as e:
         print(f"[ERROR] Synthetic audio generator error: {e}")

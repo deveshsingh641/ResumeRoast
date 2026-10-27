@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 
 interface Message {
   id: string;
@@ -19,16 +21,24 @@ export default function RoastBackChat({
   overallScore,
   verdict,
 }: RoastBackChatProps) {
+  const { i18n } = useTranslation();
+  const lang = normalizeLang(i18n.language);
+  const isHinglish = lang === "hi-IN";
+
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const initialGreeting = isHinglish
+    ? `Score ${overallScore}/100 dekh kar bura laga? "${verdict}" — agar lagta hai tera resume FAANG level tha toh defend kar le khud ko. Bol kya bolna hai? 😈🔥`
+    : `Hurt by your ${overallScore}/100 score? "${verdict}" — if you think your resume was actually top tier, defend yourself. What've you got? 😈🔥`;
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "init-1",
       sender: "ai",
-      text: `Score ${overallScore}/100 dekh kar bura laga? "${verdict}" — agar lagta hai tera resume FAANG level tha toh defend kar le khud ko. Bol kya bolna hai? 😈🔥`,
+      text: initialGreeting,
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -46,12 +56,19 @@ export default function RoastBackChat({
     }
   }, [messages, isOpen]);
 
-  const quickPills = [
-    "Ab aur kya badlu isme?",
-    "Maine sach mein 40% optimize kiya tha!",
-    "Mai aur score badhane ki koshish karunga",
-    "Ye buzzword nahi industry standard hai!",
-  ];
+  const quickPills = isHinglish
+    ? [
+        "Ab aur kya badlu isme?",
+        "Maine sach mein 40% optimize kiya tha!",
+        "Mai aur score badhane ki koshish karunga",
+        "Ye buzzword nahi industry standard hai!",
+      ]
+    : [
+        "What else should I change?",
+        "I genuinely optimized it by 40%!",
+        "I'll rewrite and beat this score!",
+        "That's an industry standard term!",
+      ];
 
   const handleSend = async (textToSend?: string) => {
     const msg = (textToSend ?? input).trim();
@@ -78,13 +95,16 @@ export default function RoastBackChat({
       const { data } = await axios.post(`/api/roast/${roastId}/comeback`, {
         message: msg,
         history: historyPayload,
+        language: lang,
       });
       const aiReply: Message = {
         id: `ai-${Date.now()}`,
         sender: "ai",
         text:
           data.reply ||
-          "Defense accha tha bhai, par score fir bhi wahi rahega 💀",
+          (isHinglish
+            ? "Defense accha tha bhai, par score fir bhi wahi rahega 💀"
+            : "Nice defense attempt, but your score stays exactly where it is 💀"),
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -95,7 +115,9 @@ export default function RoastBackChat({
       const fallbackReply: Message = {
         id: `ai-${Date.now()}`,
         sender: "ai",
-        text: "Bhai itna bura defense tha ki server bhi crash hone laga! Resume fix karo, debate nahi 😂📉",
+        text: isHinglish
+          ? "Bhai itna bura defense tha ki server bhi crash hone laga! Resume fix karo, debate nahi 😂📉"
+          : "That defense was so weak even the server tried to crash. Fix your resume, don't argue with reality 😂📉",
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -127,7 +149,9 @@ export default function RoastBackChat({
               </span>
             </div>
             <p className="font-mono text-xs text-tan-dim mt-0.5">
-              Lagta hai score galat mila? AI roaster se seedha behas karo
+              {isHinglish
+                ? "Lagta hai score galat mila? AI roaster se seedha behas karo"
+                : "Think the score was unfair? Argue directly with the AI roaster"}
             </p>
           </div>
         </div>
@@ -203,7 +227,11 @@ export default function RoastBackChat({
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Apne resume ka bachav karo..."
+              placeholder={
+                isHinglish
+                  ? "Apne resume ka bachav karo..."
+                  : "Defend your resume here..."
+              }
               disabled={loading}
               className="flex-1 bg-white/[0.05] border border-white/[0.12] rounded px-3 py-2 text-xs font-mono text-paper placeholder:text-stone-500 focus:outline-none focus:border-amber-400"
             />

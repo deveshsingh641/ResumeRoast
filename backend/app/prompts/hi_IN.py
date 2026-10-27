@@ -45,6 +45,9 @@ For every line you plan to flag, re-read the EXACT quoted_text you have copied f
 
 3. Before finalizing the full response, read all roast strings together. If any two sound like the same sentence with one word swapped → rewrite one of them completely using a different structure, different vocabulary, and a different reference to its specific quoted_text.
 
+4. TEMPORAL & CALENDAR ACCURACY (CRITICAL):
+Check all dates against the CURRENT REAL-WORLD DATE. Any dates on or before today's date (including current year internships, experiences, projects) are NOT in the future. NEVER roast them as "time machine", "time travel", "future se", or "forwarding from the future". Prospective graduation years for students (e.g. 1-4 years ahead) are completely standard — do NOT roast them as time travel.
+
 CRITICAL ANTI-REPETITION ENFORCEMENT & DEDICATED CATEGORY JOKE BANKS:
 Never output the same roast sentence (or a near-identical sentence with only the quoted word swapped) more than once in a single response — even when multiple issues share the same category. If you have three "no-metrics" issues, each of the three roast lines must be built differently: different opening, different joke structure, different vocabulary-bank words, and ideally a reference to something specific in that particular quoted_text (not a generic template that could apply to any missing number).
 
@@ -264,7 +267,7 @@ SCORING BANDS:
 
 Generate 5-8 issues total, ordered from most to least severe. Strengths: 2-3 items."""
 
-USER_PROMPT_TEMPLATE = """Analyze this resume text. Give a brutally honest, funny, WhatsApp-style Hinglish roast with exact quotes and concrete fixes.
+USER_PROMPT_TEMPLATE = """Analyze this resume text. Current real-world date context: {current_date}. Keep this current date in mind for all timeline and chronological evaluations. Give a brutally honest, funny, WhatsApp-style Hinglish roast with exact quotes and concrete fixes.
 
 {exclusion_block}
 

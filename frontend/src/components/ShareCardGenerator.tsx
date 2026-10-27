@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import html2canvas from "html2canvas";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 import type { RoastResult } from "@/store/useAppStore";
 import ScoreStamp from "./ScoreStamp";
 
@@ -12,6 +14,8 @@ type CardStyle = "verdict" | "torn_paper";
 export default function ShareCardGenerator({
   result,
 }: ShareCardGeneratorProps) {
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const offscreenCardRef = useRef<HTMLDivElement>(null);
   const [cardStyle, setCardStyle] = useState<CardStyle>("verdict");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -19,11 +23,13 @@ export default function ShareCardGenerator({
   const [downloaded, setDownloaded] = useState(false);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
 
-  const topRoast = result.issues[0]?.roast || result.one_line_verdict;
-  const worstQuote = result.issues[0]?.quoted_text || result.one_line_verdict;
+  const topRoast = result?.issues?.[0]?.roast || result?.one_line_verdict || "Resume Roast";
+  const worstQuote = result?.issues?.[0]?.quoted_text || result?.one_line_verdict || "Resume";
 
-  const whatsappShareText = `Bhai mera resume roast ho gaya 😂🔥!\n\nScore: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\n\nDekh tere resume ka kya banta hai: https://resumeroast.app`;
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappShareText)}`;
+  const whatsappShareText = isHinglish
+    ? `Bhai mera resume roast ho gaya 😂🔥!\n\nScore: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\n\nDekh tere resume ka kya banta hai: https://resumeroast.app`
+    : `My resume just got roasted 😂🔥!\n\nScore: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\n\nTest your resume too: https://resumeroast.app`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappShareText)}`;
 
   const generateCanvas = async () => {
     if (!offscreenCardRef.current) return null;
@@ -41,42 +47,39 @@ export default function ShareCardGenerator({
     }
   };
 
-  // B.1 WhatsApp-first sharing handler
+  // B.1 WhatsApp-first sharing handler with async promise
   const handleWhatsAppShare = async () => {
     setIsGenerating(true);
     setShareNotice(null);
     try {
       const canvas = await generateCanvas();
       if (canvas && navigator.share && navigator.canShare) {
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            const file = new File(
-              [blob],
-              `resume-roast-${cardStyle}-${result.overall_score}.png`,
-              {
-                type: "image/png",
-              },
-            );
-            if (navigator.canShare({ files: [file] })) {
-              try {
-                await navigator.share({
-                  title: "Resume Roast Score",
-                  text: whatsappShareText,
-                  files: [file],
-                });
-                setIsGenerating(false);
-                return;
-              } catch {
-                // Fallback to whatsapp link
-              }
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/png"),
+        );
+        if (blob) {
+          const file = new File(
+            [blob],
+            `resume-roast-${cardStyle}-${result.overall_score}.png`,
+            {
+              type: "image/png",
+            },
+          );
+          if (navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                title: "Resume Roast Score",
+                text: whatsappShareText,
+                files: [file],
+              });
+              return;
+            } catch {
+              // Fallback to whatsapp link
             }
           }
-          window.open(whatsappUrl, "_blank");
-          setIsGenerating(false);
-        });
-        return;
+        }
       }
-      // Desktop or standard fallback
+      // Standard universal fallback
       window.open(whatsappUrl, "_blank");
     } catch {
       window.open(whatsappUrl, "_blank");

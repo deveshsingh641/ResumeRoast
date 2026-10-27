@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 
 export default function PlacementSeasonBanner() {
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const currentMonth = new Date().getMonth(); // 0 = Jan, 7 = Aug, 11 = Dec
   const isPlacementSeason = currentMonth >= 7 && currentMonth <= 11; // Aug-Dec
 
@@ -38,9 +42,9 @@ export default function PlacementSeasonBanner() {
           </span>
           <p className="font-mono leading-tight text-xs">
             <strong className="text-amber-300">
-              Placement season chal raha hai
+              {isHinglish ? "Placement season chal raha hai" : "Hiring season is live"}
             </strong>{" "}
-            — resume ready hai ya jugaad se chal raha hai? 👀
+            {isHinglish ? "— resume ready hai ya jugaad se chal raha hai? 👀" : "— is your resume shortlist-ready or winging it? 👀"}
           </p>
         </div>
 
@@ -49,7 +53,7 @@ export default function PlacementSeasonBanner() {
             to="/roast"
             className="font-mono text-[11px] font-bold text-amber-300 hover:text-white bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 px-3 py-1 rounded-sm transition-colors whitespace-nowrap"
           >
-            Abhi check karwao →
+            {isHinglish ? "Abhi check karwao →" : "Check Score Now →"}
           </Link>
           <button
             type="button"

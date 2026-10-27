@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { getCurrentLanguage } from "@/i18n";
 
@@ -26,6 +26,19 @@ export default function VoiceNoteBubble({
   const [error, setError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Reset audio playback whenever roastId changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    setIsPlaying(false);
+    setAudioUrl(null);
+    setScript(null);
+    setDuration(0);
+    setCurrentTime(0);
+    setError(null);
+  }, [roastId]);
 
   // Generate or fetch voice roast
   const handleGenerateVoice = async () => {

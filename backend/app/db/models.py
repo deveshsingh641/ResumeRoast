@@ -71,6 +71,7 @@ class UsageInfo(BaseModel):
     remaining: int
     limit: int
     is_pro: bool
+    used: int = 0
 
 
 class RoastResponse(BaseModel):
@@ -80,5 +81,7 @@ class RoastResponse(BaseModel):
     one_line_verdict: str
     experience_header_line: Optional[str] = None
     issues: list[Issue]
+    total_issues: Optional[int] = None
     strengths: list[str]
     is_truncated: bool = False  # True if free tier truncated issues to 3
+    was_document_truncated: Optional[bool] = None

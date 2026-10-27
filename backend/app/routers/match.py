@@ -99,19 +99,24 @@ async def match_resume_with_jd(
         except Exception as e:
             raise HTTPException(status_code=500, detail="Could not read uploaded document.")
     elif roast_id:
-        existing_roast = database.get_roast(roast_id)
-        if existing_roast and existing_roast.get("resume_text"):
-            extracted_text = existing_roast["resume_text"]
-        elif existing_roast:
-            # Reconstruct from quoted issues if raw text not stored
-            issues = existing_roast.get("issues") or []
-            if isinstance(issues, str):
-                import json as _json
-                try:
-                    issues = _json.loads(issues)
-                except Exception:
-                    issues = []
-            extracted_text = "\n".join([iss.get("quoted_text", "") for iss in issues if isinstance(iss, dict)])
+        if roast_id in ("demo", "demo-roast", "sample-roast-1"):
+            from app.routers.roast import SAMPLE_ROAST_RESPONSE
+            issues = SAMPLE_ROAST_RESPONSE.get("issues", [])
+            extracted_text = "Experienced Software Engineer\n" + "\n".join([iss.get("quoted_text", "") for iss in issues if isinstance(iss, dict)])
+        else:
+            existing_roast = database.get_roast(roast_id)
+            if existing_roast and existing_roast.get("resume_text"):
+                extracted_text = existing_roast["resume_text"]
+            elif existing_roast:
+                # Reconstruct from quoted issues if raw text not stored
+                issues = existing_roast.get("issues") or []
+                if isinstance(issues, str):
+                    import json as _json
+                    try:
+                        issues = _json.loads(issues)
+                    except Exception:
+                        issues = []
+                extracted_text = "\n".join([iss.get("quoted_text", "") for iss in issues if isinstance(iss, dict)])
 
     if not extracted_text and resume_text:
         extracted_text = resume_text.strip()

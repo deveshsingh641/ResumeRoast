@@ -8,10 +8,11 @@ and persistence of user preferences in the database.
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.core.limiter import limiter
 from app.db import database
 from app.i18n.mapping import (
     DEFAULT_LANGUAGE,
@@ -67,6 +68,7 @@ def _detect_country_from_request(request: Request) -> Optional[str]:
 
 
 @router.get("/api/i18n/detect")
+@limiter.limit("60/minute")
 async def detect_language(request: Request) -> JSONResponse:
     """
     Auto-detect country and recommend a default language for first-time visitors.
@@ -83,13 +85,14 @@ async def detect_language(request: Request) -> JSONResponse:
 
 
 @router.post("/api/user/language")
-async def set_user_language(payload: UserLanguageUpdate) -> JSONResponse:
+@limiter.limit("20/minute")
+async def set_user_language(payload: UserLanguageUpdate, request: Request) -> JSONResponse:
     """Persist user's explicitly selected language in the database."""
     email = payload.email.strip().lower()
-    if not email:
-        return JSONResponse(
+    if not email or "@" not in email:
+        raise HTTPException(
             status_code=400,
-            content={"error": "email is required"},
+            detail="Valid email is required to update language preference.",
         )
     normalized_lang = normalize_language(payload.language)
     database.update_user_language(email, normalized_lang)
@@ -103,10 +106,11 @@ async def set_user_language(payload: UserLanguageUpdate) -> JSONResponse:
 
 
 @router.get("/api/user/language")
-async def get_user_language_endpoint(email: str) -> JSONResponse:
+@limiter.limit("30/minute")
+async def get_user_language_endpoint(email: str, request: Request) -> JSONResponse:
     """Fetch stored language preference for a given user email."""
     cleaned = email.strip().lower()
-    stored = database.get_user_language(cleaned)
+    stored = database.get_user_language(cleaned) if "@" in cleaned else None
     return JSONResponse(
         content={
             "email": cleaned,

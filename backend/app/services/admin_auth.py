@@ -49,6 +49,12 @@ def verify_admin_access(request: Request, explicit_key: Optional[str] = None) ->
     client_ip = _get_client_ip(request)
     now = time.time()
 
+    # Periodically prune stale IP records to prevent unbounded memory growth
+    if len(_failed_attempts) > 500:
+        stale_ips = [ip for ip, ts in _failed_attempts.items() if not ts or (now - ts[-1] >= LOCKOUT_WINDOW_SECONDS)]
+        for ip in stale_ips:
+            _failed_attempts.pop(ip, None)
+
     # Clean expired failed attempt timestamps outside the 15-minute lockout window
     _failed_attempts[client_ip] = [
         t for t in _failed_attempts[client_ip] if now - t < LOCKOUT_WINDOW_SECONDS

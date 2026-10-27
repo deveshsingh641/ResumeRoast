@@ -66,6 +66,22 @@ export function getSavedLanguage(): SupportedLanguage | null {
  * Never overrides an existing manual choice. Falls back silently to 'en'.
  */
 export async function detectInitialLanguage(): Promise<SupportedLanguage> {
+  // Check URL ?lang= parameter first if available
+  if (typeof window !== "undefined" && window.location.search) {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlLang = params.get("lang");
+      if (urlLang) {
+        const normalized = normalizeLang(urlLang);
+        setCookie(STORAGE_KEY, normalized);
+        try {
+          localStorage.setItem(STORAGE_KEY, normalized);
+        } catch {}
+        return normalized;
+      }
+    } catch {}
+  }
+
   const existing = getSavedLanguage();
   if (existing) {
     return existing;

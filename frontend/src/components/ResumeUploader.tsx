@@ -21,8 +21,9 @@ function validateFile(file: File, isHinglish = false): string | null {
       ? "Ye file empty hai (0 bytes). Kripya poora resume document upload karein."
       : "That file is empty (0 bytes). Please upload a complete resume document.";
   }
-  const ext = "." + file.name.split(".").pop()?.toLowerCase();
-  if ([".ppt", ".pptx", ".pps", ".ppsx", ".key"].includes(ext)) {
+  const lastDot = file.name.lastIndexOf(".");
+  const ext = lastDot !== -1 ? file.name.slice(lastDot).toLowerCase() : "";
+  if ([".ppt", ".pptx", ".pps", ".ppsx", ".key", ".odp"].includes(ext)) {
     return isHinglish
       ? "Presentation slides (.ppt/.pptx) supported nahi hain. Kripya apna resume PDF ya DOCX format mein upload karein."
       : "Presentation slides (.ppt/.pptx) are not accepted. Resume Roast only grades candidate resumes in PDF or Word (DOCX) format.";
@@ -44,13 +45,15 @@ export default function ResumeUploader() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
-  const { setUploadStatus, setUploadError, setResult, uploadStatus } =
+  const { setUploadStatus, setUploadError, setResult, uploadStatus, uploadError } =
     useAppStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showWaitlist, setShowWaitlist] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const activeError = errorMessage || uploadError;
 
   const isProcessing =
     isSubmitting ||
@@ -63,6 +66,7 @@ export default function ResumeUploader() {
 
       const valError = validateFile(file, isHinglish);
       if (valError) {
+        setUploadError(null);
         setErrorMessage(valError);
         return;
       }
@@ -140,6 +144,7 @@ export default function ResumeUploader() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isProcessing) return;
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (file) {
       processFile(file);
     }
@@ -237,22 +242,24 @@ export default function ResumeUploader() {
       </div>
 
       {/* Inline specific error message */}
-      {errorMessage && (
+      {activeError && (
         <div
           role="alert"
           className="mt-3 text-left font-mono text-[13px] text-stamp leading-relaxed flex flex-col gap-1.5 border border-stamp/30 bg-stamp/[0.06] p-3 rounded-sm"
         >
           <div className="flex items-start gap-2">
             <span aria-hidden="true">⚠</span>
-            <span>{errorMessage}</span>
+            <span>{activeError}</span>
           </div>
-          {(errorMessage.toLowerCase().includes("daily") ||
-            errorMessage.toLowerCase().includes("limit")) && (
+          {(activeError.toLowerCase().includes("daily") ||
+            activeError.toLowerCase().includes("limit")) && (
             <Link
               to="/pricing"
               className="text-ember underline text-xs font-semibold hover:text-amber-300 ml-5 inline-block text-left"
             >
-              Get Pro for unlimited daily roasts (₹99) →
+              {isHinglish
+                ? "Get Pro for unlimited daily roasts (₹99) →"
+                : "Get Pro for unlimited daily roasts ($1.20 / ₹99) →"}
             </Link>
           )}
         </div>

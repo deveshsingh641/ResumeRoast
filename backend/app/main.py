@@ -152,9 +152,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # ---------------------------------------------------------------------------
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 configured_origins = [
-    url.strip().rstrip("/")
+    url.strip().strip('"\'').rstrip("/")
     for url in FRONTEND_URL.split(",")
-    if url.strip() and url.strip() != "*"
+    if url.strip() and url.strip().strip('"\'') != "*"
 ]
 dev_origins = [
     "http://localhost:5173",
@@ -162,14 +162,14 @@ dev_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
-origins = list(dict.fromkeys(configured_origins + dev_origins))
+origins = [o for o in list(dict.fromkeys(configured_origins + dev_origins)) if o]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_origin_regex=r"^https:\/\/.*\.vercel\.app$",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

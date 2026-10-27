@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 import type { Issue } from "@/store/useAppStore";
 import { getHinglishTag } from "@/utils/categoryTags";
 import WaitlistModal from "@/components/WaitlistModal";
@@ -31,6 +33,8 @@ export function IssueCard({
   locked = false,
   roastId = "default",
 }: IssueCardProps) {
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const [showFix, setShowFix] = useState(false);
   const [showWaitlist, setShowWaitlist] = useState(false);
   const categoryColor = getCategoryColor(issue.category);
@@ -189,13 +193,21 @@ export function IssueCard({
               aria-expanded={showFix}
             >
               <span className="select-none">{showFix ? "−" : "+"}</span>
-              <span>{showFix ? "Fix chhupao (−)" : "Fix dekh le (+)"}</span>
+              <span>
+                {showFix
+                  ? isHinglish
+                    ? "Fix chhupao (−)"
+                    : "Hide Fix (−)"
+                  : isHinglish
+                    ? "Fix dekh le (+)"
+                    : "Show Fix (+)"}
+              </span>
             </button>
 
             {showFix && (
               <div className="mt-2 bg-[#F5EFE0]/[0.04] border border-white/[0.08] rounded-sm p-3">
                 <p className="font-mono text-xs text-tan-dim mb-1 uppercase tracking-wider">
-                  Aise Likhna Chahiye Tha:
+                  {isHinglish ? "Aise Likhna Chahiye Tha:" : "Recommended Rewrite:"}
                 </p>
                 <p className="font-mono text-xs text-paper leading-relaxed">
                   {issue.fix}
@@ -211,14 +223,14 @@ export function IssueCard({
 
 interface IssueListProps {
   issues: Issue[];
-  totalIssues: number;
+  totalIssues?: number;
   isTruncated: boolean;
   roastId?: string;
 }
 
 export function IssueList({
   issues,
-  totalIssues,
+  totalIssues = issues.length,
   isTruncated,
   roastId,
 }: IssueListProps) {

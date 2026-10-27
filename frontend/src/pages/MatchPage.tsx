@@ -266,7 +266,7 @@ export default function MatchPage() {
         formData.append("job_description", jobDescription);
         if (jobTitle) formData.append("job_title", jobTitle);
         if (companyName) formData.append("company_name", companyName);
-        formData.append("language", isHinglish ? "hi-IN" : "en-US");
+        formData.append("language", isHinglish ? "hi-IN" : "en");
 
         response = await axios.post("/api/match", formData, {
           headers: { "Content-Type": "multipart/form-data" },
@@ -280,7 +280,7 @@ export default function MatchPage() {
             job_description: jobDescription,
             job_title: jobTitle,
             company_name: companyName,
-            language: isHinglish ? "hi-IN" : "en-US",
+            language: isHinglish ? "hi-IN" : "en",
           },
           { timeout: 45000 },
         );

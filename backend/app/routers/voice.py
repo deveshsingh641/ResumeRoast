@@ -106,6 +106,7 @@ async def generate_voice_roast(roast_id: str, request: Request) -> JSONResponse:
 
 
 @router.get("/{roast_id}/voice/audio")
+@limiter.limit("30/minute")
 async def get_voice_audio(roast_id: str, request: Request) -> FileResponse:
     """
     Stream or download the cached voice roast MP3 audio file.

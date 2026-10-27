@@ -76,7 +76,9 @@ def _render_founder_login_html(error: Optional[str] = None) -> str:
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {{ background-color: #120F0D; color: #F5EFE0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+        body { background-color: #120F0D; color: #F5EFE0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; }
+        input[type="password"] { box-sizing: border-box; width: 100%; padding: 10px; background: #0D0A08; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; }
+        button[type="submit"] { box-sizing: border-box; width: 100%; padding: 10px; background: #E8422D; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 bg-[#0D0A08]">
@@ -133,6 +135,9 @@ def _render_dashboard_html(request: Request) -> str:
     recent_suggestions = database.get_suggestions(limit=50)
 
     total_roasts = stats.get("totals", {}).get("roasts", 0)
+    total_battles = stats.get("totals", {}).get("battles", 0)
+    total_pro = stats.get("totals", {}).get("pro_users", 0)
+    estimated_mrr = total_pro * 99
     total_suggestions = len(recent_suggestions)
     unique_today = stats.get("unique_visitors_today", 0)
     pageviews_today = stats.get("pageviews_today", 0)
@@ -146,6 +151,25 @@ def _render_dashboard_html(request: Request) -> str:
         db_label = "PostgreSQL (Self-Hosted)"
     else:
         db_label = "In-Memory Mode (Local Dev)"
+
+    from app.routers.payment import get_razorpay_config, _mask_key
+    rzp = get_razorpay_config()
+    if rzp["is_configured"]:
+        if rzp["mode"] == "live":
+            commercial_label = "Active (Live Mode)"
+            commercial_sub = f"Razorpay Live · Key {_mask_key(rzp['key_id'])}"
+        else:
+            commercial_label = "Active (Test Mode)"
+            commercial_sub = f"Razorpay Test · Key {_mask_key(rzp['key_id'])}"
+    else:
+        commercial_label = "Simulation Mode"
+        commercial_sub = "Razorpay Keys Unset in .env"
+
+    ai_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    if os.getenv("GROQ_API_KEY") and not os.getenv("GEMINI_API_KEY"):
+        ai_provider_name = "Groq Llama 3.3 70B"
+    else:
+        ai_provider_name = f"Gemini {ai_model}"
 
     # Traffic History Table
     history_rows = ""
@@ -183,12 +207,15 @@ def _render_dashboard_html(request: Request) -> str:
         res_text = r.get("resume_text") or "No text content preserved."
         created = (r.get("created_at") or "")[:19].replace("T", " ")
         verdict = r.get("one_line_verdict") or "No verdict line."
+        import html
+        safe_res_text = html.escape(res_text)
+        safe_verdict = html.escape(verdict)
         recent_roasts_html += f"""
         <div class="bg-[#14110E] p-4 rounded border border-white/[0.06] text-left">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div class="flex items-center gap-2">
                     <span class="px-2 py-0.5 rounded text-xs font-mono font-bold" style="color: {score_color}; background-color: {score_color}22; border: 1px solid {score_color}55;">
-                        {score}/100 · {band.upper()}
+                        {score}/100 · {html.escape(band.upper())}
                     </span>
                     <span class="text-xs font-mono text-stone-400">{created} UTC</span>
                 </div>
@@ -196,10 +223,10 @@ def _render_dashboard_html(request: Request) -> str:
                     Open Public Roast ↗
                 </a>
             </div>
-            <p class="font-bold text-sm text-stone-200 mb-2">"{verdict}"</p>
+            <p class="font-bold text-sm text-stone-200 mb-2">"{safe_verdict}"</p>
             <details class="text-xs font-mono text-stone-400 bg-black/40 p-2.5 rounded border border-white/5 cursor-pointer">
                 <summary class="hover:text-amber-300 select-none">📄 View Extracted Text ({len(res_text)} chars)</summary>
-                <pre class="mt-2 text-stone-300 whitespace-pre-wrap font-mono text-[11px] max-h-64 overflow-y-auto leading-relaxed p-2 bg-black/60 rounded border border-white/5">{res_text}</pre>
+                <pre class="mt-2 text-stone-300 whitespace-pre-wrap font-mono text-[11px] max-h-64 overflow-y-auto leading-relaxed p-2 bg-black/60 rounded border border-white/5">{safe_res_text}</pre>
             </details>
         </div>
         """
@@ -209,8 +236,8 @@ def _render_dashboard_html(request: Request) -> str:
     # Live Suggestions & Feedback Box
     suggestions_html = ""
     for s in recent_suggestions:
-        cat = (s.get("category") or "feedback").upper()
-        status = (s.get("status") or "new").upper()
+        cat = html.escape((s.get("category") or "feedback").upper())
+        status = html.escape((s.get("status") or "new").upper())
         status_color = (
             "#38BDF8"
             if status == "NEW"
@@ -220,12 +247,14 @@ def _render_dashboard_html(request: Request) -> str:
             if status in {"PLANNED", "DONE"}
             else "#94A3B8"
         )
+        safe_s_email = html.escape(str(s.get("email") or ""))
         email_part = (
-            f"· <span class='text-amber-400 font-bold'>{s.get('email')}</span>"
+            f"· <span class='text-amber-400 font-bold'>{safe_s_email}</span>"
             if s.get("email")
             else "· <span class='text-stone-500'>Anonymous</span>"
         )
         created = (s.get("created_at") or "")[:19].replace("T", " ")
+        safe_s_text = html.escape(str(s.get("text") or ""))
         suggestions_html += f"""
         <div class="bg-[#14110E] p-3.5 rounded border border-white/[0.06] text-left">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
@@ -239,7 +268,7 @@ def _render_dashboard_html(request: Request) -> str:
                     <span class="text-[11px] font-mono text-stone-400">{created} UTC {email_part}</span>
                 </div>
             </div>
-            <p class="text-xs font-mono text-stone-200 whitespace-pre-wrap leading-relaxed">{s.get('text')}</p>
+            <p class="text-xs font-mono text-stone-200 whitespace-pre-wrap leading-relaxed">{safe_s_text}</p>
         </div>
         """
     if not suggestions_html:
@@ -282,7 +311,7 @@ def _render_dashboard_html(request: Request) -> str:
     </header>
 
     <!-- Top Hero Metric Cards (100% Real Live Counters) -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
             <div class="text-[11px] font-mono text-stone-400 uppercase">Unique Visitors Today</div>
             <div class="text-3xl font-extrabold text-white mt-1">{unique_today:,}</div>
@@ -302,6 +331,18 @@ def _render_dashboard_html(request: Request) -> str:
         </div>
 
         <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
+            <div class="text-[11px] font-mono text-stone-400 uppercase">Active Pro Subscribers</div>
+            <div class="text-3xl font-extrabold text-amber-300 mt-1">{total_pro:,}</div>
+            <div class="text-[11px] text-emerald-400 font-mono mt-2">● Paying VIP members</div>
+        </div>
+
+        <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
+            <div class="text-[11px] font-mono text-stone-400 uppercase">Estimated MRR</div>
+            <div class="text-3xl font-extrabold text-emerald-400 mt-1">₹{estimated_mrr:,}</div>
+            <div class="text-[11px] text-stone-400 font-mono mt-2">Monthly recurring revenue</div>
+        </div>
+
+        <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
             <div class="text-[11px] font-mono text-stone-400 uppercase">Live User Suggestions</div>
             <div class="text-3xl font-extrabold text-sky-400 mt-1">{total_suggestions:,}</div>
             <div class="text-[11px] text-stone-400 font-mono mt-2">Ideas & feedback received</div>
@@ -317,8 +358,8 @@ def _render_dashboard_html(request: Request) -> str:
         </div>
 
         <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
-            <div class="text-[11px] font-mono text-stone-400 uppercase">AI Provider & Cost</div>
-            <div class="text-base font-bold text-sky-400 mt-1 font-mono">Gemini 2.5 Flash</div>
+            <div class="text-[11px] font-mono text-stone-400 uppercase">AI Provider & Model</div>
+            <div class="text-base font-bold text-sky-400 mt-1 font-mono">{ai_provider_name}</div>
             <div class="text-[11px] text-emerald-400 font-mono mt-2">Free API Tier ($0.00 spend)</div>
         </div>
 
@@ -333,8 +374,8 @@ def _render_dashboard_html(request: Request) -> str:
 
         <div class="bg-[#1A1613] p-5 rounded-lg border border-white/10">
             <div class="text-[11px] font-mono text-stone-400 uppercase">Pro Commercial Tier</div>
-            <div class="text-base font-bold text-amber-400 mt-1 font-mono">Launching Soon</div>
-            <div class="text-[11px] text-stone-400 font-mono mt-2">Razorpay KYC in review</div>
+            <div class="text-base font-bold text-emerald-400 mt-1 font-mono">{commercial_label}</div>
+            <div class="text-[11px] text-stone-400 font-mono mt-2">{commercial_sub}</div>
         </div>
     </div>
 
@@ -608,19 +649,41 @@ async def get_founder_metrics(request: Request) -> JSONResponse:
 
     stats = database.get_analytics_stats(days=7)
     waitlist_count = database.get_waitlist_count()
-    recent_waitlist = database.get_waitlist_entries(limit=10)
+    recent_waitlist = database.get_waitlist_entries(limit=50)
 
     total_roasts = stats.get("totals", {}).get("roasts", 0)
     total_battles = stats.get("totals", {}).get("battles", 0)
     pro_users = stats.get("totals", {}).get("pro_users", 0)
+    estimated_mrr = pro_users * 99
 
     # Unit cost economics
     est_blended_ai_spend = round(total_roasts * 0.00045, 3)
 
-    pool_stats = {
-        "is_pooled": database._connection_pool is not None,
-        "database_configured": bool(database.DATABASE_URL),
-    }
+    db_is_postgres = bool(database.DATABASE_URL)
+    if "supabase" in (database.DATABASE_URL or "").lower():
+        db_label = "Supabase Cloud (aws-0-ap-northeast-1)"
+    elif db_is_postgres:
+        db_label = "PostgreSQL (Self-Hosted)"
+    else:
+        db_label = "In-Memory Mode (Local Dev)"
+
+    from app.routers.payment import get_razorpay_config, _mask_key
+    rzp = get_razorpay_config()
+
+    ai_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    if os.getenv("GROQ_API_KEY") and not os.getenv("GEMINI_API_KEY"):
+        ai_provider_name = "Groq Llama 3.3 70B"
+    else:
+        ai_provider_name = f"Gemini {ai_model}"
+
+    commercial_status = "Active (Test Mode)" if rzp["mode"] == "test" else (
+        "Active (Live Mode)" if rzp["mode"] == "live" else "Simulation Mode"
+    )
+    commercial_sub = (
+        f"Razorpay {rzp['mode'].title()} · Key {_mask_key(rzp['key_id'])}"
+        if rzp["is_configured"]
+        else "Razorpay keys not configured in .env"
+    )
 
     response = JSONResponse(
         content={
@@ -633,17 +696,37 @@ async def get_founder_metrics(request: Request) -> JSONResponse:
                 "pageviews_today": stats.get("pageviews_today", 0),
                 "waitlist_signups": waitlist_count,
                 "pro_subscribers": pro_users,
-                "estimated_mrr_inr": pro_users * 99,
+                "estimated_mrr_inr": estimated_mrr,
             },
             "costs": {
                 "estimated_total_ai_spend_usd": est_blended_ai_spend,
                 "cost_per_roast_gemini_flash_usd": 0.0003,
                 "cost_per_roast_claude_sonnet_usd": 0.024,
-                "notes": "Primary volume served via Gemini Flash at ~$0.0003 - $0.0005 per roast.",
+                "notes": f"Primary volume served via {ai_provider_name} at ~$0.0003 - $0.0005 per roast.",
+            },
+            "infrastructure": {
+                "is_pooled": database._connection_pool is not None,
+                "database_configured": db_is_postgres,
+                "database_label": db_label,
+                "database_status": "Supabase Active" if db_is_postgres else "In-Memory Mode",
+            },
+            "ai_provider": {
+                "name": ai_provider_name,
+                "model": ai_model,
+                "tier": "Free API Tier ($0.00 spend)" if not os.getenv("ANTHROPIC_API_KEY") else "Blended Commercial",
+                "spend_usd": est_blended_ai_spend,
+            },
+            "payment_gateway": {
+                "configured": rzp["is_configured"],
+                "mode": rzp["mode"],
+                "status_label": commercial_status,
+                "sub_label": commercial_sub,
+                "webhook_configured": bool(rzp["webhook_secret"]),
+                "monthly_inr": 99,
+                "annual_inr": 799,
             },
             "traffic_7d": stats.get("daily_history", []),
-            "recent_waitlist": recent_waitlist[:5],
-            "infrastructure": pool_stats,
+            "recent_waitlist": recent_waitlist,
         }
     )
     return apply_secure_admin_headers(response)
@@ -667,12 +750,20 @@ async def override_user_pro_status(payload: AdminOverrideRequest, request: Reque
     database.update_subscription(clean_email, target_status)
     logger.info(f"[SUPPORT_OVERRIDE] {payload.action} for {clean_email}. Reason: {payload.reason}")
 
+    pro_token = create_pro_token(clean_email, expires_in_days=365) if target_status == "pro" else None
+    activation_url = f"/?pro_token={pro_token}" if pro_token else None
+
     response = JSONResponse(
         content={
             "ok": True,
             "email": clean_email,
             "subscription_status": target_status,
-            "message": f"Successfully set subscription status to '{target_status}' for {clean_email}.",
+            "token": pro_token,
+            "activation_url": activation_url,
+            "message": (
+                f"Successfully set subscription status to '{target_status}' for {clean_email}."
+                + (f" Instant Activation Link: {activation_url}" if activation_url else "")
+            ),
             "reason": payload.reason,
         }
     )
@@ -732,7 +823,7 @@ async def activate_founder_pro(request: Request, payload: Optional[FounderActiva
         response.set_cookie(
             key="rr_admin_key",
             value=admin_key,
-            httponly=False,
+            httponly=True,
             secure=is_prod,
             samesite="lax",
             max_age=3650 * 86400,

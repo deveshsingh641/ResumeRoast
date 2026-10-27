@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 import type { Issue } from "@/store/useAppStore";
 import { getHinglishTag } from "@/utils/categoryTags";
 
@@ -11,19 +13,25 @@ export default function WorstLineTrophy({
   issue,
   candidateName,
 }: WorstLineTrophyProps) {
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const [copied, setCopied] = useState(false);
 
   const tagLabel = issue.badge_label?.trim() || getHinglishTag(issue.category);
 
-  const shareText = `🏆 BUZZWORD CHAMPION TROPHY 🏆\n\nMere resume ki sabse bekaar line pakdi gayi 😂:\n"${issue.quoted_text}"\n\nRed Pen Verdict: "${issue.roast}"\n\nApna resume test karwao: https://resumeroast.app`;
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+  const shareText = isHinglish
+    ? `🏆 BUZZWORD CHAMPION TROPHY 🏆\n\nMere resume ki sabse bekaar line pakdi gayi 😂:\n"${issue.quoted_text}"\n\nRed Pen Verdict: "${issue.roast}"\n\nApna resume test karwao: https://resumeroast.app`
+    : `🏆 BUZZWORD CHAMPION TROPHY 🏆\n\nThe most flagrant flaw spotted on my resume 😂:\n"${issue.quoted_text}"\n\nRed Pen Verdict: "${issue.roast}"\n\nGet your resume roasted: https://resumeroast.app`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   const handleCopyStatus = async () => {
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(shareText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
-    }
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
+      }
+    } catch {}
   };
 
   return (
@@ -45,7 +53,7 @@ export default function WorstLineTrophy({
       {/* Quoted Crime */}
       <div className="bg-black/60 border border-white/10 rounded-sm p-4 mb-4">
         <p className="font-mono text-xs text-tan-dim uppercase mb-1 tracking-wider">
-          Desk pe pakdi gayi sabse cringe line:
+          {isHinglish ? "Desk pe pakdi gayi sabse cringe line:" : "Most flagrant flaw flagged on desk:"}
         </p>
         <p className="font-mono text-sm text-paper font-semibold leading-relaxed">
           "{issue.quoted_text}"
@@ -61,7 +69,7 @@ export default function WorstLineTrophy({
       {/* Share Actions - WhatsApp First */}
       <div className="pt-3 border-t border-white/[0.08] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <span className="font-mono text-xs text-tan-dim">
-          Dosto ko bhej ke unka din banao 😂
+          {isHinglish ? "Dosto ko bhej ke unka din banao 😂" : "Send to friends for an honest laugh 😂"}
         </span>
 
         <div className="flex items-center gap-2">
@@ -71,7 +79,7 @@ export default function WorstLineTrophy({
             rel="noopener noreferrer"
             className="btn-primary !py-1.5 !px-4 !text-xs !bg-emerald-600 hover:!bg-emerald-500 !border-emerald-500 flex items-center justify-center gap-1.5 font-bold"
           >
-            <span>Status pe daal de</span>
+            <span>{isHinglish ? "Status pe daal de" : "Share on Status"}</span>
             <span>📲</span>
           </a>
 
@@ -80,7 +88,7 @@ export default function WorstLineTrophy({
             onClick={handleCopyStatus}
             className="btn-ghost !py-1.5 !px-3 !text-xs"
           >
-            {copied ? "✓ Copied!" : "Copy Text"}
+            {copied ? (isHinglish ? "✓ Copied!" : "✓ Copied!") : (isHinglish ? "Copy Text" : "Copy Text")}
           </button>
         </div>
       </div>

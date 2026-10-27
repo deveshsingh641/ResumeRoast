@@ -14,7 +14,7 @@ import os
 import time
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import stripe
@@ -23,6 +23,7 @@ from app.db import database
 from app.core.limiter import limiter
 from app.services.pro_auth import create_pro_token, get_authenticated_pro_email
 from app.services.admin_auth import verify_admin_access
+from app.services.email_notifier import send_payment_alert
 
 logger = logging.getLogger("payment")
 router = APIRouter(prefix="/api", tags=["payment"])
@@ -348,6 +349,8 @@ async def create_razorpay_order(payload: CreateOrderRequest, request: Request) -
                 "Configure RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in backend/.env to run live/test transactions."
             ),
         }
+        if len(_order_email_map) > 5000:
+            _order_email_map.clear()
         _active_orders_cache[cache_key] = (now, resp_payload)
         _order_email_map[simulated_order_id] = email
         return JSONResponse(content=resp_payload)
@@ -390,6 +393,8 @@ async def create_razorpay_order(payload: CreateOrderRequest, request: Request) -
             "plan_name": plan_name,
             "simulated": False,
         }
+        if len(_order_email_map) > 5000:
+            _order_email_map.clear()
         _active_orders_cache[cache_key] = (now, resp_payload)
         _order_email_map[order["id"]] = email
 
@@ -451,9 +456,9 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest, request: Reques
     rzp = get_razorpay_config()
     logger.info(f"Verifying payment: order={order_id}, payment={payment_id} for {email}")
 
-    # Evict from active orders cache
-    _active_orders_cache.pop((email, payload.plan or "monthly", True), None)
-    _active_orders_cache.pop((email, payload.plan or "monthly", False), None)
+    norm_plan = (payload.plan or "monthly").strip().lower()
+    _active_orders_cache.pop((email, norm_plan, True), None)
+    _active_orders_cache.pop((email, norm_plan, False), None)
 
     # Idempotency check: if payment_id already verified, return immediate success
     if payment_id and payment_id in _processed_payments:
@@ -465,6 +470,7 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest, request: Reques
             content={
                 "status": "success",
                 "is_pro": True,
+                "token": pro_token,
                 "idempotent": True,
                 "message": "Payment already verified successfully. Pro access is active!",
                 "order_id": order_id,
@@ -485,12 +491,15 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest, request: Reques
         database.create_or_get_user(email)
         database.update_subscription(email, "pro", customer_id=f"sim_{payment_id}")
         if payment_id:
+            if len(_processed_payments) > 5000:
+                _processed_payments.clear()
             _processed_payments.add(payment_id)
         pro_token = create_pro_token(email)
         resp = JSONResponse(
             content={
                 "status": "success",
                 "is_pro": True,
+                "token": pro_token,
                 "simulated": True,
                 "message": "Payment verified in simulation mode. Pro access unlocked!",
                 "order_id": order_id,
@@ -531,6 +540,8 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest, request: Reques
         database.create_or_get_user(email)
         database.update_subscription(email, "pro", customer_id=payment_id)
         if payment_id:
+            if len(_processed_payments) > 5000:
+                _processed_payments.clear()
             _processed_payments.add(payment_id)
         logger.info(f"Successfully verified Razorpay payment and upgraded {email} to Pro.")
 
@@ -539,6 +550,7 @@ async def verify_razorpay_payment(payload: VerifyPaymentRequest, request: Reques
             content={
                 "status": "success",
                 "is_pro": True,
+                "token": pro_token,
                 "simulated": False,
                 "message": "Payment verified successfully. Pro access is now active!",
                 "order_id": order_id,
@@ -662,6 +674,7 @@ async def reconcile_payment(payload: ReconcilePaymentRequest, request: Request) 
             content={
                 "status": "reconciled",
                 "is_pro": True,
+                "token": pro_token,
                 "simulated": True,
                 "payment_id": payment_id,
                 "order_id": order_id,
@@ -715,6 +728,7 @@ async def reconcile_payment(payload: ReconcilePaymentRequest, request: Request) 
                 content={
                     "status": "reconciled",
                     "is_pro": True,
+                    "token": pro_token,
                     "payment_id": payment_id,
                     "order_id": order_id,
                     "message": "Payment verified with Razorpay. Pro access is active!",
@@ -767,8 +781,9 @@ async def create_checkout_session(payload: CheckoutRequest) -> JSONResponse:
         )
 
     stripe.api_key = stripe_key
-    price_in_inr = PLAN_PRICES.get(payload.plan, 9900)
-    plan_name = PLAN_NAMES.get(payload.plan, "Resume Roast Pro (Monthly)")
+    norm_plan = (payload.plan or "monthly").strip().lower()
+    price_in_inr = PLAN_PRICES.get(norm_plan, 9900)
+    plan_name = PLAN_NAMES.get(norm_plan, "Resume Roast Pro (Monthly)")
 
     try:
         session = stripe.checkout.Session.create(
@@ -906,7 +921,11 @@ class ManualUpgradeRequest(BaseModel):
 
 @router.post("/payment/manual-request")
 @limiter.limit("10/minute")
-async def manual_payment_request(payload: ManualUpgradeRequest, request: Request) -> JSONResponse:
+async def manual_payment_request(
+    payload: ManualUpgradeRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> JSONResponse:
     """
     Early Adopter Manual UPI Transfer Stopgap.
     Allows users who transfer directly via personal UPI while Razorpay automated KYC
@@ -919,8 +938,21 @@ async def manual_payment_request(payload: ManualUpgradeRequest, request: Request
     if len(clean_utr) < 6:
         raise HTTPException(status_code=400, detail="Please provide a valid UPI transaction reference (UTR).")
 
+    norm_plan = (payload.plan or "monthly").strip().lower()
+    if norm_plan not in PLAN_PRICES:
+        norm_plan = "monthly"
+
     database.create_or_get_user(clean_email)
-    logger.info(f"Manual UPI upgrade requested for {clean_email}, UTR: {clean_utr}, Plan: {payload.plan}")
+    logger.info(f"Manual UPI upgrade requested for {clean_email}, UTR: {clean_utr}, Plan: {norm_plan}")
+
+    # Alert founder in background to review transfer
+    background_tasks.add_task(
+        send_payment_alert,
+        email=clean_email,
+        plan=norm_plan,
+        utr=clean_utr,
+        notes=payload.notes,
+    )
 
     return JSONResponse(
         content={
@@ -928,5 +960,6 @@ async def manual_payment_request(payload: ManualUpgradeRequest, request: Request
             "message": "Manual transfer reference recorded. Once verified, your account is upgraded to Pro.",
             "email": clean_email,
             "utr": clean_utr,
+            "plan": norm_plan,
         }
     )

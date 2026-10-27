@@ -46,11 +46,17 @@ def send_suggestion_alert(
         return False
 
     try:
-        subject = f"💡 New Resume Roast Suggestion [{category.upper()}]"
+        import html
+        clean_category = re.sub(r"[\r\n]", "", category).strip()
+        clean_email = re.sub(r"[\r\n]", "", submitter_email).strip() if submitter_email else None
+        subject = f"💡 New Resume Roast Suggestion [{clean_category.upper()}]"
+        safe_text = html.escape(text)
+        safe_email = html.escape(clean_email) if clean_email else "Anonymous"
+        safe_category = html.escape(clean_category)
         
         contact_line = (
-            f"User Email: {submitter_email} (Reply directly to reach them)"
-            if submitter_email
+            f"User Email: {clean_email} (Reply directly to reach them)"
+            if clean_email
             else "User Email: Anonymous (No email provided)"
         )
 
@@ -58,7 +64,7 @@ def send_suggestion_alert(
 New Suggestion Received on Resume Roast!
 ========================================
 
-Category: {category.upper()}
+Category: {clean_category.upper()}
 Timestamp: {created_at or 'Just now'}
 {contact_line}
 
@@ -80,7 +86,7 @@ https://resumeroast.app/stats
                 💡 FOUNDER SUGGESTION ALERT
             </span>
             <span style="font-size: 11px; background-color: rgba(232,66,45,0.2); color: #E8422D; border: 1px solid rgba(232,66,45,0.3); padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">
-                {category}
+                {safe_category}
             </span>
         </div>
 
@@ -89,13 +95,13 @@ https://resumeroast.app/stats
         </h2>
 
         <div style="background-color: rgba(0,0,0,0.4); border-left: 3px solid #FFB93C; border-radius: 4px; padding: 14px; margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #F5EFE0; white-space: pre-wrap;">
-{text}
+{safe_text}
         </div>
 
         <table style="width: 100%; font-size: 12px; color: #8A8168; border-collapse: collapse; margin-bottom: 24px;">
             <tr>
                 <td style="padding: 4px 0;"><strong>Submitter:</strong></td>
-                <td style="padding: 4px 0; color: #FFB93C;">{submitter_email or 'Anonymous'}</td>
+                <td style="padding: 4px 0; color: #FFB93C;">{safe_email}</td>
             </tr>
             <tr>
                 <td style="padding: 4px 0;"><strong>Timestamp:</strong></td>
@@ -120,8 +126,8 @@ https://resumeroast.app/stats
         msg["Subject"] = subject
         msg["From"] = smtp_from
         msg["To"] = admin_recipient
-        if submitter_email:
-            msg["Reply-To"] = submitter_email
+        if clean_email:
+            msg["Reply-To"] = clean_email
 
         msg.attach(MIMEText(plain_text, "plain"))
         msg.attach(MIMEText(html_body, "html"))
@@ -135,4 +141,59 @@ https://resumeroast.app/stats
         return True
     except Exception as exc:
         logger.error(f"[EMAIL_FAILED] Could not send suggestion email: {exc}")
+        return False
+
+
+def send_payment_alert(
+    *,
+    email: str,
+    plan: str,
+    utr: str,
+    notes: Optional[str] = None,
+) -> bool:
+    """Send an instant email notification to the founder for manual UPI upgrade verification."""
+    load_dotenv()
+    admin_recipient = os.getenv("ADMIN_NOTIFICATION_EMAIL", "deveshsingh20666@gmail.com").strip().strip('"').strip("'")
+    smtp_host = os.getenv("SMTP_HOST", "").strip().strip('"').strip("'")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER", "").strip().strip('"').strip("'")
+    smtp_password = os.getenv("SMTP_PASSWORD", "").strip()
+    if (smtp_password.startswith('"') and smtp_password.endswith('"')) or (smtp_password.startswith("'") and smtp_password.endswith("'")):
+        smtp_password = smtp_password[1:-1].strip()
+    smtp_from = os.getenv("SMTP_FROM", smtp_user or "noreply@resumeroast.app").strip().strip('"').strip("'")
+
+    if not (smtp_host and smtp_user and smtp_password):
+        logger.info(f"[PAYMENT_ALERT_SKIPPED] Manual payment request for {email} recorded.")
+        return False
+
+    try:
+        import html
+        import re
+        clean_email = re.sub(r"[\r\n]", "", email).strip()
+        clean_utr = re.sub(r"[\r\n]", "", utr).strip()
+        subject = f"💰 New Manual UPI Payment [{plan.upper()}] - {clean_email}"
+        plain_text = f"""
+New Manual Payment Claim!
+User: {clean_email}
+Plan: {plan}
+UTR / Ref: {clean_utr}
+Notes: {notes or 'None'}
+
+Please verify payment receipt in your bank/UPI app and upgrade this user on /stats.
+"""
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = smtp_from
+        msg["To"] = admin_recipient
+        msg.attach(MIMEText(plain_text, "plain"))
+
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.sendmail(smtp_from, [admin_recipient], msg.as_string())
+
+        logger.info(f"[PAYMENT_ALERT_SENT] Payment alert for {clean_email} sent to {admin_recipient}")
+        return True
+    except Exception as exc:
+        logger.error(f"[PAYMENT_ALERT_FAILED] Could not send payment alert email: {exc}")
         return False

@@ -11,7 +11,6 @@ import { usePageTitle } from "@/utils/usePageTitle";
 
 export default function RoastPage() {
   usePageTitle("Upload & Grade Resume");
-  const { uploadError } = useAppStore();
   const [searchParams] = useSearchParams();
   const isUpgraded = searchParams.get("upgraded") === "true";
   const { i18n } = useTranslation();
@@ -89,30 +88,6 @@ export default function RoastPage() {
 
         {/* Morphable Dropzone Component */}
         <ResumeUploader />
-
-        {/* Global rate limit / server error note */}
-        {uploadError && (
-          <div
-            role="alert"
-            className="mt-4 border border-stamp/40 bg-[#E8422D]/[0.08] rounded-sm p-4 text-left"
-          >
-            <p className="font-mono text-xs text-stamp leading-relaxed">
-              ⚠ {uploadError}
-            </p>
-            {uploadError.includes("limit") && (
-              <div className="mt-2 flex items-center gap-3">
-                <Link
-                  to="/pricing"
-                  className="font-mono text-xs text-ember underline hover:text-amber-300"
-                >
-                  {isHinglish
-                    ? "Get Pro for Unlimited Roasts (₹99) →"
-                    : "Get Pro for Unlimited Roasts ($1.20 / ₹99) →"}
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Bottom Info Note & Creator Footer */}

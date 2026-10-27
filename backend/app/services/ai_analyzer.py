@@ -12,6 +12,7 @@ import os
 import re
 import time
 from typing import Any
+from datetime import datetime
 
 from dotenv import load_dotenv
 import httpx
@@ -383,7 +384,7 @@ def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "", 
     sys_prompt = get_system_prompt(language)
     user_template = get_user_prompt_template(language)
     formatted_user_prompt = user_template.format(
-        resume_text=resume_text[:12000],
+        resume_text=resume_text[:6000],
         exclusion_block=f"\n{exclusion_block}\n" if exclusion_block else "",
     )
     payload = {
@@ -399,6 +400,7 @@ def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "", 
         "generationConfig": {
             "responseMimeType": "application/json",
             "temperature": 0.7,
+            "maxOutputTokens": 2048,
         },
     }
 
@@ -406,18 +408,22 @@ def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "", 
     models_to_try = [
         preferred_model,
         "gemini-3.5-flash-lite",
-        "gemini-3.1-flash-lite",
-        "gemini-2.5-flash",
-        "gemini-flash-latest",
         "gemini-3.6-flash",
+        "gemini-3.1-flash-lite",
     ]
     candidate_models = list(dict.fromkeys(models_to_try))
     last_err = None
-    with httpx.Client(timeout=20.0) as client:
+    deadline = time.time() + 18.0
+    with httpx.Client(timeout=9.0) as client:
         for model in candidate_models:
+            if time.time() >= deadline:
+                logger.warning("Gemini API overall deadline reached, stopping attempts to prevent request timeout.")
+                break
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
             try:
-                response = client.post(url, json=payload)
+                remaining = max(1.0, deadline - time.time())
+                req_timeout = min(9.0, remaining)
+                response = client.post(url, json=payload, timeout=req_timeout)
                 if response.status_code in (404, 429, 503):
                     logger.warning(f"Gemini model {model} returned status {response.status_code}, trying fallback candidate model.")
                     continue
@@ -446,25 +452,38 @@ def _call_groq_api(api_key: str, resume_text: str, exclusion_block: str = "", la
     sys_prompt = get_system_prompt(language)
     user_template = get_user_prompt_template(language)
     formatted_user_prompt = user_template.format(
-        resume_text=resume_text[:12000],
+        resume_text=resume_text[:6000],
         exclusion_block=f"\n{exclusion_block}\n" if exclusion_block else "",
     )
-    payload = {
-        "model": "llama-3.3-70b-versatile",
-        "messages": [
-            {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": formatted_user_prompt},
-        ],
-        "response_format": {"type": "json_object"},
-        "temperature": 0.7,
-    }
-
-    with httpx.Client(timeout=45.0) as client:
-        response = client.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        data = response.json()
-        raw_text = data["choices"][0]["message"]["content"]
-        return _extract_json(raw_text)
+    models_to_try = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+    ]
+    last_err = None
+    with httpx.Client(timeout=15.0) as client:
+        for model in models_to_try:
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": formatted_user_prompt},
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.7,
+            }
+            try:
+                response = client.post(url, headers=headers, json=payload)
+                if response.status_code in (404, 429, 503):
+                    continue
+                response.raise_for_status()
+                data = response.json()
+                raw_text = data["choices"][0]["message"]["content"]
+                return _extract_json(raw_text)
+            except Exception as e:
+                last_err = e
+        if last_err:
+            raise last_err
+    return {}
 
 
 # ---------------------------------------------------------------------------
@@ -1290,6 +1309,14 @@ def _has_hinglish_tone(text: str) -> bool:
 
 def _validate_schema(data: dict, resume_text: str | None = None, language: str = HINGLISH_LANGUAGE) -> None:
     required_top = {"overall_score", "band", "one_line_verdict", "issues", "strengths"}
+
+    # Unwrap single-key container if model wrapped it (e.g. {"analysis": {...}})
+    if len(data) == 1 and not (required_top & set(data.keys())):
+        inner = next(iter(data.values()))
+        if isinstance(inner, dict) and (required_top & set(inner.keys())):
+            data.clear()
+            data.update(inner)
+
     missing = required_top - set(data.keys())
     if missing:
         raise ValueError(f"Missing top-level keys: {missing}")
@@ -1430,6 +1457,80 @@ def _validate_no_metrics_categorization(data: dict) -> None:
     data["issues"] = clean
 
 
+_TEMPORAL_HALLUCINATION_REGEX = re.compile(
+    r"(?:time\s*machine|time\s*travel|delorean|sci-fi|"
+    r"future\s+(?:mein\b|se\b|dates?\b|forward\b|ka\b|ki\b)|"
+    r"(?:from|in)\s+the\s+future|saal\s+check\s+karo|year\s+check\s+karo|"
+    r"forward\s+kar\s+rahe\s+ho|bhavishya|future\s+se\s+resume|future\s+mein\s+internship|"
+    r"hasn'?t\s+happened\s+yet)",
+    re.IGNORECASE,
+)
+
+
+def _validate_temporal_accuracy(data: dict, language: str = DEFAULT_LANGUAGE) -> None:
+    """
+    Server-side safety net: If the AI falsely flagged a date/experience as 'future'
+    or 'time travel' / 'time machine', but the dates mentioned are on or before the
+    current real-world date (or standard prospective graduation up to +5 years),
+    drop the hallucinated issue and sanitize the one-line verdict if needed.
+    """
+    now = datetime.now()
+    current_year = now.year
+
+    issues = data.get("issues", [])
+    clean: list[dict] = []
+    dropped_temporal = False
+
+    for iss in issues:
+        roast = iss.get("roast", "")
+        badge = iss.get("badge_label", "")
+        quoted_text = iss.get("quoted_text", "")
+
+        is_flagged_temporal = bool(
+            _TEMPORAL_HALLUCINATION_REGEX.search(roast)
+            or _TEMPORAL_HALLUCINATION_REGEX.search(badge)
+        )
+
+        if is_flagged_temporal:
+            years = [int(y) for y in re.findall(r"\b(20\d\d)\b", quoted_text)]
+            is_valid_date = False
+            if years:
+                # If all years are <= current_year, it is already past or present
+                if all(y <= current_year for y in years):
+                    is_valid_date = True
+                # If education/degree, up to 5 years into future is normal prospective graduation
+                elif any(
+                    word in quoted_text.lower()
+                    for word in [
+                        "b.tech", "degree", "graduat", "bachelor", "college",
+                        "master", "m.tech", "expected", "b.e", "b.sc", "m.sc"
+                    ]
+                ) and all(y <= current_year + 5 for y in years):
+                    is_valid_date = True
+
+            if is_valid_date:
+                dropped_temporal = True
+                safe_q = quoted_text.encode("ascii", "replace").decode("ascii")
+                logger.warning(
+                    f"[GUARD] Dropping false temporal hallucination — quoted_text ({safe_q!r}) "
+                    f"contains valid years {years} (current year: {current_year})"
+                )
+                continue
+
+        clean.append(iss)
+
+    data["issues"] = clean
+
+    # Sanitize one_line_verdict if it contains a false time machine / future roast
+    verdict = data.get("one_line_verdict", "")
+    if dropped_temporal or _TEMPORAL_HALLUCINATION_REGEX.search(verdict):
+        if _TEMPORAL_HALLUCINATION_REGEX.search(verdict):
+            if normalize_language(language) == "hi-IN":
+                data["one_line_verdict"] = "Bhai resume mein dum toh hai, par thodi polishing aur chahiye! 🔥"
+            else:
+                data["one_line_verdict"] = "Your resume has good bones, but it needs serious fine-tuning! 🔥"
+
+
 def _extract_json(text: str) -> dict:
     text = text.strip()
     text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
@@ -1439,7 +1540,10 @@ def _extract_json(text: str) -> dict:
     end = text.rfind("}")
     if start == -1 or end == -1:
         raise ValueError("No JSON object found in AI response")
-    return json.loads(text[start : end + 1])
+    json_str = text[start : end + 1]
+    # Remove trailing commas before closing braces/brackets
+    json_str = re.sub(r",\s*([\]}])", r"\1", json_str)
+    return json.loads(json_str)
 
 
 def _find_duplicate_roasts(issues: list[dict], threshold: float = 0.70) -> list[tuple[int, str, str]]:
@@ -1577,28 +1681,34 @@ def analyze_resume(resume_text: str, language: str = DEFAULT_LANGUAGE) -> dict[s
     anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
 
     # Dynamic exclusion sampling from anti-repeat memory (Section 1.3)
-    exclusion_block = anti_repeat_memory.build_exclusion_prompt()
+    exclusion_block = anti_repeat_memory.build_exclusion_prompt(language=lang)
 
     data: dict | None = None
 
-    # 1. Try Google Gemini
-    if gemini_key:
-        try:
-            data = _call_gemini_api(gemini_key, resume_text, exclusion_block, language=lang)
-            _validate_schema(data, resume_text, language=lang)
-            _validate_no_metrics_categorization(data)
-        except Exception as e:
-            print(f"[WARN] Gemini API error: {e}")
-            data = None
-
-    # 2. Try Groq
-    if not data and groq_key:
+    # 1. Try Groq (Ultra-fast LPU inference with GPT-OSS-120B / Llama)
+    if groq_key:
         try:
             data = _call_groq_api(groq_key, resume_text, exclusion_block, language=lang)
             _validate_schema(data, resume_text, language=lang)
             _validate_no_metrics_categorization(data)
+            _validate_temporal_accuracy(data, language=lang)
+            if not data.get("issues"):
+                raise ValueError("No valid issues remaining after validation")
         except Exception as e:
             print(f"[WARN] Groq API error: {e}")
+            data = None
+
+    # 2. Try Google Gemini (High-accuracy fallback or primary when Groq not set)
+    if not data and gemini_key:
+        try:
+            data = _call_gemini_api(gemini_key, resume_text, exclusion_block, language=lang)
+            _validate_schema(data, resume_text, language=lang)
+            _validate_no_metrics_categorization(data)
+            _validate_temporal_accuracy(data, language=lang)
+            if not data.get("issues"):
+                raise ValueError("No valid issues remaining after validation")
+        except Exception as e:
+            print(f"[WARN] Gemini API error: {e}")
             data = None
 
     # 3. Try Anthropic Claude
@@ -1607,6 +1717,9 @@ def analyze_resume(resume_text: str, language: str = DEFAULT_LANGUAGE) -> dict[s
             data = _call_anthropic_api(anthropic_key, resume_text, exclusion_block, language=lang)
             _validate_schema(data, resume_text, language=lang)
             _validate_no_metrics_categorization(data)
+            _validate_temporal_accuracy(data, language=lang)
+            if not data.get("issues"):
+                raise ValueError("No valid issues remaining after validation")
         except Exception as e:
             print(f"[WARN] Anthropic API error: {e}")
             data = None
@@ -1615,6 +1728,7 @@ def analyze_resume(resume_text: str, language: str = DEFAULT_LANGUAGE) -> dict[s
     if not data:
         data = _generate_fallback_roast(resume_text, exclusion_block, language=lang)
         _validate_no_metrics_categorization(data)
+        _validate_temporal_accuracy(data, language=lang)
 
     # Server-side anti-repetition / duplicate check safety net (Section 3.7)
     _deduplicate_roasts(data, language=lang)
@@ -1661,10 +1775,8 @@ def generate_roast_comeback(
         candidate_models = list(dict.fromkeys([
             preferred_model,
             "gemini-3.5-flash-lite",
-            "gemini-3.1-flash-lite",
-            "gemini-2.5-flash",
-            "gemini-flash-latest",
             "gemini-3.6-flash",
+            "gemini-3.1-flash-lite",
         ]))
         for model in candidate_models:
             try:
@@ -1686,7 +1798,7 @@ def generate_roast_comeback(
                 )
                 payload = {
                     "contents": [{"parts": [{"text": sys_prompt}]}],
-                    "generationConfig": {"temperature": 0.8, "maxOutputTokens": 120},
+                    "generationConfig": {"temperature": 0.8, "maxOutputTokens": 250},
                 }
                 with httpx.Client(timeout=3.5) as client:
                     resp = client.post(url, json=payload)
@@ -1837,6 +1949,7 @@ def generate_roast_comeback(
             return f"Welcome! Roasted you at {score}/100 — what part of your resume are we defending today? 😈"
 
     # Intent H: General Dynamic Pool (Guaranteed Non-Repeating)
+    stable_hash = int(hashlib.sha256(user_msg.encode("utf-8", "ignore")).hexdigest()[:8], 16)
     if lang == "hi-IN":
         gen_responses = [
             f"Itna confidence agar resume ke summary section mein dikhaya hota toh score {score} nahi, 85+ hota! 😉",
@@ -1850,7 +1963,7 @@ def generate_roast_comeback(
         for r in gen_responses:
             if r not in past_ai_texts:
                 return r
-        return gen_responses[(turn_number + hash(user_msg)) % len(gen_responses)]
+        return gen_responses[(turn_number + stable_hash) % len(gen_responses)]
     else:
         gen_responses = [
             f"Great comeback! If only half that energy went into writing actionable bullet points instead of generic corporate jargon 😈🔥",
@@ -1861,5 +1974,5 @@ def generate_roast_comeback(
         for r in gen_responses:
             if r not in past_ai_texts:
                 return r
-        return gen_responses[(turn_number + hash(user_msg)) % len(gen_responses)]
+        return gen_responses[(turn_number + stable_hash) % len(gen_responses)]
 

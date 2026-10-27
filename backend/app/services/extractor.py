@@ -27,9 +27,9 @@ def validate_file_signature(file_bytes: bytes, filename: str) -> str:
     if file_bytes.startswith(b"%PDF"):
         return "pdf"
 
-    # Check for presentation slides (.ppt / .pptx)
+    # Check for presentation slides (.ppt / .pptx / .odp)
     fn_lower = filename.lower()
-    if fn_lower.endswith((".ppt", ".pptx", ".pps", ".ppsx", ".key")):
+    if fn_lower.endswith((".ppt", ".pptx", ".pps", ".ppsx", ".key", ".odp")):
         raise ValueError(
             "Presentation slides (.ppt/.pptx) are not accepted. Resume Roast only grades candidate resumes in PDF or Word (DOCX) format."
         )
@@ -126,7 +126,12 @@ def extract_text_from_pdf(file_bytes: bytes) -> tuple[str, bool]:
 
     was_truncated = False
     if len(full_text) > MAX_EXTRACT_CHARS:
-        full_text = full_text[:MAX_EXTRACT_CHARS].rsplit("\n", 1)[0]
+        truncated = full_text[:MAX_EXTRACT_CHARS]
+        if "\n" in truncated:
+            chopped = truncated.rsplit("\n", 1)[0]
+            full_text = chopped if chopped.strip() else truncated
+        else:
+            full_text = truncated
         was_truncated = True
 
     return full_text, was_truncated
@@ -159,10 +164,19 @@ def extract_text_from_docx(file_bytes: bytes) -> tuple[str, bool]:
             if lines and lines[-1] != "":
                 lines.append("")
 
-    # Also extract from tables if paragraphs were sparse
+    # Also extract from tables if paragraphs were sparse (deduplicate merged cells by XML element, not text)
     for table in doc.tables:
         for row in table.rows:
-            row_texts = list(dict.fromkeys(cell.text.strip() for cell in row.cells if cell.text.strip()))
+            seen_tcs = set()
+            row_texts: list[str] = []
+            for cell in row.cells:
+                tc_id = id(getattr(cell, "_tc", cell))
+                if tc_id in seen_tcs:
+                    continue
+                seen_tcs.add(tc_id)
+                ctext = cell.text.strip()
+                if ctext:
+                    row_texts.append(ctext)
             if row_texts:
                 lines.append(" | ".join(row_texts))
 
@@ -176,7 +190,12 @@ def extract_text_from_docx(file_bytes: bytes) -> tuple[str, bool]:
 
     was_truncated = False
     if len(full_text) > MAX_EXTRACT_CHARS:
-        full_text = full_text[:MAX_EXTRACT_CHARS].rsplit("\n", 1)[0]
+        truncated = full_text[:MAX_EXTRACT_CHARS]
+        if "\n" in truncated:
+            chopped = truncated.rsplit("\n", 1)[0]
+            full_text = chopped if chopped.strip() else truncated
+        else:
+            full_text = truncated
         was_truncated = True
 
     return full_text, was_truncated
@@ -207,8 +226,6 @@ def map_quoted_text_to_offsets(
     """
     offsets: list[tuple[int | None, int | None]] = []
     lower_full = full_text.lower()
-    # Normalized whitespace version
-    norm_full = re.sub(r"\s+", " ", full_text).lower()
 
     for qt in quoted_texts:
         if not qt or not isinstance(qt, str):
@@ -226,18 +243,14 @@ def map_quoted_text_to_offsets(
             offsets.append((idx, idx + len(clean_qt)))
             continue
 
-        # 2. Match with normalized whitespace
-        norm_qt = re.sub(r"\s+", " ", clean_qt).lower()
-        norm_idx = norm_full.find(norm_qt)
-        if norm_idx != -1:
-            # Map back approximately to full_text index
-            # Find the first word in full_text
-            first_word = norm_qt.split()[0] if norm_qt.split() else ""
-            if first_word:
-                word_idx = lower_full.find(first_word)
-                if word_idx != -1:
-                    offsets.append((word_idx, min(len(full_text), word_idx + len(clean_qt))))
-                    continue
+        # 2. Match with normalized whitespace regex across full_text
+        words = clean_qt.split()
+        if words:
+            pattern = r"\s+".join(re.escape(w) for w in words)
+            m = re.search(pattern, full_text, re.IGNORECASE)
+            if m:
+                offsets.append((m.start(), m.end()))
+                continue
 
         # 3. Substring match on first 30 chars
         if len(clean_qt) > 30:
@@ -251,3 +264,4 @@ def map_quoted_text_to_offsets(
         offsets.append((None, None))
 
     return offsets
+

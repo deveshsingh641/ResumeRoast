@@ -22,9 +22,15 @@ export interface RoastResult {
   one_line_verdict: string;
   experience_header_line?: string | null;
   issues: Issue[];
-  total_issues: number;
+  total_issues?: number;
   strengths: string[];
   is_truncated: boolean;
+  was_document_truncated?: boolean;
+  ats_compatibility?: {
+    score?: number;
+    label?: string;
+    remarks?: string[];
+  };
   created_at?: string;
 }
 
@@ -58,5 +64,5 @@ export const useAppStore = create<AppState>((set) => ({
   setUploadError: (error) => set({ uploadError: error }),
   setResult: (result) => set({ result }),
   setUsage: (usage) => set({ usage }),
-  reset: () => set({ uploadStatus: "idle", uploadError: null, result: null }),
+  reset: () => set({ uploadStatus: "idle", uploadError: null, result: null, usage: null }),
 }));

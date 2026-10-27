@@ -42,8 +42,10 @@ def _generate_fallback_battle(f1: dict, f2: dict, language: str = DEFAULT_LANGUA
             winner = "fighter_2"
             margin = "landslide" if abs(diff) > 20 else "close"
             verdict = f"Fighter 2 ne baazi maar li! 🏆 Score {s2} vs {s1}. Fighter 1 ka resume padhke lagta hai 2010 ka biodata dekh rahe hain."
-        f1_roast = f1.get("issues", [{}])[0].get("roast", f1.get("one_line_verdict", "Format theek hai par numbers gayab hain."))
-        f2_roast = f2.get("issues", [{}])[0].get("roast", f2.get("one_line_verdict", "Thoda aur concrete kaam dikhana padega."))
+        f1_issues = f1.get("issues") or [{}]
+        f2_issues = f2.get("issues") or [{}]
+        f1_roast = f1_issues[0].get("roast", f1.get("one_line_verdict", "Format theek hai par numbers gayab hain.")) if f1_issues else f1.get("one_line_verdict", "Format theek hai par numbers gayab hain.")
+        f2_roast = f2_issues[0].get("roast", f2.get("one_line_verdict", "Thoda aur concrete kaam dikhana padega.")) if f2_issues else f2.get("one_line_verdict", "Thoda aur concrete kaam dikhana padega.")
     else:
         if abs(diff) < 5:
             winner = "draw"
@@ -57,8 +59,10 @@ def _generate_fallback_battle(f1: dict, f2: dict, language: str = DEFAULT_LANGUA
             winner = "fighter_2"
             margin = "landslide" if abs(diff) > 20 else "close"
             verdict = f"Fighter 2 wins the duel! 🏆 Score {s2} vs {s1}. Fighter 1's resume reads like a generic job description from a decade ago."
-        f1_roast = f1.get("issues", [{}])[0].get("roast", f1.get("one_line_verdict", "Clean structure, but metrics are missing."))
-        f2_roast = f2.get("issues", [{}])[0].get("roast", f2.get("one_line_verdict", "Needs more concrete, quantifiable accomplishments."))
+        f1_issues = f1.get("issues") or [{}]
+        f2_issues = f2.get("issues") or [{}]
+        f1_roast = f1_issues[0].get("roast", f1.get("one_line_verdict", "Clean structure, but metrics are missing.")) if f1_issues else f1.get("one_line_verdict", "Clean structure, but metrics are missing.")
+        f2_roast = f2_issues[0].get("roast", f2.get("one_line_verdict", "Needs more concrete, quantifiable accomplishments.")) if f2_issues else f2.get("one_line_verdict", "Needs more concrete, quantifiable accomplishments.")
 
     return {
         "winner": winner,
@@ -96,7 +100,13 @@ Declare the winner and generate the savage comparative JSON verdict now.
 
     # 1. Gemini
     if gemini_key:
-        candidate_models = [os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), "gemini-flash-latest"]
+        preferred_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+        candidate_models = list(dict.fromkeys([
+            preferred_model,
+            "gemini-3.5-flash-lite",
+            "gemini-3.6-flash",
+            "gemini-3.1-flash-lite",
+        ]))
         for model in candidate_models:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"

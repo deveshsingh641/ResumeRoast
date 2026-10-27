@@ -72,8 +72,9 @@ async def create_battle(
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Fighter 2 file error: {str(e)}")
 
-    # 4. Analyze both resumes
     lang = language_from_request(request)
+
+    # 4. Analyze both resumes
     try:
         f1_analysis = ai_analyzer.analyze_resume(f1_text, language=lang)
         f2_analysis = ai_analyzer.analyze_resume(f2_text, language=lang)
@@ -109,7 +110,7 @@ async def create_battle(
         content={
             "id": battle_id,
             "fighter_1": {
-                "name": fighter1.filename or "Fighter 1",
+                "name": clean_f1_name,
                 "overall_score": f1_analysis["overall_score"],
                 "band": f1_analysis["band"],
                 "one_line_verdict": f1_analysis["one_line_verdict"],
@@ -118,7 +119,7 @@ async def create_battle(
                 "strengths": f1_analysis["strengths"],
             },
             "fighter_2": {
-                "name": fighter2.filename or "Fighter 2",
+                "name": clean_f2_name,
                 "overall_score": f2_analysis["overall_score"],
                 "band": f2_analysis["band"],
                 "one_line_verdict": f2_analysis["one_line_verdict"],
@@ -138,6 +139,41 @@ async def create_battle(
 @router.get("/battle/{battle_id}")
 async def get_battle(battle_id: str) -> JSONResponse:
     """Fetch stored battle by ID."""
+    if battle_id in ("demo", "demo-battle", "sample-battle"):
+        return JSONResponse(
+            content={
+                "id": "demo-battle",
+                "fighter_1": {
+                    "name": "Rohan Mehta",
+                    "overall_score": 28,
+                    "band": "weak",
+                    "one_line_verdict": "Bhai resume hai ya suspense novel? 🕵️",
+                    "issues": [
+                        {"quoted_text": "Responsible for handling client relationships", "roast": "Handling matlab chai pilate the ya deals close karte the?", "fix": "Managed relationships with 15+ enterprise clients"},
+                    ],
+                    "total_issues": 3,
+                    "strengths": ["Clear section structure", "Good technical degree"],
+                },
+                "fighter_2": {
+                    "name": "Alex Morgan",
+                    "overall_score": 68,
+                    "band": "mid",
+                    "one_line_verdict": "Strong foundation, but numbers need tightening 🚀",
+                    "issues": [
+                        {"quoted_text": "Leveraged modern cloud tools to drive impact", "roast": "Which cloud tools and how much impact?", "fix": "Deployed AWS Lambda functions handling 1M daily requests"},
+                    ],
+                    "total_issues": 2,
+                    "strengths": ["Quantified outcomes", "Clean formatting"],
+                },
+                "winner": "fighter_2",
+                "margin": 40,
+                "verdict": "Alex Morgan takes the round by 40 points with quantified metrics and modern stack proof!",
+                "fighter_1_best_line": "B.Tech Computer Science graduate",
+                "fighter_2_best_line": "Reduced AWS infrastructure costs by 22%",
+                "created_at": "2026-03-01T12:00:00Z",
+            }
+        )
+
     b = database.get_battle(battle_id)
     if not b:
         raise HTTPException(

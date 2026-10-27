@@ -82,4 +82,4 @@ def language_from_request(request: Any) -> str:
         query = request.query_params.get("lang") or request.query_params.get("language")
     except Exception:
         query = None
-    return normalize_language(header or query)
+    return normalize_language(query or header)

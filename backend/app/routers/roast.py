@@ -305,6 +305,7 @@ async def create_roast(
                     "total_issues": len(issues),
                     "strengths": strengths,
                     "is_truncated": is_free_tier and len(issues) > 3,
+                    "was_document_truncated": existing_roast.get("was_document_truncated", False),
                 }
             )
 
@@ -444,15 +445,17 @@ async def get_roast(roast_id: str, request: Request, email: Optional[str] = None
             "total_issues": len(issues),
             "strengths": strengths,
             "is_truncated": is_truncated,
+            "was_document_truncated": row.get("was_document_truncated", False),
             "created_at": str(row.get("created_at", "")),
         }
     )
 
 
 @router.get("/roast/{roast_id}/certificate")
-async def get_certificate_info(roast_id: str) -> JSONResponse:
+async def get_certificate_info(roast_id: str, request: Request) -> JSONResponse:
+    lang = language_from_request(request)
     if roast_id in ("demo", "demo-roast", "sample-roast-1"):
-        row = SAMPLE_ROAST_RESPONSE
+        row = SAMPLE_ROAST_RESPONSE if lang == "hi-IN" else ENGLISH_SAMPLE_ROAST_RESPONSE
     else:
         row = database.get_roast(roast_id)
         if row is None:
@@ -470,6 +473,7 @@ async def get_certificate_info(roast_id: str) -> JSONResponse:
         band=band,
         one_line_verdict=verdict,
         created_at=str(row.get("created_at", "")),
+        language=lang,
     )
 
     return JSONResponse(
@@ -555,6 +559,7 @@ class ComebackRequest(BaseModel):
 
 
 @router.post("/roast/{roast_id}/comeback")
+@limiter.limit("20/minute")
 async def roast_comeback(roast_id: str, payload: ComebackRequest, request: Request) -> JSONResponse:
     """Generate in-character witty comeback when user argues back with the roast."""
     user_msg = payload.message.strip()
@@ -563,7 +568,7 @@ async def roast_comeback(roast_id: str, payload: ComebackRequest, request: Reque
 
     roast = database.get_roast(roast_id)
     if not roast:
-        if roast_id != "demo":
+        if roast_id not in ("demo", "demo-roast", "sample-roast-1"):
             raise HTTPException(status_code=404, detail="Roast not found or expired.")
         lang = language_from_request(request)
         roast = SAMPLE_ROAST_RESPONSE if lang == "hi-IN" else ENGLISH_SAMPLE_ROAST_RESPONSE

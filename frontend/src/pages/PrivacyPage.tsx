@@ -1,27 +1,33 @@
 import { Link } from "react-router-dom";
 import { usePageTitle } from "@/utils/usePageTitle";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import Footer from "@/components/Footer";
 
 export default function PrivacyPage() {
   usePageTitle("Privacy Policy");
   return (
-    <main className="min-h-screen pb-24">
-      {/* Top Bar Header */}
-      <header className="border-b border-white/[0.08] py-4 px-6 mb-12">
-        <div className="max-w-[960px] mx-auto flex items-center justify-between">
-          <Link
-            to="/"
-            className="font-display text-lg tracking-tight text-paper select-none"
-          >
-            RESUME<span className="text-stamp">ROAST</span>
-          </Link>
-          <Link
-            to="/"
-            className="font-mono text-xs text-tan-dim hover:text-tan transition-colors"
-          >
-            ← Back to Desk
-          </Link>
-        </div>
-      </header>
+    <main className="min-h-screen pb-24 flex flex-col justify-between">
+      <div>
+        {/* Top Bar Header */}
+        <header className="border-b border-white/[0.08] py-4 px-6 mb-12">
+          <div className="max-w-[960px] mx-auto flex items-center justify-between">
+            <Link
+              to="/"
+              className="font-display text-lg tracking-tight text-paper select-none"
+            >
+              RESUME<span className="text-stamp">ROAST</span>
+            </Link>
+            <div className="flex items-center gap-4">
+              <LanguageSwitcher />
+              <Link
+                to="/"
+                className="font-mono text-xs text-tan-dim hover:text-tan transition-colors"
+              >
+                ← Back to Desk
+              </Link>
+            </div>
+          </div>
+        </header>
 
       <div className="max-w-[720px] mx-auto px-4 text-left space-y-8">
         <div>
@@ -149,6 +155,10 @@ export default function PrivacyPage() {
             </p>
           </section>
         </div>
+      </div>
+      </div>
+      <div className="mt-16">
+        <Footer />
       </div>
     </main>
   );

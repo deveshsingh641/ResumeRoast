@@ -146,8 +146,21 @@ export function loadRazorpaySDK(): Promise<boolean> {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
-    script.onload = () => resolve(Boolean(window.Razorpay));
+
+    const timeoutId = setTimeout(() => {
+      if (!window.Razorpay) {
+        console.warn("Razorpay SDK load timed out after 10 seconds.");
+        loadPromise = null;
+        resolve(false);
+      }
+    }, 10000);
+
+    script.onload = () => {
+      clearTimeout(timeoutId);
+      resolve(Boolean(window.Razorpay));
+    };
     script.onerror = () => {
+      clearTimeout(timeoutId);
       console.error("Failed to load Razorpay Checkout SDK.");
       loadPromise = null; // allow retry
       resolve(false);

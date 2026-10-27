@@ -1,5 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { normalizeLang } from "@/i18n/detector";
 import type { ScoreBand } from "@/store/useAppStore";
 
 interface ScoreJourneyProps {
@@ -13,14 +15,18 @@ export default function ScoreJourney({
   band,
   totalIssues,
 }: ScoreJourneyProps) {
-  // Calculate milestone scores dynamically
-  const step1Gain = 25;
-  const step2Gain = 18;
-  const step3Gain = 14;
+  const { i18n } = useTranslation();
+  const isHinglish = normalizeLang(i18n.language) === "hi-IN";
 
-  const scoreStep1 = Math.min(65, currentScore + step1Gain);
-  const scoreStep2 = Math.min(82, scoreStep1 + step2Gain);
-  const scoreStep3 = Math.min(96, Math.max(85, scoreStep2 + step3Gain));
+  // Calculate milestone scores dynamically so baseline score never inverts
+  const gap = Math.max(0, 100 - currentScore);
+  const step1Gain = Math.max(5, Math.round(gap * 0.45));
+  const step2Gain = Math.max(4, Math.round(gap * 0.30));
+  const step3Gain = Math.max(3, Math.round(gap * 0.20));
+
+  const scoreStep1 = Math.min(98, currentScore + step1Gain);
+  const scoreStep2 = Math.min(99, scoreStep1 + step2Gain);
+  const scoreStep3 = Math.min(99, Math.max(85, scoreStep2 + step3Gain));
 
   const countDisplay = totalIssues && totalIssues > 0 ? `${totalIssues} ` : "";
 
@@ -30,10 +36,12 @@ export default function ScoreJourney({
       <div className="flex items-center justify-between gap-2 mb-4 border-b border-white/[0.08] pb-3">
         <div>
           <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold block">
-            ROADMAP // FIX KARNE KA PLAN
+            {isHinglish ? "ROADMAP // FIX KARNE KA PLAN" : "ROADMAP // ACTION PLAN"}
           </span>
           <h3 className="font-display text-lg sm:text-xl text-paper">
-            Score Journey: {currentScore} se 85+ tak ka safar 🚀
+            {isHinglish
+              ? `Score Journey: ${currentScore} se 85+ tak ka safar 🚀`
+              : `Score Journey: Path from ${currentScore} to 85+ 🚀`}
           </h3>
         </div>
         <div className="text-right">
@@ -47,8 +55,9 @@ export default function ScoreJourney({
       </div>
 
       <p className="font-mono text-xs text-tan-dim mb-6 leading-relaxed">
-        Ye {countDisplay}galtiyan theek karne se tera resume sidha Top 5% ATS
-        filter mein enter kar sakta hai.
+        {isHinglish
+          ? `Ye ${countDisplay}galtiyan theek karne se tera resume sidha Top 5% ATS filter mein enter kar sakta hai.`
+          : `Addressing these ${countDisplay}flagged issues can propel your resume into the top 5% of candidate screens.`}
       </p>
 
       {/* Steps Visual Track */}
@@ -61,15 +70,16 @@ export default function ScoreJourney({
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
               <h4 className="font-body text-sm font-semibold text-paper">
-                Numbers aur Metrics daalo
+                {isHinglish ? "Numbers aur Metrics daalo" : "Incorporate Hard Metrics & Scale"}
               </h4>
               <span className="font-mono text-xs text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded-sm">
                 +{step1Gain} pts → ~{scoreStep1}
               </span>
             </div>
             <p className="font-mono text-xs text-tan-dim leading-relaxed">
-              Har bullet point mein %, $, ya counts daalo. Recruiter ko pata
-              chalna chahiye kitna scale kiya.
+              {isHinglish
+                ? "Har bullet point mein %, $, ya counts daalo. Recruiter ko pata chalna chahiye kitna scale kiya."
+                : "Anchor achievements with %, dollar volume, or user scale so recruiters immediately see tangible scope."}
             </p>
           </div>
         </div>
@@ -82,15 +92,16 @@ export default function ScoreJourney({
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
               <h4 className="font-body text-sm font-semibold text-paper">
-                Buzzwords & Jargon hatao
+                {isHinglish ? "Buzzwords & Jargon hatao" : "Purge Fluffy Buzzwords"}
               </h4>
               <span className="font-mono text-xs text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded-sm">
                 +{step2Gain} pts → ~{scoreStep2}
               </span>
             </div>
             <p className="font-mono text-xs text-tan-dim leading-relaxed">
-              "Synergistic", "responsible for", "passionate" jaise words cut
-              karke direct action verbs use karo.
+              {isHinglish
+                ? '"Synergistic", "responsible for", "passionate" jaise words cut karke direct action verbs use karo.'
+                : 'Replace clichés like "spearheaded synergies" and "responsible for" with direct, active verb ownership.'}
             </p>
           </div>
         </div>
@@ -103,15 +114,16 @@ export default function ScoreJourney({
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
               <h4 className="font-body text-sm font-semibold text-paper">
-                Formatting & Spacing Clean Karo
+                {isHinglish ? "Formatting & Spacing Clean Karo" : "Streamline Layout & Whitespace"}
               </h4>
               <span className="font-mono text-xs text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded-sm">
                 +{step3Gain} pts → ~{scoreStep3}
               </span>
             </div>
             <p className="font-mono text-xs text-tan-dim leading-relaxed">
-              1-page layout, standard margins, aur zero typos. ATS parser 100%
-              clean extract karega.
+              {isHinglish
+                ? "1-page layout, standard margins, aur zero typos. ATS parser 100% clean extract karega."
+                : "Enforce clean single-page hierarchy, uniform margins, and zero typos for flawless ATS parsing."}
             </p>
           </div>
         </div>
@@ -123,10 +135,12 @@ export default function ScoreJourney({
           <span className="text-xl">🏆</span>
           <div>
             <span className="font-mono text-[11px] text-emerald-300 font-bold block">
-              FINAL GOAL: 85+ (Shortlist Ready)
+              {isHinglish ? "FINAL GOAL: 85+ (Shortlist Ready)" : "TARGET GOAL: 85+ (Interview Ready)"}
             </span>
             <span className="font-mono text-[10px] text-tan-dim">
-              Recruiter ke samne aate hi interview call aayega
+              {isHinglish
+                ? "Recruiter ke samne aate hi interview call aayega"
+                : "Passes automated ATS screenings and grabs recruiter attention within 6 seconds"}
             </span>
           </div>
         </div>
@@ -134,7 +148,7 @@ export default function ScoreJourney({
           to="/roast"
           className="btn-ghost !py-1 !px-3 !text-xs text-emerald-400 hover:text-emerald-300"
         >
-          Fix karke dobara roast karo →
+          {isHinglish ? "Fix karke dobara roast karo →" : "Re-roast after fixing →"}
         </Link>
       </div>
     </div>
