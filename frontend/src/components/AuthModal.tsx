@@ -26,6 +26,8 @@ export default function AuthModal({
       ""
     );
   });
+  const [paymentId, setPaymentId] = useState("");
+  const [showPaymentIdInput, setShowPaymentIdInput] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -50,61 +52,101 @@ export default function AuthModal({
     setSuccessMsg(null);
     setIsProDetected(null);
 
-    try {
-      const { data } = await axios.post("/api/auth/login", {
-        email: cleanEmail,
-      });
+    const cleanPaymentId = paymentId.trim();
+    const endpoints = [
+      "/api/auth/login",
+      "/api/payment/reconcile",
+      "/api/reconcile",
+      "/api/billing/reconcile",
+      "/api/payment/login",
+    ];
 
-      if (data && data.ok) {
-        setUserEmail(cleanEmail);
+    let data: any = null;
+    let lastError: any = null;
 
-        if (data.token) {
-          localStorage.setItem("resumeroast_pro_token", data.token);
-          sessionStorage.setItem("resumeroast_pro_token", data.token);
+    for (const endpoint of endpoints) {
+      try {
+        const payload: Record<string, any> = { email: cleanEmail };
+        if (cleanPaymentId) {
+          payload.payment_id = cleanPaymentId;
         }
 
-        if (data.is_pro) {
-          setIsProDetected(true);
-          setUsage({
-            used: 0,
-            remaining: 999999,
-            limit: 999999,
-            is_pro: true,
-          });
-          setSuccessMsg(
-            isHinglish
-              ? `👑 Wah! Pro subscription active mil gaya for ${cleanEmail}! Aapka device sync ho chuka hai.`
-              : `👑 Pro plan verified & active for ${cleanEmail}! Unlimited access is enabled.`,
-          );
-        } else {
-          setIsProDetected(false);
-          setUsage({
-            used: 0,
-            remaining: 1,
-            limit: 1,
-            is_pro: false,
-          });
-          setSuccessMsg(
-            isHinglish
-              ? `Signed in ho gaya as ${cleanEmail} (Free Tier). Agar aapne Pro khareeda hai toh wahi email daalein.`
-              : `Signed in as ${cleanEmail} (Free Tier). If you purchased Pro, ensure this matches your checkout email.`,
-          );
+        const res = await axios.post(endpoint, payload);
+        if (res && res.data && (res.data.ok || res.data.is_pro !== undefined || res.data.status)) {
+          data = res.data;
+          break;
         }
+      } catch (err: any) {
+        lastError = err;
+        // If server responded with a non-404 error (e.g. 422 validation), don't blindly loop
+        if (err?.response?.status && err.response.status !== 404) {
+          break;
+        }
+      }
+    }
+
+    setLoading(false);
+
+    if (data && (data.ok || data.is_pro !== undefined)) {
+      setUserEmail(cleanEmail);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("resumeroast_user_email", cleanEmail);
+      }
+
+      if (data.token) {
+        localStorage.setItem("resumeroast_pro_token", data.token);
+        sessionStorage.setItem("resumeroast_pro_token", data.token);
+      }
+
+      if (data.is_pro) {
+        setIsProDetected(true);
+        setUsage({
+          used: 0,
+          remaining: 999999,
+          limit: 999999,
+          is_pro: true,
+        });
+        setSuccessMsg(
+          isHinglish
+            ? `👑 Wah! Pro subscription active mil gaya for ${cleanEmail}! Unlimited roasts unlock ho gaye.`
+            : `👑 Pro plan verified & active for ${cleanEmail}! Unlimited access is enabled.`,
+        );
 
         setTimeout(() => {
           if (onSuccess) onSuccess();
           onClose();
-        }, 1400);
+        }, 1500);
+      } else {
+        setIsProDetected(false);
+        setUsage({
+          used: 0,
+          remaining: 1,
+          limit: 1,
+          is_pro: false,
+        });
+        setSuccessMsg(
+          isHinglish
+            ? `Signed in as ${cleanEmail} (Free Tier). Agar aapne Pro khareeda hai toh Payment ID enter karein.`
+            : `Signed in as ${cleanEmail} (Free Tier). If you purchased Pro, enter your Razorpay Payment ID below.`,
+        );
+        setShowPaymentIdInput(true);
       }
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      const msg =
-        typeof detail === "string"
-          ? detail
-          : err?.message || "Failed to sign in. Please try again.";
+    } else {
+      const status = lastError?.response?.status;
+      let msg = "Failed to sign in. Please try again.";
+      if (status === 404) {
+        msg = isHinglish
+          ? "Server update in progress hai ya wake ho rha hai. Kripya 10 second baad retry karein ya Payment ID daalein."
+          : "Server is updating or restarting. Please retry in 10-15 seconds, or enter your Razorpay Payment ID.";
+      } else {
+        const detail = lastError?.response?.data?.detail;
+        msg =
+          typeof detail === "string"
+            ? detail
+            : lastError?.message || msg;
+      }
       setErrorMsg(msg);
-    } finally {
-      setLoading(false);
+      setShowPaymentIdInput(true);
     }
   };
 
@@ -139,7 +181,7 @@ export default function AuthModal({
             <p className="font-mono text-xs text-tan-dim mt-0.5">
               {isHinglish
                 ? "Email daalein. Free tier ho ya Pro, aapka account yahan se sync ho jayega."
-                : "Enter your email to sign in, save your profile, or sync your Pro plan across devices."}
+                : "Enter your email to sign in or instantly sync your Pro plan across devices."}
             </p>
           </div>
         </div>
@@ -176,10 +218,45 @@ export default function AuthModal({
               autoFocus
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. yourname@gmail.com"
+              placeholder="e.g. ankitprjsoft@gmail.com"
               className="w-full bg-black/60 border border-white/20 rounded-lg px-3.5 py-2.5 text-sm font-mono text-white placeholder:text-stone-600 focus:outline-none focus:border-amber-400 transition"
             />
           </div>
+
+          {/* Optional Razorpay Payment ID toggle */}
+          {showPaymentIdInput ? (
+            <div className="animate-fadeIn">
+              <label className="block font-mono text-[11px] uppercase tracking-wider text-amber-400 font-bold mb-1.5">
+                {isHinglish
+                  ? "Razorpay Payment ID (Optional)"
+                  : "Razorpay Payment ID (Optional)"}
+              </label>
+              <input
+                type="text"
+                value={paymentId}
+                onChange={(e) => setPaymentId(e.target.value)}
+                placeholder="e.g. pay_TsoYydo0zY4KrB"
+                className="w-full bg-black/60 border border-amber-500/30 rounded-lg px-3.5 py-2 text-xs font-mono text-amber-200 placeholder:text-stone-600 focus:outline-none focus:border-amber-400 transition"
+              />
+              <p className="font-mono text-[10px] text-tan-dim mt-1">
+                {isHinglish
+                  ? "Agar email se match na ho toh SMS/email se Razorpay payment ID copy karke paste karein."
+                  : "Found in your Razorpay confirmation SMS/email receipt."}
+              </p>
+            </div>
+          ) : (
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => setShowPaymentIdInput(true)}
+                className="text-[11px] font-mono text-tan-dim hover:text-amber-400 underline underline-offset-2 transition"
+              >
+                {isHinglish
+                  ? "+ Have a Razorpay Payment ID?"
+                  : "+ Have a Razorpay Payment ID?"}
+              </button>
+            </div>
+          )}
 
           <button
             type="submit"
@@ -188,8 +265,8 @@ export default function AuthModal({
           >
             {loading
               ? isHinglish
-                ? "Signing in..."
-                : "Signing in..."
+                ? "Connecting..."
+                : "Connecting..."
               : isHinglish
                 ? "Continue with Email →"
                 : "Continue with Email →"}

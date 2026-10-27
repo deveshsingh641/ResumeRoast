@@ -645,6 +645,8 @@ async def razorpay_webhook(
 @router.post("/reconcile")
 @router.post("/billing/reconcile")
 @router.post("/payment/reconcile")
+@router.post("/payment/login")
+@router.post("/billing/login")
 @limiter.limit("20/minute")
 async def reconcile_payment(payload: ReconcilePaymentRequest, request: Request) -> JSONResponse:
     """
@@ -660,10 +662,36 @@ async def reconcile_payment(payload: ReconcilePaymentRequest, request: Request) 
     payment_id = (payload.payment_id or "").strip()
 
     if not order_id and not payment_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Please provide at least one of 'order_id' or 'payment_id' to reconcile.",
-        )
+        # Check if user already exists as Pro in the database
+        database.create_or_get_user(email)
+        sub_status = database.get_user_subscription(email)
+        if sub_status == "pro":
+            pro_token = create_pro_token(email, expires_in_days=30)
+            resp = JSONResponse(
+                content={
+                    "ok": True,
+                    "status": "reconciled",
+                    "is_pro": True,
+                    "token": pro_token,
+                    "email": email,
+                    "subscription_status": "pro",
+                    "message": f"Welcome back! Pro VIP subscription is active for {email}.",
+                }
+            )
+            resp.set_cookie("resumeroast_pro_token", pro_token, max_age=30*86400, httponly=True, samesite="lax")
+            return resp
+        else:
+            return JSONResponse(
+                content={
+                    "ok": True,
+                    "status": "free",
+                    "is_pro": False,
+                    "token": None,
+                    "email": email,
+                    "subscription_status": "free",
+                    "message": f"Signed in as {email} (Free Tier).",
+                }
+            )
 
     rzp = get_razorpay_config()
     if not rzp["is_configured"]:
