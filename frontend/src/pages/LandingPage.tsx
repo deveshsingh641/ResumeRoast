@@ -13,6 +13,7 @@ import Footer from "@/components/Footer";
 import WaitlistModal from "@/components/WaitlistModal";
 import CheckoutModal from "@/components/CheckoutModal";
 import UserAccountNav from "@/components/UserAccountNav";
+import { useAppStore } from "@/store/useAppStore";
 import { usePageTitle } from "@/utils/usePageTitle";
 import { getSampleResumes, getDailyRotationIndex } from "@/data/sampleRoast";
 
@@ -256,6 +257,7 @@ function PricingSection() {
   const [annual, setAnnual] = useState(false);
   const [showWaitlist, setShowWaitlist] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const isPro = useAppStore((s) => s.usage?.is_pro);
 
   const features = isHinglish
     ? [
@@ -435,14 +437,29 @@ function PricingSection() {
               </ul>
             </div>
 
-            <button
-              type="button"
-              id="landing-unlock-pro-button"
-              onClick={() => setShowCheckout(true)}
-              className="btn-primary w-full justify-center font-semibold text-center shadow-lg hover:shadow-xl transition-all"
-            >
-              {isHinglish ? "Unlock Pro ₹99 →" : "Get Pro Access (₹99) →"}
-            </button>
+            {isPro ? (
+              <Link
+                to="/roast"
+                id="landing-unlock-pro-button"
+                className="btn-primary w-full justify-center font-semibold text-center shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+              >
+                <span>👑</span>
+                <span>
+                  {isHinglish
+                    ? "Pro Plan Active Hai → Roast Karo 🔥"
+                    : "Pro Plan Active → Start Roasting 🔥"}
+                </span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                id="landing-unlock-pro-button"
+                onClick={() => setShowCheckout(true)}
+                className="btn-primary w-full justify-center font-semibold text-center shadow-lg hover:shadow-xl transition-all"
+              >
+                {isHinglish ? "Unlock Pro ₹99 →" : "Get Pro Access (₹99) →"}
+              </button>
+            )}
           </div>
         </div>
       </div>

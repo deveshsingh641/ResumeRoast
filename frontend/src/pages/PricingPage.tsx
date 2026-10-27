@@ -826,7 +826,38 @@ export default function PricingPage() {
               </div>
             </div>
 
-            {isLaunchingSoon ? (
+            {usage?.is_pro ? (
+              <div className="space-y-3 pt-2">
+                <div className="p-3.5 bg-emerald-950/40 border border-emerald-500/40 rounded-sm text-center">
+                  <p className="font-display text-sm font-bold text-emerald-400">
+                    👑 CURRENT PLAN: PRO VIP ACTIVE
+                  </p>
+                  <p className="font-mono text-[11px] text-tan-dim mt-1">
+                    Unlimited daily roasts, full JD match & bullet rewrites are active on your profile.
+                  </p>
+                </div>
+                <Link
+                  to="/roast"
+                  className="btn-primary w-full justify-center text-sm py-3 font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                >
+                  <span>🔥</span>
+                  <span>Go to Roast Desk</span>
+                </Link>
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEmailModal(true);
+                      setCheckoutStatus("idle");
+                      setCheckoutMessage(null);
+                    }}
+                    className="font-mono text-[11px] text-tan-dim hover:text-tan underline cursor-pointer"
+                  >
+                    Extend / Renew Plan (Optional) →
+                  </button>
+                </div>
+              </div>
+            ) : isLaunchingSoon ? (
               <button
                 id="pro-launching-soon-button"
                 type="button"

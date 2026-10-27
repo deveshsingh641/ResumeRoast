@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
-import type { Issue } from "@/store/useAppStore";
+import { useAppStore, type Issue } from "@/store/useAppStore";
 import { getHinglishTag } from "@/utils/categoryTags";
 import WaitlistModal from "@/components/WaitlistModal";
 
@@ -234,9 +234,9 @@ export function IssueList({
   isTruncated,
   roastId,
 }: IssueListProps) {
-  const lockedCount = isTruncated
-    ? Math.max(0, totalIssues - issues.length)
-    : 0;
+  const isPro = useAppStore((state) => state.usage?.is_pro) ?? false;
+  const lockedCount =
+    isTruncated && !isPro ? Math.max(0, totalIssues - issues.length) : 0;
 
   // Real placeholder locked cards for layout-shift-free preview
   const lockedCards: Issue[] = [

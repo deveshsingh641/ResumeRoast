@@ -95,6 +95,13 @@ try {
       })
       .then((usageRes) => {
         if (usageRes && usageRes.data) {
+          if (usageRes.data.token) {
+            localStorage.setItem("resumeroast_pro_token", usageRes.data.token);
+            sessionStorage.setItem("resumeroast_pro_token", usageRes.data.token);
+          }
+          if (usageRes.data.email) {
+            useAppStore.getState().setUserEmail(usageRes.data.email);
+          }
           useAppStore.getState().setUsage(usageRes.data);
         }
       })
@@ -102,7 +109,16 @@ try {
         axios
           .get("/api/usage")
           .then((res) => {
-            if (res.data) useAppStore.getState().setUsage(res.data);
+            if (res.data) {
+              if (res.data.token) {
+                localStorage.setItem("resumeroast_pro_token", res.data.token);
+                sessionStorage.setItem("resumeroast_pro_token", res.data.token);
+              }
+              if (res.data.email) {
+                useAppStore.getState().setUserEmail(res.data.email);
+              }
+              useAppStore.getState().setUsage(res.data);
+            }
           })
           .catch(() => {});
       });
@@ -111,6 +127,13 @@ try {
       .get("/api/usage")
       .then((res) => {
         if (res.data) {
+          if (res.data.token) {
+            localStorage.setItem("resumeroast_pro_token", res.data.token);
+            sessionStorage.setItem("resumeroast_pro_token", res.data.token);
+          }
+          if (res.data.email) {
+            useAppStore.getState().setUserEmail(res.data.email);
+          }
           useAppStore.getState().setUsage(res.data);
         }
       })

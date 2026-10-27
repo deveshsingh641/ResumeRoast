@@ -119,7 +119,7 @@ export default function MatchPage() {
   const { i18n } = useTranslation();
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
 
-  const { result: existingRoast } = useAppStore();
+  const { result: existingRoast, usage } = useAppStore();
 
   // Form State
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -935,7 +935,7 @@ export default function MatchPage() {
                 ))}
 
                 {/* Locked Pro State / Waitlist Hook */}
-                {matchResult.is_truncated && (
+                {matchResult.is_truncated && !usage?.is_pro && (
                   <div className="border border-stamp/40 bg-gradient-to-b from-stamp/10 to-transparent rounded-sm p-6 text-center space-y-3 relative overflow-hidden">
                     <div className="text-3xl">🔒</div>
                     <h4 className="font-display text-lg text-paper">

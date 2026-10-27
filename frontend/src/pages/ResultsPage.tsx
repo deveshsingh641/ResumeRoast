@@ -54,7 +54,7 @@ export default function ResultsPage() {
   const isMobile = useIsMobile(768);
   const [mobileExtraTab, setMobileExtraTab] = useState<"chat" | "trophies" | "share">("chat");
 
-  const { result: storeResult, setResult } = useAppStore();
+  const { result: storeResult, setResult, usage: storeUsage } = useAppStore();
   const [result, setLocalResult] = useState<ExtendedRoastResult | null>(
     storeResult,
   );
@@ -573,7 +573,7 @@ export default function ResultsPage() {
         </section>
 
         {/* ── 5. Pro Upgrade Banner (if truncated) ── */}
-        {result.is_truncated && (
+        {result.is_truncated && !storeUsage?.is_pro && (
           <section
             aria-label="Unlock full roast"
             className="max-w-[640px] mx-auto text-left border border-stamp/40 bg-[#E8422D]/[0.05] rounded-sm p-4 sm:p-8"
