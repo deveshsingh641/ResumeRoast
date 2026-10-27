@@ -3,6 +3,7 @@ import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import UserAccountNav from "@/components/UserAccountNav";
 import axios from "axios";
 import { useAppStore } from "@/store/useAppStore";
 import { loadRazorpaySDK, RazorpaySuccessResponse } from "@/utils/razorpay";
@@ -645,29 +646,30 @@ export default function PricingPage() {
           >
             RESUME<span className="text-stamp">ROAST</span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             {returnUrl && returnUrl !== "/roast" && (
               <Link
                 to={returnUrl}
-                className="font-mono text-xs text-ember hover:underline"
+                className="font-mono text-xs text-ember hover:underline hidden sm:inline"
               >
                 ← Back to Roast
               </Link>
             )}
             <Link
               to="/"
-              className="font-mono text-xs text-tan-dim hover:text-tan transition-colors"
+              className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden sm:inline"
             >
               Desk Home
             </Link>
-            <LanguageSwitcher />
+            <LanguageSwitcher compact={true} />
+            <UserAccountNav />
           </div>
         </div>
       </header>
 
       <div className="max-w-[960px] mx-auto px-4">
         {/* Active Pro Notification Banner */}
-        {usage?.is_pro && (
+        {usage?.is_pro ? (
           <div className="mb-8 p-4 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 rounded-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-amber-950/20">
             <div className="flex items-center gap-3">
               <span className="text-2xl">👑</span>
@@ -688,6 +690,20 @@ export default function PricingPage() {
                 Go to Match 🎯
               </Link>
             </div>
+          </div>
+        ) : (
+          <div className="mb-8 p-3 sm:p-4 bg-white/[0.02] border border-white/[0.08] rounded-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono">
+            <div className="flex items-center gap-2 text-tan">
+              <span className="text-amber-400 text-sm">💡</span>
+              <span>Already purchased Pro on another browser or device?</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("open-auth-modal"))}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-stamp/20 hover:bg-stamp/30 text-paper border border-stamp/40 text-xs font-mono font-medium transition cursor-pointer"
+            >
+              <span>⚡</span> Sign In / Restore Pro Plan
+            </button>
           </div>
         )}
 

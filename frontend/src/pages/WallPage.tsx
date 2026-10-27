@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import UserAccountNav from "@/components/UserAccountNav";
 import axios from "axios";
 import ScoreStamp from "@/components/ScoreStamp";
 import DeskClutter from "@/components/DeskClutter";
@@ -234,6 +235,7 @@ export default function WallPage() {
               <span className="sm:hidden">Grade</span>
             </Link>
             <LanguageSwitcher compact={true} className="shrink-0" />
+            <UserAccountNav />
           </div>
         </div>
       </header>

@@ -676,6 +676,22 @@ export default function CheckoutModal({
               <span>⚡ Official Razorpay SDK</span>
               <span>🇮🇳 Made in India</span>
             </div>
+
+            {/* Already purchased Pro link */}
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  window.dispatchEvent(new CustomEvent("open-auth-modal"));
+                }}
+                className="font-mono text-xs text-tan-dim hover:text-amber-400 underline decoration-dotted transition-colors cursor-pointer"
+              >
+                {isHinglish
+                  ? "Pehle se Pro liya hua hai? Sign In / Restore karo →"
+                  : "Already purchased Pro? Sign in to restore →"}
+              </button>
+            </div>
           </form>
         )}
       </div>

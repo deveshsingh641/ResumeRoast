@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import UserAccountNav from "@/components/UserAccountNav";
 import axios from "axios";
 import ScoreStamp from "@/components/ScoreStamp";
 import { IssueList } from "@/components/IssueCard";
@@ -143,6 +144,7 @@ export default function BattlePage() {
               <span className="sm:hidden">Roast →</span>
             </Link>
             <LanguageSwitcher compact={true} className="shrink-0" />
+            <UserAccountNav />
           </div>
         </div>
       </header>

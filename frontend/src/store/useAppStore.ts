@@ -46,11 +46,14 @@ interface AppState {
   uploadError: string | null;
   result: RoastResult | null;
   usage: UsageInfo | null;
+  userEmail: string | null;
 
   setUploadStatus: (status: UploadStatus) => void;
   setUploadError: (error: string | null) => void;
   setResult: (result: RoastResult | null) => void;
   setUsage: (usage: UsageInfo) => void;
+  setUserEmail: (email: string | null) => void;
+  logout: () => void;
   reset: () => void;
 }
 
@@ -59,10 +62,43 @@ export const useAppStore = create<AppState>((set) => ({
   uploadError: null,
   result: null,
   usage: null,
+  userEmail:
+    typeof window !== "undefined"
+      ? localStorage.getItem("resumeroast_user_email")
+      : null,
 
   setUploadStatus: (status) => set({ uploadStatus: status }),
   setUploadError: (error) => set({ uploadError: error }),
   setResult: (result) => set({ result }),
   setUsage: (usage) => set({ usage }),
-  reset: () => set({ uploadStatus: "idle", uploadError: null, result: null, usage: null }),
+  setUserEmail: (email) => {
+    if (typeof window !== "undefined") {
+      if (email) {
+        localStorage.setItem("resumeroast_user_email", email);
+      } else {
+        localStorage.removeItem("resumeroast_user_email");
+      }
+    }
+    set({ userEmail: email });
+  },
+  logout: () => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("resumeroast_pro_token");
+        sessionStorage.removeItem("resumeroast_pro_token");
+        localStorage.removeItem("resumeroast_user_email");
+      } catch {}
+    }
+    set({
+      userEmail: null,
+      usage: { used: 0, remaining: 1, limit: 1, is_pro: false },
+    });
+  },
+  reset: () =>
+    set({
+      uploadStatus: "idle",
+      uploadError: null,
+      result: null,
+      usage: null,
+    }),
 }));

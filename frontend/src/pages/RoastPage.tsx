@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import UserAccountNav from "@/components/UserAccountNav";
 import ResumeUploader from "@/components/ResumeUploader";
 import Footer from "@/components/Footer";
 import WaitlistModal from "@/components/WaitlistModal";
@@ -27,14 +28,15 @@ export default function RoastPage() {
         >
           RESUME<span className="text-stamp">ROAST</span>
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link
             to="/"
-            className="font-mono text-xs text-tan-dim hover:text-tan transition-colors"
+            className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden sm:inline"
           >
             {isHinglish ? "← Wapas Desk Pe" : "← Back to Desk"}
           </Link>
-          <LanguageSwitcher />
+          <LanguageSwitcher compact={true} />
+          <UserAccountNav />
         </div>
       </header>
 

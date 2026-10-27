@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import axios from "axios";
 import { normalizeLang } from "@/i18n/detector";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import UserAccountNav from "@/components/UserAccountNav";
 import Footer from "@/components/Footer";
 import WaitlistModal from "@/components/WaitlistModal";
 import { useAppStore } from "@/store/useAppStore";
@@ -355,14 +356,15 @@ export default function MatchPage() {
         >
           RESUME<span className="text-stamp">ROAST</span>
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link
             to="/"
-            className="font-mono text-xs text-tan-dim hover:text-tan transition-colors"
+            className="font-mono text-xs text-tan-dim hover:text-tan transition-colors hidden sm:inline"
           >
             {isHinglish ? "← Desk Pe Wapas" : "← Back to Desk"}
           </Link>
-          <LanguageSwitcher />
+          <LanguageSwitcher compact={true} />
+          <UserAccountNav />
         </div>
       </header>
 

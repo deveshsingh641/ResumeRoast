@@ -12,6 +12,7 @@ import LiveRoastCounter from "@/components/LiveRoastCounter";
 import Footer from "@/components/Footer";
 import WaitlistModal from "@/components/WaitlistModal";
 import CheckoutModal from "@/components/CheckoutModal";
+import UserAccountNav from "@/components/UserAccountNav";
 import { usePageTitle } from "@/utils/usePageTitle";
 import { getSampleResumes, getDailyRotationIndex } from "@/data/sampleRoast";
 
@@ -618,6 +619,7 @@ export default function LandingPage() {
               </Link>
             </nav>
             <LanguageSwitcher compact={true} className="shrink-0" />
+            <UserAccountNav />
           </div>
         </div>
       </header>

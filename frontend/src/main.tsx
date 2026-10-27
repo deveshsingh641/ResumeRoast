@@ -70,16 +70,52 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
-// Sync usage and Pro entitlement on initial boot
+// Sync usage and Pro entitlement on initial boot (with auto-restore for paying users)
 try {
-  axios
-    .get("/api/usage")
-    .then((res) => {
-      if (res.data) {
-        useAppStore.getState().setUsage(res.data);
-      }
-    })
-    .catch(() => {});
+  const savedEmail =
+    typeof window !== "undefined"
+      ? localStorage.getItem("resumeroast_user_email")
+      : null;
+  const savedToken =
+    typeof window !== "undefined"
+      ? localStorage.getItem("resumeroast_pro_token") ||
+        sessionStorage.getItem("resumeroast_pro_token")
+      : null;
+
+  if (savedEmail && !savedToken) {
+    // If email is saved but token was lost (e.g. mobile payment redirect/restart), restore token silently
+    axios
+      .post("/api/auth/login", { email: savedEmail })
+      .then((authRes) => {
+        if (authRes.data && authRes.data.token) {
+          localStorage.setItem("resumeroast_pro_token", authRes.data.token);
+          sessionStorage.setItem("resumeroast_pro_token", authRes.data.token);
+        }
+        return axios.get("/api/usage");
+      })
+      .then((usageRes) => {
+        if (usageRes && usageRes.data) {
+          useAppStore.getState().setUsage(usageRes.data);
+        }
+      })
+      .catch(() => {
+        axios
+          .get("/api/usage")
+          .then((res) => {
+            if (res.data) useAppStore.getState().setUsage(res.data);
+          })
+          .catch(() => {});
+      });
+  } else {
+    axios
+      .get("/api/usage")
+      .then((res) => {
+        if (res.data) {
+          useAppStore.getState().setUsage(res.data);
+        }
+      })
+      .catch(() => {});
+  }
 } catch {}
 
 
