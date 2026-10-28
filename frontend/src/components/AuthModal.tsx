@@ -36,8 +36,10 @@ export default function AuthModal({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isProDetected, setIsProDetected] = useState<boolean | null>(null);
 
+  const [elapsedSecs, setElapsedSecs] = useState(0);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastCheckedEmailRef = useRef<string>("");
 
   // Sync / Login execution function
@@ -46,9 +48,15 @@ export default function AuthModal({
 
     setLoading(true);
     setIsWakingUp(false);
+    setElapsedSecs(0);
     setErrorMsg(null);
     setSuccessMsg(null);
     setIsProDetected(null);
+
+    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    elapsedTimerRef.current = setInterval(() => {
+      setElapsedSecs((s) => s + 1);
+    }, 1000);
 
     // If server takes > 2.5s (e.g. Render cold start), show helpful status
     if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
@@ -65,9 +73,9 @@ export default function AuthModal({
     let data: any = null;
     let lastError: any = null;
 
-    // Primary endpoint: /api/auth/login (timeout: 12 seconds)
+    // Primary endpoint: /api/auth/login (timeout: 45 seconds for cold start)
     try {
-      const res = await axios.post("/api/auth/login", payload, { timeout: 12000 });
+      const res = await axios.post("/api/auth/login", payload, { timeout: 45000 });
       if (res && res.data && (res.data.ok || res.data.is_pro !== undefined)) {
         data = res.data;
       }
@@ -76,7 +84,7 @@ export default function AuthModal({
       // On 404, fallback to /api/payment/reconcile
       if (err?.response?.status === 404) {
         try {
-          const res = await axios.post("/api/payment/reconcile", payload, { timeout: 12000 });
+          const res = await axios.post("/api/payment/reconcile", payload, { timeout: 45000 });
           if (res && res.data && (res.data.ok || res.data.is_pro !== undefined || res.data.status)) {
             data = res.data;
           }
@@ -86,6 +94,7 @@ export default function AuthModal({
       }
     } finally {
       if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
       setLoading(false);
       setIsWakingUp(false);
     }
@@ -180,6 +189,7 @@ export default function AuthModal({
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
     };
   }, []);
 
@@ -241,25 +251,32 @@ export default function AuthModal({
             <span className="inline-block animate-spin">⏳</span>
             <span>
               {isHinglish
-                ? "Server wake ho raha hai (~10s lag sakte hain). Kripya wait karein..."
-                : "Waking up server (~10s). Please hold on a moment..."}
+                ? `Server wake ho raha hai (${elapsedSecs}s)... Render free tier cold-start le raha hai, kripya thoda wait karein.`
+                : `Waking up secure server (${elapsedSecs}s)... Cold start in progress, please hold on.`}
             </span>
           </div>
         )}
 
-        {/* Error message */}
+        {/* Error message with prominent Retry */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-xs leading-relaxed flex items-start justify-between gap-2">
-            <div>
-              <span>⚠️ </span>
-              <span>{errorMsg}</span>
+          <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-xs leading-relaxed flex flex-col gap-2.5">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <span>⚠️ </span>
+                <span>{errorMsg}</span>
+              </div>
             </div>
             <button
               type="button"
               onClick={() => performSync(email.trim().toLowerCase())}
-              className="text-[11px] underline font-bold shrink-0 text-red-300 hover:text-white"
+              className="w-full py-2 px-3 rounded bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm shadow-amber-900/40"
             >
-              Retry
+              <span>⚡</span>
+              <span>
+                {isHinglish
+                  ? "Server Ab Wake Ho Chuka Hai — Click to Retry"
+                  : "Server is now awake — Click to Retry"}
+              </span>
             </button>
           </div>
         )}
