@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
@@ -9,6 +9,8 @@ interface AuthModalProps {
   onClose: () => void;
   onSuccess?: () => void;
 }
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function AuthModal({
   isOpen,
@@ -29,65 +31,67 @@ export default function AuthModal({
   const [paymentId, setPaymentId] = useState("");
   const [showPaymentIdInput, setShowPaymentIdInput] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isWakingUp, setIsWakingUp] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isProDetected, setIsProDetected] = useState<boolean | null>(null);
 
-  if (!isOpen) return null;
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastCheckedEmailRef = useRef<string>("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes("@")) {
-      setErrorMsg(
-        isHinglish
-          ? "Kripya sahi email address enter karein (e.g. name@gmail.com)."
-          : "Please enter a valid email address.",
-      );
-      return;
-    }
+  // Sync / Login execution function
+  const performSync = async (cleanEmail: string, explicitPaymentId?: string) => {
+    if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) return;
 
     setLoading(true);
+    setIsWakingUp(false);
     setErrorMsg(null);
     setSuccessMsg(null);
     setIsProDetected(null);
 
-    const cleanPaymentId = paymentId.trim();
-    const endpoints = [
-      "/api/auth/login",
-      "/api/payment/reconcile",
-      "/api/reconcile",
-      "/api/billing/reconcile",
-      "/api/payment/login",
-    ];
+    // If server takes > 2.5s (e.g. Render cold start), show helpful status
+    if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+    wakeTimerRef.current = setTimeout(() => {
+      setIsWakingUp(true);
+    }, 2500);
+
+    const payload: Record<string, any> = { email: cleanEmail };
+    const pid = (explicitPaymentId !== undefined ? explicitPaymentId : paymentId).trim();
+    if (pid) {
+      payload.payment_id = pid;
+    }
 
     let data: any = null;
     let lastError: any = null;
 
-    for (const endpoint of endpoints) {
-      try {
-        const payload: Record<string, any> = { email: cleanEmail };
-        if (cleanPaymentId) {
-          payload.payment_id = cleanPaymentId;
-        }
-
-        const res = await axios.post(endpoint, payload);
-        if (res && res.data && (res.data.ok || res.data.is_pro !== undefined || res.data.status)) {
-          data = res.data;
-          break;
-        }
-      } catch (err: any) {
-        lastError = err;
-        // If server responded with a non-404 error (e.g. 422 validation), don't blindly loop
-        if (err?.response?.status && err.response.status !== 404) {
-          break;
+    // Primary endpoint: /api/auth/login (timeout: 12 seconds)
+    try {
+      const res = await axios.post("/api/auth/login", payload, { timeout: 12000 });
+      if (res && res.data && (res.data.ok || res.data.is_pro !== undefined)) {
+        data = res.data;
+      }
+    } catch (err: any) {
+      lastError = err;
+      // On 404, fallback to /api/payment/reconcile
+      if (err?.response?.status === 404) {
+        try {
+          const res = await axios.post("/api/payment/reconcile", payload, { timeout: 12000 });
+          if (res && res.data && (res.data.ok || res.data.is_pro !== undefined || res.data.status)) {
+            data = res.data;
+          }
+        } catch (fbErr: any) {
+          lastError = fbErr;
         }
       }
+    } finally {
+      if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+      setLoading(false);
+      setIsWakingUp(false);
     }
 
-    setLoading(false);
-
     if (data && (data.ok || data.is_pro !== undefined)) {
+      lastCheckedEmailRef.current = cleanEmail;
       setUserEmail(cleanEmail);
       if (typeof window !== "undefined") {
         localStorage.setItem("resumeroast_user_email", cleanEmail);
@@ -115,7 +119,7 @@ export default function AuthModal({
         setTimeout(() => {
           if (onSuccess) onSuccess();
           onClose();
-        }, 1500);
+        }, 1200);
       } else {
         setIsProDetected(false);
         setUsage({
@@ -132,22 +136,67 @@ export default function AuthModal({
         setShowPaymentIdInput(true);
       }
     } else {
+      const code = lastError?.code;
       const status = lastError?.response?.status;
       let msg = "Failed to sign in. Please try again.";
-      if (status === 404) {
+
+      if (code === "ECONNABORTED" || lastError?.message?.includes("timeout")) {
         msg = isHinglish
-          ? "Server update in progress hai ya wake ho rha hai. Kripya 10 second baad retry karein ya Payment ID daalein."
-          : "Server is updating or restarting. Please retry in 10-15 seconds, or enter your Razorpay Payment ID.";
+          ? "Server respond karne mein time le raha hai (waking up). Kripya 'Retry' karein."
+          : "Server connection timed out while waking up. Please click Retry.";
+      } else if (status === 404) {
+        msg = isHinglish
+          ? "Server deployment in progress hai. Kripya 10 second baad retry karein ya Payment ID daalein."
+          : "Server is updating. Please retry in 10-15 seconds, or enter your Payment ID below.";
       } else {
         const detail = lastError?.response?.data?.detail;
-        msg =
-          typeof detail === "string"
-            ? detail
-            : lastError?.message || msg;
+        msg = typeof detail === "string" ? detail : (lastError?.message || msg);
       }
+
       setErrorMsg(msg);
       setShowPaymentIdInput(true);
     }
+  };
+
+  // Automatic Sync: as soon as user types or pastes a valid email address
+  useEffect(() => {
+    if (!isOpen) return;
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (EMAIL_REGEX.test(cleanEmail) && cleanEmail !== lastCheckedEmailRef.current && !loading) {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        performSync(cleanEmail);
+      }, 500);
+    }
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [email, isOpen]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+    };
+  }, []);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setErrorMsg(
+        isHinglish
+          ? "Kripya sahi email address enter karein (e.g. name@gmail.com)."
+          : "Please enter a valid email address.",
+      );
+      return;
+    }
+    performSync(cleanEmail);
   };
 
   return (
@@ -180,16 +229,38 @@ export default function AuthModal({
             </h3>
             <p className="font-mono text-xs text-tan-dim mt-0.5">
               {isHinglish
-                ? "Email daalein. Free tier ho ya Pro, aapka account yahan se sync ho jayega."
+                ? "Email daalein. Free tier ho ya Pro, automatically sync ho jayega."
                 : "Enter your email to sign in or instantly sync your Pro plan across devices."}
             </p>
           </div>
         </div>
 
+        {/* Live waking-up indicator */}
+        {isWakingUp && (
+          <div className="mb-4 p-2.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs flex items-center gap-2 animate-pulse">
+            <span className="inline-block animate-spin">⏳</span>
+            <span>
+              {isHinglish
+                ? "Server wake ho raha hai (~10s lag sakte hain). Kripya wait karein..."
+                : "Waking up server (~10s). Please hold on a moment..."}
+            </span>
+          </div>
+        )}
+
         {/* Error message */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-xs leading-relaxed">
-            ⚠️ {errorMsg}
+          <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-xs leading-relaxed flex items-start justify-between gap-2">
+            <div>
+              <span>⚠️ </span>
+              <span>{errorMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => performSync(email.trim().toLowerCase())}
+              className="text-[11px] underline font-bold shrink-0 text-red-300 hover:text-white"
+            >
+              Retry
+            </button>
           </div>
         )}
 
@@ -209,9 +280,17 @@ export default function AuthModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block font-mono text-[11px] uppercase tracking-wider text-tan-dim font-bold mb-1.5">
-              {isHinglish ? "Email Address" : "Email Address"}
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block font-mono text-[11px] uppercase tracking-wider text-tan-dim font-bold">
+                {isHinglish ? "Email Address" : "Email Address"}
+              </label>
+              {loading && (
+                <span className="font-mono text-[11px] text-amber-400 flex items-center gap-1">
+                  <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  Auto-syncing...
+                </span>
+              )}
+            </div>
             <input
               type="email"
               required
@@ -240,7 +319,7 @@ export default function AuthModal({
               />
               <p className="font-mono text-[10px] text-tan-dim mt-1">
                 {isHinglish
-                  ? "Agar email se match na ho toh SMS/email se Razorpay payment ID copy karke paste karein."
+                  ? "Agar email se match na ho toh Razorpay confirmation SMS se Payment ID daalein."
                   : "Found in your Razorpay confirmation SMS/email receipt."}
               </p>
             </div>
@@ -249,7 +328,7 @@ export default function AuthModal({
               <button
                 type="button"
                 onClick={() => setShowPaymentIdInput(true)}
-                className="text-[11px] font-mono text-tan-dim hover:text-amber-400 underline underline-offset-2 transition"
+                className="text-[11px] font-mono text-tan-dim hover:text-amber-400 underline underline-offset-2 transition cursor-pointer"
               >
                 {isHinglish
                   ? "+ Have a Razorpay Payment ID?"
@@ -261,23 +340,36 @@ export default function AuthModal({
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 font-mono font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-amber-900/30 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 font-mono font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-amber-900/30 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {loading
-              ? isHinglish
-                ? "Connecting..."
-                : "Connecting..."
-              : isHinglish
-                ? "Continue with Email →"
-                : "Continue with Email →"}
+            {loading ? (
+              <>
+                <span className="inline-block w-3.5 h-3.5 border-2 border-stone-950 border-t-transparent rounded-full animate-spin" />
+                <span>
+                  {isWakingUp
+                    ? isHinglish
+                      ? "Server Waking Up..."
+                      : "Server Waking Up..."
+                    : isHinglish
+                      ? "Syncing Account..."
+                      : "Syncing Account..."}
+                </span>
+              </>
+            ) : (
+              <span>
+                {isHinglish
+                  ? "Continue / Sync Email →"
+                  : "Continue / Sync Email →"}
+              </span>
+            )}
           </button>
         </form>
 
         <div className="mt-5 pt-4 border-t border-white/[0.08] text-center text-xs font-mono text-tan-dim leading-relaxed">
           <span>
             {isHinglish
-              ? "Password ki zaroorat nahi hai. Agar Pro liya hua hai toh unlimited roasts instantly unlock ho jayenge."
-              : "Zero password needed. Free accounts get 1 daily roast, and Pro accounts unlock unlimited access automatically."}
+              ? "Password ki zaroorat nahi hai. Email enter karte hi automatic sync ho jayega."
+              : "Zero password needed. Entering your email automatically synchronizes your account."}
           </span>
         </div>
       </div>

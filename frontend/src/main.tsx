@@ -91,6 +91,15 @@ try {
           localStorage.setItem("resumeroast_pro_token", authRes.data.token);
           sessionStorage.setItem("resumeroast_pro_token", authRes.data.token);
         }
+        if (authRes.data && authRes.data.is_pro) {
+          useAppStore.getState().setUserEmail(savedEmail);
+          useAppStore.getState().setUsage({
+            used: 0,
+            remaining: 999999,
+            limit: 999999,
+            is_pro: true,
+          });
+        }
         return axios.get("/api/usage");
       })
       .then((usageRes) => {
