@@ -137,12 +137,26 @@ export default function AuthModal({
           limit: 1,
           is_pro: false,
         });
-        setSuccessMsg(
-          isHinglish
-            ? `Signed in as ${cleanEmail} (Free Tier). Agar aapne Pro khareeda hai toh Payment ID enter karein.`
-            : `Signed in as ${cleanEmail} (Free Tier). If you purchased Pro, enter your Razorpay Payment ID below.`,
-        );
-        setShowPaymentIdInput(true);
+
+        if (pid) {
+          setSuccessMsg(
+            isHinglish
+              ? `Signed in as ${cleanEmail} (Free Tier). Diya gaya Payment ID match nahi hua.`
+              : `Signed in as ${cleanEmail} (Free Tier). Entered Payment ID did not match an active plan.`,
+          );
+          setShowPaymentIdInput(true);
+        } else {
+          setSuccessMsg(
+            isHinglish
+              ? `✓ Welcome! Signed in as ${cleanEmail} (Free Tier — 1 roast/day).`
+              : `✓ Welcome! Signed in as ${cleanEmail} (Free Tier — 1 roast/day).`,
+          );
+          // Auto-close smoothly so the user isn't stuck on the modal
+          setTimeout(() => {
+            if (onSuccess) onSuccess();
+            onClose();
+          }, 1400);
+        }
       }
     } else {
       const code = lastError?.code;
@@ -197,6 +211,11 @@ export default function AuthModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (successMsg && isProDetected !== null && !paymentId.trim()) {
+      if (onSuccess) onSuccess();
+      onClose();
+      return;
+    }
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes("@")) {
       setErrorMsg(
@@ -372,6 +391,10 @@ export default function AuthModal({
                       : "Syncing Account..."}
                 </span>
               </>
+            ) : successMsg && isProDetected !== null && !paymentId.trim() ? (
+              <span>
+                {isHinglish ? "✓ Continue to App →" : "✓ Continue to App →"}
+              </span>
             ) : (
               <span>
                 {isHinglish
