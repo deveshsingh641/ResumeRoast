@@ -42,9 +42,13 @@ export default function PlacementSeasonBanner() {
           </span>
           <p className="font-mono leading-tight text-xs">
             <strong className="text-amber-300">
-              {isHinglish ? "Placement season chal raha hai" : "Hiring season is live"}
+              {isHinglish
+                ? "Placement season chal raha hai"
+                : "Hiring season is live"}
             </strong>{" "}
-            {isHinglish ? "— resume ready hai ya jugaad se chal raha hai? 👀" : "— is your resume shortlist-ready or winging it? 👀"}
+            {isHinglish
+              ? "— resume ready hai ya jugaad se chal raha hai? 👀"
+              : "— is your resume shortlist-ready or winging it? 👀"}
           </p>
         </div>
 

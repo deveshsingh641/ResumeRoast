@@ -207,7 +207,9 @@ export function IssueCard({
             {showFix && (
               <div className="mt-2 bg-[#F5EFE0]/[0.04] border border-white/[0.08] rounded-sm p-3">
                 <p className="font-mono text-xs text-tan-dim mb-1 uppercase tracking-wider">
-                  {isHinglish ? "Aise Likhna Chahiye Tha:" : "Recommended Rewrite:"}
+                  {isHinglish
+                    ? "Aise Likhna Chahiye Tha:"
+                    : "Recommended Rewrite:"}
                 </p>
                 <p className="font-mono text-xs text-paper leading-relaxed">
                   {issue.fix}

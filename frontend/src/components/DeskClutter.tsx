@@ -13,7 +13,11 @@ export default function DeskClutter({
 }: DeskClutterProps) {
   const { i18n } = useTranslation();
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
-  const finalStickyText = stickyText || (isHinglish ? "friday se pehle fix kar le yaar!! 😭" : "fix this before friday please!! 😭");
+  const finalStickyText =
+    stickyText ||
+    (isHinglish
+      ? "friday se pehle fix kar le yaar!! 😭"
+      : "fix this before friday please!! 😭");
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isTouch, setIsTouch] = useState(false);
 

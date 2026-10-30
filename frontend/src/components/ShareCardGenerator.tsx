@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
+import { getAppUrl } from "@/utils/appUrl";
 import type { RoastResult } from "@/store/useAppStore";
 import ScoreStamp from "./ScoreStamp";
 
@@ -23,12 +24,14 @@ export default function ShareCardGenerator({
   const [downloaded, setDownloaded] = useState(false);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
 
-  const topRoast = result?.issues?.[0]?.roast || result?.one_line_verdict || "Resume Roast";
-  const worstQuote = result?.issues?.[0]?.quoted_text || result?.one_line_verdict || "Resume";
+  const topRoast =
+    result?.issues?.[0]?.roast || result?.one_line_verdict || "Resume Roast";
+  const worstQuote =
+    result?.issues?.[0]?.quoted_text || result?.one_line_verdict || "Resume";
 
   const whatsappShareText = isHinglish
-    ? `Bhai mera resume roast ho gaya 😂🔥!\n\nScore: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\n\nDekh tere resume ka kya banta hai: https://resumeroast.app`
-    : `My resume just got roasted 😂🔥!\n\nScore: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\n\nTest your resume too: https://resumeroast.app`;
+    ? `Bhai mera resume roast ho gaya 😂🔥!\n\nScore: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\n\nDekh tere resume ka kya banta hai: ${getAppUrl()}`
+    : `My resume just got roasted 😂🔥!\n\nScore: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\n\nTest your resume too: ${getAppUrl()}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappShareText)}`;
 
   const generateCanvas = async () => {

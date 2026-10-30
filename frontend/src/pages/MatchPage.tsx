@@ -3,6 +3,8 @@ import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 import { normalizeLang } from "@/i18n/detector";
+import { getCurrentLanguage } from "@/i18n";
+import { getAppUrl } from "@/utils/appUrl";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import UserAccountNav from "@/components/UserAccountNav";
 import Footer from "@/components/Footer";
@@ -267,7 +269,7 @@ export default function MatchPage() {
         formData.append("job_description", jobDescription);
         if (jobTitle) formData.append("job_title", jobTitle);
         if (companyName) formData.append("company_name", companyName);
-        formData.append("language", isHinglish ? "hi-IN" : "en");
+        formData.append("language", getCurrentLanguage());
 
         response = await axios.post("/api/match", formData, {
           headers: { "Content-Type": "multipart/form-data" },
@@ -281,7 +283,7 @@ export default function MatchPage() {
             job_description: jobDescription,
             job_title: jobTitle,
             company_name: companyName,
-            language: isHinglish ? "hi-IN" : "en",
+            language: getCurrentLanguage(),
           },
           { timeout: 45000 },
         );
@@ -335,7 +337,7 @@ export default function MatchPage() {
             `#${i + 1} Target: ${rw.target_jd_requirement}\nOriginal: "${rw.original}"\nTailored: "${rw.tailored_fix}"\n`,
         )
         .join("\n"),
-      "Analyzed via Resume Roast (https://resumeroast.app/match)",
+      `Analyzed via Resume Roast (${getAppUrl()}/match)`,
     ];
     try {
       await navigator.clipboard.writeText(lines.join("\n"));

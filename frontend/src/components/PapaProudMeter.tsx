@@ -1,6 +1,7 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
+import { getAppUrl } from "@/utils/appUrl";
 
 interface PapaProudMeterProps {
   overallScore: number;
@@ -69,27 +70,31 @@ export function getPapaCommentary(
   }
   if (papaScore <= 45) {
     return {
-      comment: 'Dad will ask: "We paid four years of college tuition for this?" 😭',
+      comment:
+        'Dad will ask: "We paid four years of college tuition for this?" 😭',
       sub: "Heavy rough draft vibe — wouldn't survive the dinner table critique.",
       emoji: "😭",
     };
   }
   if (papaScore <= 65) {
     return {
-      comment: 'Dad sigh: "You studied software to write \'Responsible for\'?" 🫠',
+      comment:
+        "Dad sigh: \"You studied software to write 'Responsible for'?\" 🫠",
       sub: "Passable, but expect a lingering expression of parental concern.",
       emoji: "🫠",
     };
   }
   if (papaScore <= 80) {
     return {
-      comment: 'Decent, but he will immediately ask: "Where did the other 20% go?" 🤨',
+      comment:
+        'Decent, but he will immediately ask: "Where did the other 20% go?" 🤨',
       sub: "Strict parents never give 100% approval, and you know it.",
       emoji: "🤨",
     };
   }
   return {
-    comment: "Finally an interview-worthy score that makes the family proud! 🎉",
+    comment:
+      "Finally an interview-worthy score that makes the family proud! 🎉",
     sub: "You can safely show this one off in the family group chat.",
     emoji: "🎉",
   };
@@ -107,8 +112,8 @@ export default function PapaProudMeter({ overallScore }: PapaProudMeterProps) {
     papaScore < 40 ? "#E8422D" : papaScore < 70 ? "#FFB93C" : "#7FA65C";
 
   const shareText = isHinglish
-    ? `Bhai mera Papa Proud Meter score sirf ${papaScore}% aaya hai ${emoji}!\n"${comment}"\nApna bhi check karwa: https://resumeroast.app`
-    : `My Papa Proud Meter score is ${papaScore}% ${emoji}!\n"${comment}"\nTest your resume too: https://resumeroast.app`;
+    ? `Bhai mera Papa Proud Meter score sirf ${papaScore}% aaya hai ${emoji}!\n"${comment}"\nApna bhi check karwa: ${getAppUrl()}`
+    : `My Papa Proud Meter score is ${papaScore}% ${emoji}!\n"${comment}"\nTest your resume too: ${getAppUrl()}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   return (
@@ -127,7 +132,9 @@ export default function PapaProudMeter({ overallScore }: PapaProudMeterProps) {
           <span className="text-xl">👨‍💼</span>
           <div>
             <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold block">
-              {isHinglish ? "GAG METER // DIL PE MAT LENA" : "GAG METER // LIGHTHEARTED FUN"}
+              {isHinglish
+                ? "GAG METER // DIL PE MAT LENA"
+                : "GAG METER // LIGHTHEARTED FUN"}
             </span>
             <h3 className="font-display text-lg sm:text-xl text-paper">
               Papa Proud Meter
@@ -178,7 +185,9 @@ export default function PapaProudMeter({ overallScore }: PapaProudMeterProps) {
       {/* WhatsApp mini share CTA */}
       <div className="mt-4 pt-3 border-t border-white/[0.08] flex items-center justify-between gap-4">
         <span className="font-mono text-[11px] text-tan-dim">
-          {isHinglish ? "Family group mein mat bhejna 💀" : "Probably don't share to the family group 💀"}
+          {isHinglish
+            ? "Family group mein mat bhejna 💀"
+            : "Probably don't share to the family group 💀"}
         </span>
         <a
           href={whatsappUrl}
@@ -186,7 +195,9 @@ export default function PapaProudMeter({ overallScore }: PapaProudMeterProps) {
           rel="noopener noreferrer"
           className="font-mono text-xs text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1.5 transition-colors font-semibold"
         >
-          <span>{isHinglish ? "WhatsApp pe daal de" : "Share to WhatsApp"}</span>
+          <span>
+            {isHinglish ? "WhatsApp pe daal de" : "Share to WhatsApp"}
+          </span>
           <span>📲</span>
         </a>
       </div>

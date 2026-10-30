@@ -21,8 +21,8 @@ export default function ScoreJourney({
   // Calculate milestone scores dynamically so baseline score never inverts
   const gap = Math.max(0, 100 - currentScore);
   const step1Gain = Math.max(5, Math.round(gap * 0.45));
-  const step2Gain = Math.max(4, Math.round(gap * 0.30));
-  const step3Gain = Math.max(3, Math.round(gap * 0.20));
+  const step2Gain = Math.max(4, Math.round(gap * 0.3));
+  const step3Gain = Math.max(3, Math.round(gap * 0.2));
 
   const scoreStep1 = Math.min(98, currentScore + step1Gain);
   const scoreStep2 = Math.min(99, scoreStep1 + step2Gain);
@@ -36,7 +36,9 @@ export default function ScoreJourney({
       <div className="flex items-center justify-between gap-2 mb-4 border-b border-white/[0.08] pb-3">
         <div>
           <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold block">
-            {isHinglish ? "ROADMAP // FIX KARNE KA PLAN" : "ROADMAP // ACTION PLAN"}
+            {isHinglish
+              ? "ROADMAP // FIX KARNE KA PLAN"
+              : "ROADMAP // ACTION PLAN"}
           </span>
           <h3 className="font-display text-lg sm:text-xl text-paper">
             {isHinglish
@@ -70,7 +72,9 @@ export default function ScoreJourney({
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
               <h4 className="font-body text-sm font-semibold text-paper">
-                {isHinglish ? "Numbers aur Metrics daalo" : "Incorporate Hard Metrics & Scale"}
+                {isHinglish
+                  ? "Numbers aur Metrics daalo"
+                  : "Incorporate Hard Metrics & Scale"}
               </h4>
               <span className="font-mono text-xs text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded-sm">
                 +{step1Gain} pts → ~{scoreStep1}
@@ -92,7 +96,9 @@ export default function ScoreJourney({
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
               <h4 className="font-body text-sm font-semibold text-paper">
-                {isHinglish ? "Buzzwords & Jargon hatao" : "Purge Fluffy Buzzwords"}
+                {isHinglish
+                  ? "Buzzwords & Jargon hatao"
+                  : "Purge Fluffy Buzzwords"}
               </h4>
               <span className="font-mono text-xs text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded-sm">
                 +{step2Gain} pts → ~{scoreStep2}
@@ -114,7 +120,9 @@ export default function ScoreJourney({
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
               <h4 className="font-body text-sm font-semibold text-paper">
-                {isHinglish ? "Formatting & Spacing Clean Karo" : "Streamline Layout & Whitespace"}
+                {isHinglish
+                  ? "Formatting & Spacing Clean Karo"
+                  : "Streamline Layout & Whitespace"}
               </h4>
               <span className="font-mono text-xs text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded-sm">
                 +{step3Gain} pts → ~{scoreStep3}
@@ -135,7 +143,9 @@ export default function ScoreJourney({
           <span className="text-xl">🏆</span>
           <div>
             <span className="font-mono text-[11px] text-emerald-300 font-bold block">
-              {isHinglish ? "FINAL GOAL: 85+ (Shortlist Ready)" : "TARGET GOAL: 85+ (Interview Ready)"}
+              {isHinglish
+                ? "FINAL GOAL: 85+ (Shortlist Ready)"
+                : "TARGET GOAL: 85+ (Interview Ready)"}
             </span>
             <span className="font-mono text-[10px] text-tan-dim">
               {isHinglish
@@ -148,7 +158,9 @@ export default function ScoreJourney({
           to="/roast"
           className="btn-ghost !py-1 !px-3 !text-xs text-emerald-400 hover:text-emerald-300"
         >
-          {isHinglish ? "Fix karke dobara roast karo →" : "Re-roast after fixing →"}
+          {isHinglish
+            ? "Fix karke dobara roast karo →"
+            : "Re-roast after fixing →"}
         </Link>
       </div>
     </div>

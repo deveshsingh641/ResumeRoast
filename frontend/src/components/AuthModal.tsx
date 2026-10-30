@@ -43,7 +43,10 @@ export default function AuthModal({
   const lastCheckedEmailRef = useRef<string>("");
 
   // Sync / Login execution function
-  const performSync = async (cleanEmail: string, explicitPaymentId?: string) => {
+  const performSync = async (
+    cleanEmail: string,
+    explicitPaymentId?: string,
+  ) => {
     if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) return;
 
     setLoading(true);
@@ -65,7 +68,9 @@ export default function AuthModal({
     }, 2500);
 
     const payload: Record<string, any> = { email: cleanEmail };
-    const pid = (explicitPaymentId !== undefined ? explicitPaymentId : paymentId).trim();
+    const pid = (
+      explicitPaymentId !== undefined ? explicitPaymentId : paymentId
+    ).trim();
     if (pid) {
       payload.payment_id = pid;
     }
@@ -75,7 +80,9 @@ export default function AuthModal({
 
     // Primary endpoint: /api/auth/login (timeout: 45 seconds for cold start)
     try {
-      const res = await axios.post("/api/auth/login", payload, { timeout: 45000 });
+      const res = await axios.post("/api/auth/login", payload, {
+        timeout: 45000,
+      });
       if (res && res.data && (res.data.ok || res.data.is_pro !== undefined)) {
         data = res.data;
       }
@@ -84,8 +91,14 @@ export default function AuthModal({
       // On 404, fallback to /api/payment/reconcile
       if (err?.response?.status === 404) {
         try {
-          const res = await axios.post("/api/payment/reconcile", payload, { timeout: 45000 });
-          if (res && res.data && (res.data.ok || res.data.is_pro !== undefined || res.data.status)) {
+          const res = await axios.post("/api/payment/reconcile", payload, {
+            timeout: 45000,
+          });
+          if (
+            res &&
+            res.data &&
+            (res.data.ok || res.data.is_pro !== undefined || res.data.status)
+          ) {
             data = res.data;
           }
         } catch (fbErr: any) {
@@ -173,7 +186,7 @@ export default function AuthModal({
           : "Server is updating. Please retry in 10-15 seconds, or enter your Payment ID below.";
       } else {
         const detail = lastError?.response?.data?.detail;
-        msg = typeof detail === "string" ? detail : (lastError?.message || msg);
+        msg = typeof detail === "string" ? detail : lastError?.message || msg;
       }
 
       setErrorMsg(msg);
@@ -186,7 +199,11 @@ export default function AuthModal({
     if (!isOpen) return;
     const cleanEmail = email.trim().toLowerCase();
 
-    if (EMAIL_REGEX.test(cleanEmail) && cleanEmail !== lastCheckedEmailRef.current && !loading) {
+    if (
+      EMAIL_REGEX.test(cleanEmail) &&
+      cleanEmail !== lastCheckedEmailRef.current &&
+      !loading
+    ) {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
         performSync(cleanEmail);

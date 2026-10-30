@@ -26,8 +26,14 @@ if (typeof window !== "undefined") {
       audioCtx.resume().catch(() => {});
     }
   };
-  window.addEventListener("pointerdown", unlockAudio, { once: true, passive: true });
-  window.addEventListener("keydown", unlockAudio, { once: true, passive: true });
+  window.addEventListener("pointerdown", unlockAudio, {
+    once: true,
+    passive: true,
+  });
+  window.addEventListener("keydown", unlockAudio, {
+    once: true,
+    passive: true,
+  });
 }
 
 export function isSoundEnabled(): boolean {

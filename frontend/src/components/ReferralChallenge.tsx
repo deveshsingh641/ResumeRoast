@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { getAppUrl } from "@/utils/appUrl";
 
 export default function ReferralChallenge() {
   const [copied, setCopied] = useState(false);
-  const challengeLink = "https://resumeroast.app";
+  const challengeLink = getAppUrl();
   const shareMessage = `Bhai apna resume test karwa ke dikha, dekhein kiska score zyada bura hai 😂🔥: ${challengeLink}`;
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
 

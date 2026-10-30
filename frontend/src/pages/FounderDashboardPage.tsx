@@ -4,7 +4,6 @@ import axios from "axios";
 import { usePageTitle } from "@/utils/usePageTitle";
 import { useAppStore } from "@/store/useAppStore";
 
-
 interface MetricsSummary {
   total_roasts_all_time: number;
   total_battles_all_time: number;
@@ -87,9 +86,11 @@ export default function FounderDashboardPage() {
   // Dashboard state
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
-  const [infrastructure, setInfrastructure] = useState<InfrastructureInfo | null>(null);
+  const [infrastructure, setInfrastructure] =
+    useState<InfrastructureInfo | null>(null);
   const [aiProvider, setAiProvider] = useState<AIProviderInfo | null>(null);
-  const [paymentGateway, setPaymentGateway] = useState<PaymentGatewayInfo | null>(null);
+  const [paymentGateway, setPaymentGateway] =
+    useState<PaymentGatewayInfo | null>(null);
   const [recentWaitlist, setRecentWaitlist] = useState<WaitlistEntry[]>([]);
   const [showWaitlist, setShowWaitlist] = useState(false);
   const [trafficHistory, setTrafficHistory] = useState<TrafficDay[]>([]);
@@ -221,10 +222,13 @@ export default function FounderDashboardPage() {
       if (metricsData && metricsData.ok) {
         setMetrics(metricsData.summary);
         setTrafficHistory(metricsData.traffic_7d || []);
-        if (metricsData.infrastructure) setInfrastructure(metricsData.infrastructure);
+        if (metricsData.infrastructure)
+          setInfrastructure(metricsData.infrastructure);
         if (metricsData.ai_provider) setAiProvider(metricsData.ai_provider);
-        if (metricsData.payment_gateway) setPaymentGateway(metricsData.payment_gateway);
-        if (metricsData.recent_waitlist) setRecentWaitlist(metricsData.recent_waitlist);
+        if (metricsData.payment_gateway)
+          setPaymentGateway(metricsData.payment_gateway);
+        if (metricsData.recent_waitlist)
+          setRecentWaitlist(metricsData.recent_waitlist);
       }
 
       // 2. Fetch paginated roasts
@@ -257,7 +261,11 @@ export default function FounderDashboardPage() {
 
       // Clean key query param from address bar to prevent leaking secret in history or screen share
       if (window.location.search.includes("key=")) {
-        window.history.replaceState({}, document.title, window.location.pathname);
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
       }
 
       // Auto-sync Founder VIP Pro on device
@@ -475,7 +483,11 @@ export default function FounderDashboardPage() {
               </span>
             </div>
             <p className="font-mono text-xs text-tan-dim mt-0.5">
-              Account: <span className="text-paper font-bold">deveshsingh20666@gmail.com</span> · Unlimited Roasts · Full JD Match · No Limits
+              Account:{" "}
+              <span className="text-paper font-bold">
+                deveshsingh20666@gmail.com
+              </span>{" "}
+              · Unlimited Roasts · Full JD Match · No Limits
             </p>
             {founderProMsg && (
               <div
@@ -575,7 +587,7 @@ export default function FounderDashboardPage() {
             Estimated MRR
           </div>
           <div className="text-3xl font-extrabold text-emerald-400 mt-1 font-display">
-            ₹{((metrics?.estimated_mrr_inr ?? 0)).toLocaleString("en-IN")}
+            ₹{(metrics?.estimated_mrr_inr ?? 0).toLocaleString("en-IN")}
           </div>
           <div className="text-[11px] text-tan-dim font-mono mt-2">
             Monthly recurring revenue
@@ -614,7 +626,9 @@ export default function FounderDashboardPage() {
                 onClick={() => setShowWaitlist(!showWaitlist)}
                 className="text-amber-300 hover:text-white underline cursor-pointer text-[10px]"
               >
-                {showWaitlist ? "Hide leads" : `View (${recentWaitlist.length}) ↗`}
+                {showWaitlist
+                  ? "Hide leads"
+                  : `View (${recentWaitlist.length}) ↗`}
               </button>
             )}
           </div>
@@ -625,7 +639,10 @@ export default function FounderDashboardPage() {
           <div className="text-[11px] font-mono text-tan-dim uppercase">
             AI Provider & Model
           </div>
-          <div className="text-base font-bold text-sky-400 mt-1 font-mono truncate" title={aiProvider?.name || "Gemini gemini-3.5-flash-lite"}>
+          <div
+            className="text-base font-bold text-sky-400 mt-1 font-mono truncate"
+            title={aiProvider?.name || "Gemini gemini-3.5-flash-lite"}
+          >
             {aiProvider?.name || "Gemini gemini-3.5-flash-lite"}
           </div>
           <div className="text-[11px] text-emerald-400 font-mono mt-2 truncate">
@@ -642,7 +659,10 @@ export default function FounderDashboardPage() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             {infrastructure?.database_status || "Supabase Active"}
           </div>
-          <div className="text-[11px] text-tan-dim font-mono mt-2 truncate" title={infrastructure?.database_label || "aws-0-ap-northeast-1"}>
+          <div
+            className="text-[11px] text-tan-dim font-mono mt-2 truncate"
+            title={infrastructure?.database_label || "aws-0-ap-northeast-1"}
+          >
             {infrastructure?.database_label || "aws-0-ap-northeast-1"}
           </div>
         </div>
@@ -656,7 +676,12 @@ export default function FounderDashboardPage() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
             {paymentGateway?.status_label || "Active (Test Mode)"}
           </div>
-          <div className="text-[11px] text-tan-dim font-mono mt-2 truncate" title={paymentGateway?.sub_label || "Razorpay Test · ₹99/mo, ₹799/yr"}>
+          <div
+            className="text-[11px] text-tan-dim font-mono mt-2 truncate"
+            title={
+              paymentGateway?.sub_label || "Razorpay Test · ₹99/mo, ₹799/yr"
+            }
+          >
             {paymentGateway?.sub_label || "Razorpay Test · ₹99/mo, ₹799/yr"}
           </div>
         </div>
@@ -687,14 +712,22 @@ export default function FounderDashboardPage() {
           </div>
           <div className="divide-y divide-white/5 max-h-60 overflow-y-auto">
             {recentWaitlist.map((entry, idx) => (
-              <div key={idx} className="py-2.5 flex items-center justify-between text-xs font-mono">
+              <div
+                key={idx}
+                className="py-2.5 flex items-center justify-between text-xs font-mono"
+              >
                 <div className="flex items-center gap-2">
                   <span className="text-stone-500 font-bold">#{idx + 1}</span>
-                  <span className="text-amber-300 font-bold">{entry.email}</span>
+                  <span className="text-amber-300 font-bold">
+                    {entry.email}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-tan-dim">
-                    {entry.created_at ? entry.created_at.slice(0, 19).replace("T", " ") : "Recent"} UTC
+                    {entry.created_at
+                      ? entry.created_at.slice(0, 19).replace("T", " ")
+                      : "Recent"}{" "}
+                    UTC
                   </span>
                   <button
                     type="button"
@@ -709,7 +742,6 @@ export default function FounderDashboardPage() {
           </div>
         </div>
       )}
-
 
       {/* ── Section 3: Customer Support Pro Override Panel ── */}
       <div className="mb-8 bg-[#1A1613] rounded-lg border border-white/10 p-5">

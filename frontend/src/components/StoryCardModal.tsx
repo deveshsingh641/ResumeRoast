@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import html2canvas from "html2canvas";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
+import { getAppUrl } from "@/utils/appUrl";
 import type { RoastResult } from "@/store/useAppStore";
 import ScoreStamp from "./ScoreStamp";
 
@@ -51,8 +52,8 @@ export default function StoryCardModal({
   const worstQuote = result.issues?.[0]?.quoted_text || result.one_line_verdict;
 
   const shareText = isHinglish
-    ? `Mera resume roast ho gaya 😂! Score: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\nCheck yours at https://resumeroast.app`
-    : `My resume just got roasted 😂! Score: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\nCheck yours at https://resumeroast.app`;
+    ? `Mera resume roast ho gaya 😂! Score: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\nCheck yours at ${getAppUrl()}`
+    : `My resume just got roasted 😂! Score: ${result.overall_score}/100\nVerdict: "${result.one_line_verdict}"\nCheck yours at ${getAppUrl()}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   const generateCanvas = async () => {

@@ -284,10 +284,14 @@ export default function PaperMockup({
         </div>
 
         {/* Section Heading — rendered only if companyLine or experienceHeader is provided */}
-        {((companyLine && companyLine.trim() !== "") || (experienceHeader && experienceHeader.trim() !== "")) && (
+        {((companyLine && companyLine.trim() !== "") ||
+          (experienceHeader && experienceHeader.trim() !== "")) && (
           <div className="relative mb-3 text-left">
             <p className="font-mono text-xs font-semibold uppercase tracking-widest text-ink/60">
-              {experienceHeader || (isHinglish ? "EXPERIENCE (KAAM KA RECORD)" : "RECENT EXPERIENCE")}
+              {experienceHeader ||
+                (isHinglish
+                  ? "EXPERIENCE (KAAM KA RECORD)"
+                  : "RECENT EXPERIENCE")}
             </p>
             {companyLine && companyLine.trim() !== "" && (
               <p className="font-body text-sm font-medium text-ink mt-1">

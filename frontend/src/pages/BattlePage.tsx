@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -15,6 +15,7 @@ import { usePageTitle } from "@/utils/usePageTitle";
 export default function BattlePage() {
   usePageTitle("1-on-1 Resume Battle Arena");
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
 
@@ -85,7 +86,7 @@ export default function BattlePage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setBattleData(data);
-      window.history.pushState({}, "", `/battle/${data.id}`);
+      navigate(`/battle/${data.id}`, { replace: true });
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       let msg = isHinglish

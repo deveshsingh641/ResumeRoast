@@ -140,7 +140,8 @@ export default function UserAccountNav({
                   onClick={() => setDropdownOpen(false)}
                   className="block w-full py-1.5 px-2 rounded text-xs font-bold bg-[#E8422D]/20 hover:bg-[#E8422D]/30 text-[#FF6347] border border-[#E8422D]/40 text-center transition"
                 >
-                  ⚡ {isHinglish ? "Upgrade to Pro (₹99)" : "Upgrade to Pro (₹99)"}
+                  ⚡{" "}
+                  {isHinglish ? "Upgrade to Pro (₹99)" : "Upgrade to Pro (₹99)"}
                 </Link>
               )}
 

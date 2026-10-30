@@ -45,8 +45,13 @@ export default function ResumeUploader() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
-  const { setUploadStatus, setUploadError, setResult, uploadStatus, uploadError } =
-    useAppStore();
+  const {
+    setUploadStatus,
+    setUploadError,
+    setResult,
+    uploadStatus,
+    uploadError,
+  } = useAppStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showWaitlist, setShowWaitlist] = useState(false);

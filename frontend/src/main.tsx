@@ -24,7 +24,8 @@ axios.defaults.withCredentials = true;
 if (typeof window !== "undefined") {
   try {
     const searchParams = new URLSearchParams(window.location.search);
-    const tokenParam = searchParams.get("pro_token") || searchParams.get("token");
+    const tokenParam =
+      searchParams.get("pro_token") || searchParams.get("token");
     if (tokenParam && tokenParam.trim()) {
       const cleanToken = tokenParam.trim();
       localStorage.setItem("resumeroast_pro_token", cleanToken);
@@ -32,12 +33,18 @@ if (typeof window !== "undefined") {
       searchParams.delete("pro_token");
       searchParams.delete("token");
       const cleanQuery = searchParams.toString();
-      const cleanUrl = window.location.pathname + (cleanQuery ? `?${cleanQuery}` : "") + window.location.hash;
+      const cleanUrl =
+        window.location.pathname +
+        (cleanQuery ? `?${cleanQuery}` : "") +
+        window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
     }
     const emailParam = searchParams.get("email");
     if (emailParam && emailParam.trim()) {
-      localStorage.setItem("resumeroast_user_email", emailParam.trim().toLowerCase());
+      localStorage.setItem(
+        "resumeroast_user_email",
+        emailParam.trim().toLowerCase(),
+      );
     }
   } catch {}
 }
@@ -109,7 +116,10 @@ try {
         if (usageRes && usageRes.data) {
           if (usageRes.data.token) {
             localStorage.setItem("resumeroast_pro_token", usageRes.data.token);
-            sessionStorage.setItem("resumeroast_pro_token", usageRes.data.token);
+            sessionStorage.setItem(
+              "resumeroast_pro_token",
+              usageRes.data.token,
+            );
           }
           if (usageRes.data.email) {
             useAppStore.getState().setUserEmail(usageRes.data.email);
@@ -152,7 +162,6 @@ try {
       .catch(() => {});
   }
 } catch {}
-
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

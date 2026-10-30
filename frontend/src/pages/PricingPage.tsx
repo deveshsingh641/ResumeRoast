@@ -104,7 +104,8 @@ export default function PricingPage() {
   // Auto-activate Founder VIP Pro if secret key is passed in URL
   useEffect(() => {
     // Ingest direct Pro activation token (?pro_token=... or ?token=...)
-    const proTokenParam = searchParams.get("pro_token") || searchParams.get("token");
+    const proTokenParam =
+      searchParams.get("pro_token") || searchParams.get("token");
     if (proTokenParam && proTokenParam.trim()) {
       const cleanToken = proTokenParam.trim();
       localStorage.setItem("resumeroast_pro_token", cleanToken);
@@ -156,7 +157,6 @@ export default function PricingPage() {
         .catch(() => {});
     }
   }, [searchParams, usage?.is_pro]);
-
 
   // Escape key closes modals
   useEffect(() => {
@@ -679,7 +679,8 @@ export default function PricingPage() {
                   PRO VIP ACCESS ACTIVE ON THIS BROWSER
                 </p>
                 <p className="font-mono text-xs text-amber-300/80">
-                  Unlimited Roasts & Full Job Description Match are fully unlocked.
+                  Unlimited Roasts & Full Job Description Match are fully
+                  unlocked.
                 </p>
               </div>
             </div>
@@ -700,7 +701,9 @@ export default function PricingPage() {
             </div>
             <button
               type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent("open-auth-modal"))}
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent("open-auth-modal"))
+              }
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-stamp/20 hover:bg-stamp/30 text-paper border border-stamp/40 text-xs font-mono font-medium transition cursor-pointer"
             >
               <span>⚡</span> Sign In / Restore Pro Plan
@@ -834,7 +837,8 @@ export default function PricingPage() {
                     👑 CURRENT PLAN: PRO VIP ACTIVE
                   </p>
                   <p className="font-mono text-[11px] text-tan-dim mt-1">
-                    Unlimited daily roasts, full JD match & bullet rewrites are active on your profile.
+                    Unlimited daily roasts, full JD match & bullet rewrites are
+                    active on your profile.
                   </p>
                 </div>
                 <Link
@@ -981,7 +985,9 @@ export default function PricingPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const key = prompt("Enter Founder Secret Key to activate Pro access:");
+                  const key = prompt(
+                    "Enter Founder Secret Key to activate Pro access:",
+                  );
                   if (key && key.trim()) {
                     axios
                       .post(
@@ -992,11 +998,20 @@ export default function PricingPage() {
                       .then((res) => {
                         if (res.data?.ok) {
                           if (res.data.token) {
-                            localStorage.setItem("resumeroast_pro_token", res.data.token);
-                            sessionStorage.setItem("resumeroast_pro_token", res.data.token);
+                            localStorage.setItem(
+                              "resumeroast_pro_token",
+                              res.data.token,
+                            );
+                            sessionStorage.setItem(
+                              "resumeroast_pro_token",
+                              res.data.token,
+                            );
                           }
                           if (res.data.email) {
-                            localStorage.setItem("resumeroast_user_email", res.data.email);
+                            localStorage.setItem(
+                              "resumeroast_user_email",
+                              res.data.email,
+                            );
                           }
                           localStorage.setItem("rr_admin_key", key.trim());
                           sessionStorage.setItem("rr_admin_key", key.trim());
@@ -1006,12 +1021,17 @@ export default function PricingPage() {
                             limit: 999999,
                             is_pro: true,
                           });
-                          alert("👑 Founder VIP Pro successfully unlocked on this browser!");
+                          alert(
+                            "👑 Founder VIP Pro successfully unlocked on this browser!",
+                          );
                           navigate(returnUrl || "/roast");
                         }
                       })
                       .catch((err) => {
-                        alert(err.response?.data?.detail || "Invalid founder secret key.");
+                        alert(
+                          err.response?.data?.detail ||
+                            "Invalid founder secret key.",
+                        );
                       });
                   }
                 }}

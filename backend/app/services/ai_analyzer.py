@@ -404,12 +404,13 @@ def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "", 
         },
     }
 
-    preferred_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    preferred_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
     models_to_try = [
         preferred_model,
-        "gemini-3.5-flash-lite",
-        "gemini-3.6-flash",
-        "gemini-3.1-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro",
     ]
     candidate_models = list(dict.fromkeys(models_to_try))
     last_err = None
@@ -1771,12 +1772,13 @@ def generate_roast_comeback(
     # 1. Attempt LLM generation via Gemini
     gemini_key = os.getenv("GEMINI_API_KEY", "")
     if gemini_key:
-        preferred_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+        preferred_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
         candidate_models = list(dict.fromkeys([
             preferred_model,
-            "gemini-3.5-flash-lite",
-            "gemini-3.6-flash",
-            "gemini-3.1-flash-lite",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash-8b",
+            "gemini-1.5-pro",
         ]))
         for model in candidate_models:
             try:

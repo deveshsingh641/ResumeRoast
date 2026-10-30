@@ -462,6 +462,7 @@ async def get_roast(roast_id: str, request: Request, email: Optional[str] = None
 
 
 @router.get("/roast/{roast_id}/certificate")
+@router.get("/certificate/{roast_id}")
 async def get_certificate_info(roast_id: str, request: Request) -> JSONResponse:
     lang = language_from_request(request)
     if roast_id in ("demo", "demo-roast", "sample-roast-1"):
@@ -497,6 +498,7 @@ async def get_certificate_info(roast_id: str, request: Request) -> JSONResponse:
 
 
 @router.get("/roast/{roast_id}/certificate/download")
+@router.get("/certificate/{roast_id}/download")
 async def download_certificate(roast_id: str, request: Request) -> FileResponse:
     lang = language_from_request(request)
     if roast_id in ("demo", "demo-roast", "sample-roast-1"):

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://resumeroast.app/sitemap.xml
+Sitemap: https://resume-roast-lemon.vercel.app/sitemap.xml

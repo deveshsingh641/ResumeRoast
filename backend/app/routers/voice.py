@@ -42,6 +42,7 @@ ENGLISH_DEMO_VOICE_ROAST = {
 
 
 @router.post("/{roast_id}/voice")
+@router.get("/{roast_id}/voice")
 @limiter.limit("15/minute")
 async def generate_voice_roast(roast_id: str, request: Request) -> JSONResponse:
     """

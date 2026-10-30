@@ -124,6 +124,7 @@ async def lifespan(app: FastAPI):
     validate_startup_environment()
     try:
         database.init_db()
+        database.cleanup_expired_roasts()
     except Exception as e:
         logger.warning(f"Database init warning: {e}")
     # Candidate resumes are preserved permanently to protect founder data and metrics.
@@ -187,6 +188,24 @@ app.include_router(i18n.router)
 app.include_router(waitlist.router)
 app.include_router(match.router)
 app.include_router(suggestion.router)
+
+# ---------------------------------------------------------------------------
+# Direct aliases for canonical REST endpoints
+# ---------------------------------------------------------------------------
+@app.get("/api/voice/{roast_id}")
+@app.post("/api/voice/{roast_id}")
+async def api_voice_alias(roast_id: str, request: Request) -> JSONResponse:
+    return await voice.generate_voice_roast(roast_id, request)
+
+
+@app.get("/api/certificate/{roast_id}")
+async def api_certificate_alias(roast_id: str, request: Request) -> JSONResponse:
+    return await roast.get_certificate_info(roast_id, request)
+
+
+@app.get("/api/certificate/{roast_id}/download")
+async def api_certificate_download_alias(roast_id: str, request: Request):
+    return await roast.download_certificate(roast_id, request)
 
 # ---------------------------------------------------------------------------
 # Global error handler — preserves HTTPExceptions, never leaks raw stack traces

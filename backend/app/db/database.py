@@ -35,7 +35,7 @@ def _is_valid_uuid(val: Any) -> bool:
         return False
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-ANONYMOUS_ROAST_EXPIRY_DAYS = int(os.getenv("ANONYMOUS_ROAST_EXPIRY_DAYS", "0"))
+ANONYMOUS_ROAST_EXPIRY_DAYS = int(os.getenv("ANONYMOUS_ROAST_EXPIRY_DAYS", "7"))
 HISTORICAL_ROASTS_OFFSET = int(os.getenv("HISTORICAL_ROASTS_OFFSET", "98"))
 HISTORICAL_UNIQUE_OFFSET = int(os.getenv("HISTORICAL_UNIQUE_OFFSET", "38"))
 FREE_TIER_DAILY_LIMIT = int(os.getenv("FREE_TIER_DAILY_LIMIT", "1"))

@@ -27,6 +27,7 @@ import WaitlistModal from "@/components/WaitlistModal";
 import { useCinematicReveal } from "@/hooks/useCinematicReveal";
 import { ExtendedRoastResult, getSampleRoastData } from "@/data/sampleRoast";
 import { usePageTitle } from "@/utils/usePageTitle";
+import { getAppUrl } from "@/utils/appUrl";
 
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(() =>
@@ -52,13 +53,16 @@ export default function ResultsPage() {
   const isHinglish = lang === "hi-IN";
 
   const isMobile = useIsMobile(768);
-  const [mobileExtraTab, setMobileExtraTab] = useState<"chat" | "trophies" | "share">("chat");
+  const [mobileExtraTab, setMobileExtraTab] = useState<
+    "chat" | "trophies" | "share"
+  >("chat");
 
   const { result: storeResult, setResult, usage: storeUsage } = useAppStore();
   const [result, setLocalResult] = useState<ExtendedRoastResult | null>(
     storeResult,
   );
-  const isDemoId = !id || id === "demo" || id === "demo-roast" || id === "sample-roast-1";
+  const isDemoId =
+    !id || id === "demo" || id === "demo-roast" || id === "sample-roast-1";
   const [loading, setLoading] = useState(!storeResult && !isDemoId);
   const [error, setError] = useState<string | null>(null);
   const [downloadingCert, setDownloadingCert] = useState(false);
@@ -127,7 +131,7 @@ export default function ResultsPage() {
         );
       }),
       "--------------------------------------------------",
-      "Roast and fix your resume at https://resumeroast.app",
+      `Roast and fix your resume at ${getAppUrl()}`,
     ];
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
@@ -161,7 +165,7 @@ export default function ResultsPage() {
         }),
         ``,
         `---`,
-        `Generated with Resume Roast AI (https://resumeroast.app)`,
+        `Generated with Resume Roast AI (${getAppUrl()})`,
       ].join("\n");
 
       const blob = new Blob([fixedLines], {
@@ -508,7 +512,10 @@ export default function ResultsPage() {
         )}
 
         {/* ── 4. Detailed Flagged Issues (Section A.6 with WhatsApp typing indicator) ── */}
-        <section aria-label="Flagged Issues Breakdown" className="space-y-4 sm:space-y-6">
+        <section
+          aria-label="Flagged Issues Breakdown"
+          className="space-y-4 sm:space-y-6"
+        >
           <div className="max-w-[640px] mx-auto text-left flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
             <div>
               <p className="section-label mb-1">
@@ -621,7 +628,9 @@ export default function ResultsPage() {
                   </span>
                 </div>
                 <h3 className="font-display text-base text-paper mt-0.5">
-                  {isHinglish ? "Extras & Interactive Features" : "Interactive Extras & Tools"}
+                  {isHinglish
+                    ? "Extras & Interactive Features"
+                    : "Interactive Extras & Tools"}
                 </h3>
               </div>
             </div>
@@ -677,7 +686,9 @@ export default function ResultsPage() {
             </div>
 
             {/* Mobile Tab 2: Badges & Pride (Worst Line Trophy + Papa Proud Meter + Score Journey) */}
-            <div className={mobileExtraTab === "trophies" ? "space-y-4" : "hidden"}>
+            <div
+              className={mobileExtraTab === "trophies" ? "space-y-4" : "hidden"}
+            >
               {worstIssue && <WorstLineTrophy issue={worstIssue} />}
               <PapaProudMeter overallScore={result.overall_score} />
               <ScoreJourney
@@ -688,7 +699,9 @@ export default function ResultsPage() {
             </div>
 
             {/* Mobile Tab 3: Share, Certificate & Extras */}
-            <div className={mobileExtraTab === "share" ? "space-y-4" : "hidden"}>
+            <div
+              className={mobileExtraTab === "share" ? "space-y-4" : "hidden"}
+            >
               {/* Parody Certificate */}
               <div className="border border-dashed border-amber-500/40 bg-gradient-to-br from-[#1C160E] to-[#120F0C] rounded p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -698,7 +711,9 @@ export default function ResultsPage() {
                   </span>
                 </div>
                 <h4 className="font-display text-sm text-paper mb-1">
-                  {isHinglish ? "Parody Certificate (PDF)" : "Parody Certificate (PDF)"}
+                  {isHinglish
+                    ? "Parody Certificate (PDF)"
+                    : "Parody Certificate (PDF)"}
                 </h4>
                 <p className="font-mono text-xs text-tan-dim mb-3">
                   Printable PDF with wax seal stamp and red-pen verdict.
@@ -709,7 +724,9 @@ export default function ResultsPage() {
                   disabled={downloadingCert}
                   className="btn-primary !text-xs !py-2 !px-3 w-full justify-center"
                 >
-                  {downloadingCert ? "Generating PDF…" : "Download Certificate 📥"}
+                  {downloadingCert
+                    ? "Generating PDF…"
+                    : "Download Certificate 📥"}
                 </button>
               </div>
 
@@ -722,10 +739,13 @@ export default function ResultsPage() {
                   </span>
                 </div>
                 <h4 className="font-display text-sm text-paper mb-1">
-                  {isHinglish ? "Specific job ke liye match karo" : "Match against Job Description"}
+                  {isHinglish
+                    ? "Specific job ke liye match karo"
+                    : "Match against Job Description"}
                 </h4>
                 <p className="font-mono text-xs text-tan-dim mb-3">
-                  Match this resume against a target JD to find missing ATS keywords.
+                  Match this resume against a target JD to find missing ATS
+                  keywords.
                 </p>
                 <Link
                   to={`/match?roast_id=${result.id}`}
@@ -744,7 +764,10 @@ export default function ResultsPage() {
               {/* Wall of Shame Opt-in */}
               <div className="border border-white/[0.08] bg-white/[0.02] rounded p-4">
                 <p className="font-display text-sm text-paper mb-1">
-                  📢 {isHinglish ? "Public Wall pe post karo" : "Post to Public Wall"}
+                  📢{" "}
+                  {isHinglish
+                    ? "Public Wall pe post karo"
+                    : "Post to Public Wall"}
                 </p>
                 <p className="font-mono text-xs text-tan-dim mb-3">
                   {isHinglish
@@ -758,7 +781,9 @@ export default function ResultsPage() {
                     if (wallPublished || wallPublishing) return;
                     try {
                       setWallPublishing(true);
-                      await axios.post("/api/wall/publish", { roast_id: result.id });
+                      await axios.post("/api/wall/publish", {
+                        roast_id: result.id,
+                      });
                       setWallPublished(true);
                     } catch {
                       setWallPublished(true);
@@ -768,7 +793,11 @@ export default function ResultsPage() {
                   }}
                   className="btn-ghost !text-xs !py-1.5 !px-3 text-amber-400 hover:border-amber-400 w-full justify-center"
                 >
-                  {wallPublishing ? "Publishing…" : wallPublished ? "✓ Added to Wall!" : "Post to Wall"}
+                  {wallPublishing
+                    ? "Publishing…"
+                    : wallPublished
+                      ? "✓ Added to Wall!"
+                      : "Post to Wall"}
                 </button>
               </div>
             </div>
@@ -908,14 +937,16 @@ export default function ResultsPage() {
                 </p>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="font-display text-xl text-paper">
-                    {isHinglish ? "Shareable Grade Card" : "Shareable Grade Card"}
+                    {isHinglish
+                      ? "Shareable Grade Card"
+                      : "Shareable Grade Card"}
                   </h2>
                   {/* Quick 1-Click Viral Share Suite */}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => {
-                        const shareText = `My resume scored ${result.overall_score}/100 on Resume Roast 💀🔥!\n\nVerdict: "${result.one_line_verdict}"\n\nFind out how brutal yours is: https://resumeroast.app`;
+                        const shareText = `My resume scored ${result.overall_score}/100 on Resume Roast 💀🔥!\n\nVerdict: "${result.one_line_verdict}"\n\nFind out how brutal yours is: ${getAppUrl()}`;
                         window.open(
                           `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
                           "_blank",

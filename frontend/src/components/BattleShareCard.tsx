@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
+import { getAppUrl } from "@/utils/appUrl";
 import ScoreStamp from "./ScoreStamp";
 import type { ScoreBand } from "@/store/useAppStore";
 
@@ -39,8 +40,8 @@ export default function BattleShareCard({ battle }: BattleShareCardProps) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const shareText = isHinglish
-    ? `Resume Roast Battle Result 🥊\nFighter 1: ${battle.fighter_1.overall_score}/100\nFighter 2: ${battle.fighter_2.overall_score}/100\n\nVerdict: "${battle.verdict}"\n\nBattle your friends at: https://resumeroast.app/battle`
-    : `Resume Roast Battle Match 🥊\nFighter 1: ${battle.fighter_1.overall_score}/100\nFighter 2: ${battle.fighter_2.overall_score}/100\n\nReferee Verdict: "${battle.verdict}"\n\nChallenge your peers at: https://resumeroast.app/battle`;
+    ? `Resume Roast Battle Result 🥊\nFighter 1: ${battle.fighter_1.overall_score}/100\nFighter 2: ${battle.fighter_2.overall_score}/100\n\nVerdict: "${battle.verdict}"\n\nBattle your friends at: ${getAppUrl()}/battle`
+    : `Resume Roast Battle Match 🥊\nFighter 1: ${battle.fighter_1.overall_score}/100\nFighter 2: ${battle.fighter_2.overall_score}/100\n\nReferee Verdict: "${battle.verdict}"\n\nChallenge your peers at: ${getAppUrl()}/battle`;
 
   const generateCanvas = async () => {
     if (!cardRef.current) return null;

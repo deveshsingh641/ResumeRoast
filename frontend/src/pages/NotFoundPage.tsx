@@ -37,7 +37,9 @@ export default function NotFoundPage() {
                 404
               </span>
               <p className="font-mono text-[10px] text-stamp font-bold tracking-widest uppercase mt-1">
-                {isHinglish ? "NOT FOUND // DESK EMPTY" : "NOT FOUND // DESK EMPTY"}
+                {isHinglish
+                  ? "NOT FOUND // DESK EMPTY"
+                  : "NOT FOUND // DESK EMPTY"}
               </p>
             </div>
           </div>
