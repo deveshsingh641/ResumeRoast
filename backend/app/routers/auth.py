@@ -3,7 +3,6 @@ Authentication & User Session Router for Resume Roast.
 Allows users to sign in with their email address to synchronize their Pro subscription,
 unlimited daily roasts, and features across devices and browsers.
 """
-from __future__ import annotations
 
 import logging
 import re
