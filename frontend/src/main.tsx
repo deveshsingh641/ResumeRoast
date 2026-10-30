@@ -82,6 +82,10 @@ try {
         sessionStorage.getItem("resumeroast_pro_token")
       : null;
 
+  if (savedEmail) {
+    useAppStore.getState().setUserEmail(savedEmail);
+  }
+
   if (savedEmail && !savedToken) {
     // If email is saved but token was lost (e.g. mobile payment redirect/restart), restore token silently
     axios
@@ -92,7 +96,6 @@ try {
           sessionStorage.setItem("resumeroast_pro_token", authRes.data.token);
         }
         if (authRes.data && authRes.data.is_pro) {
-          useAppStore.getState().setUserEmail(savedEmail);
           useAppStore.getState().setUsage({
             used: 0,
             remaining: 999999,

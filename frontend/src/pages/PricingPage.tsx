@@ -58,7 +58,7 @@ export default function PricingPage() {
   const isLaunchingSoon =
     import.meta.env.VITE_PRO_LAUNCHING_SOON === "true" && !isTestMode;
 
-  const { usage, setUsage } = useAppStore();
+  const { usage, setUsage, setUserEmail } = useAppStore();
   const { i18n } = useTranslation();
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const [annual, setAnnual] = useState(false);
@@ -590,6 +590,7 @@ export default function PricingPage() {
         try {
           localStorage.setItem("resumeroast_user_email", userEmail);
         } catch {}
+        setUserEmail(userEmail);
 
         setCheckoutStatus("success");
         setCheckoutMessage(

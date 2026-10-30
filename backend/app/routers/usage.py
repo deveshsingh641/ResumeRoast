@@ -33,10 +33,18 @@ def _device_fingerprint(request: Request) -> str:
 async def get_usage(request: Request, email: Optional[str] = None) -> JSONResponse:
     auth_pro_email = get_authenticated_pro_email(request)
     is_pro = False
+    clean_email = None
+
     if auth_pro_email:
         clean_email = auth_pro_email.strip().lower()
         sub_status = database.get_user_subscription(clean_email)
         if sub_status == "pro":
+            is_pro = True
+    elif email or request.headers.get("X-User-Email"):
+        clean_email = (email or request.headers.get("X-User-Email") or "").strip().lower()
+        sub_status = database.get_user_subscription(clean_email)
+        # Unauthenticated header can only report Free tier status unless verified by cookie
+        if sub_status == "pro" and auth_pro_email:
             is_pro = True
 
     forwarded = request.headers.get("X-Forwarded-For")
@@ -45,8 +53,11 @@ async def get_usage(request: Request, email: Optional[str] = None) -> JSONRespon
 
     fp_usage = database.get_usage_count(fingerprint)
     ip_usage = database.get_usage_count(f"ip:{client_ip}")
-    # Fingerprint check is primary (1/day); shared-IP threshold (10/day) acts as backstop against header rotation abuse
-    used = fp_usage if ip_usage < IP_SHARED_LIMIT else max(fp_usage, FREE_TIER_LIMIT)
+    email_usage = database.get_usage_count(f"email:{clean_email}") if clean_email and not is_pro else 0
+
+    base_usage = max(fp_usage, email_usage)
+    # Fingerprint/email check is primary (1/day); shared-IP threshold (10/day) acts as backstop against header rotation abuse
+    used = base_usage if ip_usage < IP_SHARED_LIMIT else max(base_usage, FREE_TIER_LIMIT)
     remaining = 999999 if is_pro else max(0, FREE_TIER_LIMIT - used)
     limit = 999999 if is_pro else FREE_TIER_LIMIT
 
@@ -56,5 +67,7 @@ async def get_usage(request: Request, email: Optional[str] = None) -> JSONRespon
             "remaining": remaining,
             "limit": limit,
             "is_pro": is_pro,
+            "email": clean_email,
+            "subscription_status": "pro" if is_pro else ("free" if clean_email else "guest"),
         }
     )

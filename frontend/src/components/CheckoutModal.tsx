@@ -41,7 +41,7 @@ export default function CheckoutModal({
 }: CheckoutModalProps) {
   const { i18n } = useTranslation();
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
-  const { usage, setUsage } = useAppStore();
+  const { usage, setUsage, setUserEmail } = useAppStore();
 
   const [annual, setAnnual] = useState(defaultPlan === "annual");
   const [email, setEmail] = useState("");
@@ -387,6 +387,7 @@ export default function CheckoutModal({
         try {
           localStorage.setItem("resumeroast_user_email", userEmail);
         } catch {}
+        setUserEmail(userEmail);
 
         setCheckoutStatus("success");
         setCheckoutMessage(
@@ -454,6 +455,7 @@ export default function CheckoutModal({
           email.trim().toLowerCase(),
         );
       } catch {}
+      setUserEmail(email.trim().toLowerCase());
 
       setCheckoutStatus("success");
       setCheckoutMessage(

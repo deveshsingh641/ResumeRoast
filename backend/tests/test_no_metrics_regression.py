@@ -1,4 +1,4 @@
-﻿"""
+"""
 Regression test: server-side no-metrics guard must never let a
 "no-metrics" category through when quoted_text already contains a number.
 

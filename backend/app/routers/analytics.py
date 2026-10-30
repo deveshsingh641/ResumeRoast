@@ -76,9 +76,9 @@ def _render_founder_login_html(error: Optional[str] = None) -> str:
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #120F0D; color: #F5EFE0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; }
-        input[type="password"] { box-sizing: border-box; width: 100%; padding: 10px; background: #0D0A08; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; }
-        button[type="submit"] { box-sizing: border-box; width: 100%; padding: 10px; background: #E8422D; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+        body {{ background-color: #120F0D; color: #F5EFE0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; }}
+        input[type="password"] {{ box-sizing: border-box; width: 100%; padding: 10px; background: #0D0A08; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; }}
+        button[type="submit"] {{ box-sizing: border-box; width: 100%; padding: 10px; background: #E8422D; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }}
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 bg-[#0D0A08]">

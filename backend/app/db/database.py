@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import time
 import uuid
@@ -20,6 +21,8 @@ from psycopg2 import pool
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger("database")
 
 
 def _is_valid_uuid(val: Any) -> bool:

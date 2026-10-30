@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import axios from "axios";
 
 export type UploadStatus =
   "idle" | "uploading" | "analyzing" | "done" | "error";
@@ -87,6 +88,7 @@ export const useAppStore = create<AppState>((set) => ({
         localStorage.removeItem("resumeroast_pro_token");
         sessionStorage.removeItem("resumeroast_pro_token");
         localStorage.removeItem("resumeroast_user_email");
+        axios.post("/api/auth/logout").catch(() => {});
       } catch {}
     }
     set({

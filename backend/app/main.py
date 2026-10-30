@@ -123,7 +123,7 @@ def validate_startup_environment() -> None:
 async def lifespan(app: FastAPI):
     validate_startup_environment()
     try:
-        init_db()
+        database.init_db()
     except Exception as e:
         logger.warning(f"Database init warning: {e}")
     # Candidate resumes are preserved permanently to protect founder data and metrics.

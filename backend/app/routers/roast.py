@@ -251,14 +251,21 @@ async def create_roast(
     fingerprint = _device_fingerprint(request)
     fp_usage = database.get_usage_count(fingerprint)
     ip_usage = database.get_usage_count(ip_key)
+    user_email = (
+        auth_pro_email
+        or (request.headers.get("X-User-Email") or "").strip().lower()
+        or (request.query_params.get("email") or "").strip().lower()
+        or None
+    )
+    email_usage = database.get_usage_count(f"email:{user_email}") if user_email and is_free_tier else 0
 
     # Section 0C: Per-device fingerprint limit (1/day) protects individual quotas,
     # while shared-IP limit (IP_SHARED_LIMIT, default 10/day) prevents header rotation abuse
     # without blocking normal shared CGNAT or hostel/office networks.
-    if is_free_tier and (fp_usage >= FREE_TIER_LIMIT or ip_usage >= IP_SHARED_LIMIT):
+    if is_free_tier and (fp_usage >= FREE_TIER_LIMIT or ip_usage >= IP_SHARED_LIMIT or email_usage >= FREE_TIER_LIMIT):
         limit_msg = (
             f"You have used your {FREE_TIER_LIMIT} free roast for today. Upgrade to Pro for unlimited daily roasts."
-            if fp_usage >= FREE_TIER_LIMIT
+            if (fp_usage >= FREE_TIER_LIMIT or email_usage >= FREE_TIER_LIMIT)
             else f"Daily free limit reached for this network ({IP_SHARED_LIMIT} free roasts). Upgrade to Pro for unlimited daily roasts."
         )
         raise HTTPException(
@@ -338,9 +345,12 @@ async def create_roast(
             detail="Our AI grader encountered an unexpected error. Please try again in a few moments.",
         )
 
-    # 6. Increment usage counters (both device fingerprint and client IP)
-    database.increment_usage(fingerprint)
-    database.increment_usage(ip_key)
+    # 6. Increment usage counters (only for free tier users)
+    if is_free_tier:
+        database.increment_usage(fingerprint)
+        database.increment_usage(ip_key)
+        if user_email:
+            database.increment_usage(f"email:{user_email}")
 
     # 7. Store result
     roast_id = database.save_roast(
