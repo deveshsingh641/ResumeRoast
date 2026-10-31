@@ -629,11 +629,21 @@ async def add_reaction(roast_id: str, payload: ReactionPayload, request: Request
         reactions = database.get_roast_reactions(roast_id)
         return JSONResponse(content={"roast_id": roast_id, "reactions": reactions, "limited": True})
 
-    emoji = payload.emoji.strip().lower()
+    raw_emoji = payload.emoji.strip()
+    unicode_map = {
+        "😂": "laugh",
+        "🤣": "laugh",
+        "🔥": "fire",
+        "💀": "skull",
+        "☠️": "skull",
+        "☠": "skull",
+        "👀": "eyes",
+    }
+    emoji = unicode_map.get(raw_emoji, raw_emoji.lower())
     if emoji not in database.VALID_REACTION_EMOJIS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid emoji. Must be one of: {sorted(list(database.VALID_REACTION_EMOJIS))}",
+            detail=f"Invalid emoji. Must be one of: {sorted(list(database.VALID_REACTION_EMOJIS))} or matching symbols",
         )
     _REACTION_COUNTS_BY_CLIENT[client_key] = current_count + 1
     reactions = database.add_roast_reaction(roast_id, emoji)
