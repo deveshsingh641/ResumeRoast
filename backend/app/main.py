@@ -207,6 +207,16 @@ async def api_certificate_alias(roast_id: str, request: Request) -> JSONResponse
 async def api_certificate_download_alias(roast_id: str, request: Request):
     return await roast.download_certificate(roast_id, request)
 
+
+@app.get("/api/carousel/{roast_id}")
+async def api_carousel_alias(roast_id: str, request: Request) -> JSONResponse:
+    return await roast.get_carousel_info(roast_id, request)
+
+
+@app.get("/api/carousel/{roast_id}/download")
+async def api_carousel_download_alias(roast_id: str, request: Request):
+    return await roast.download_carousel(roast_id, request)
+
 # ---------------------------------------------------------------------------
 # Global error handler — preserves HTTPExceptions, never leaks raw stack traces
 # ---------------------------------------------------------------------------

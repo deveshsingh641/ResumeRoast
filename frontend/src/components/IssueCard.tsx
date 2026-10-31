@@ -5,6 +5,7 @@ import { normalizeLang } from "@/i18n/detector";
 import { useAppStore, type Issue } from "@/store/useAppStore";
 import { getHinglishTag } from "@/utils/categoryTags";
 import WaitlistModal from "@/components/WaitlistModal";
+import BulletRewriterModal from "@/components/BulletRewriterModal";
 
 export function getCategoryColor(category: string): string {
   switch (category) {
@@ -37,6 +38,7 @@ export function IssueCard({
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const [showFix, setShowFix] = useState(false);
   const [showWaitlist, setShowWaitlist] = useState(false);
+  const [showRewriter, setShowRewriter] = useState(false);
   const categoryColor = getCategoryColor(issue.category);
   const tagLabel = issue.badge_label?.trim() || getHinglishTag(issue.category);
 
@@ -186,23 +188,35 @@ export function IssueCard({
         {/* Fix button & toggleable suggested rewrite */}
         {isRevealed && issue.fix && (
           <div>
-            <button
-              type="button"
-              onClick={() => setShowFix((v) => !v)}
-              className="font-mono text-xs text-ember hover:underline flex items-center gap-1.5 focus:outline-none"
-              aria-expanded={showFix}
-            >
-              <span className="select-none">{showFix ? "−" : "+"}</span>
-              <span>
-                {showFix
-                  ? isHinglish
-                    ? "Fix chhupao (−)"
-                    : "Hide Fix (−)"
-                  : isHinglish
-                    ? "Fix dekh le (+)"
-                    : "Show Fix (+)"}
-              </span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowFix((v) => !v)}
+                className="font-mono text-xs text-ember hover:underline flex items-center gap-1.5 focus:outline-none"
+                aria-expanded={showFix}
+              >
+                <span className="select-none">{showFix ? "−" : "+"}</span>
+                <span>
+                  {showFix
+                    ? isHinglish
+                      ? "Fix chhupao (−)"
+                      : "Hide Fix (−)"
+                    : isHinglish
+                      ? "Fix dekh le (+)"
+                      : "Show Fix (+)"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowRewriter(true)}
+                className="font-mono text-[11px] text-amber-400/90 hover:text-amber-300 flex items-center gap-1 px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/20 hover:border-amber-400/40 transition-all focus:outline-none"
+                title="Generate 3 AI STAR rewrites"
+              >
+                <span>⚡</span>
+                <span>{isHinglish ? "AI Rewrite" : "AI Rewrite"}</span>
+              </button>
+            </div>
 
             {showFix && (
               <div className="mt-2 bg-[#F5EFE0]/[0.04] border border-white/[0.08] rounded-sm p-3">
@@ -218,6 +232,13 @@ export function IssueCard({
             )}
           </div>
         )}
+
+        {/* AI Bullet Rewriter Modal */}
+        <BulletRewriterModal
+          isOpen={showRewriter}
+          onClose={() => setShowRewriter(false)}
+          initialBullet={issue.quoted_text}
+        />
       </div>
     </div>
   );

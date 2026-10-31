@@ -24,6 +24,7 @@ import StoryCardModal from "@/components/StoryCardModal";
 import RoastBackChat from "@/components/RoastBackChat";
 import Footer from "@/components/Footer";
 import WaitlistModal from "@/components/WaitlistModal";
+import BulletRewriterModal from "@/components/BulletRewriterModal";
 import { useCinematicReveal } from "@/hooks/useCinematicReveal";
 import { ExtendedRoastResult, getSampleRoastData } from "@/data/sampleRoast";
 import { usePageTitle } from "@/utils/usePageTitle";
@@ -66,6 +67,8 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(!storeResult && !isDemoId);
   const [error, setError] = useState<string | null>(null);
   const [downloadingCert, setDownloadingCert] = useState(false);
+  const [downloadingCarousel, setDownloadingCarousel] = useState(false);
+  const [showStudioRewriter, setShowStudioRewriter] = useState(false);
   const [downloadingFixed, setDownloadingFixed] = useState(false);
   const [xRayMode, setXRayMode] = useState(false);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
@@ -113,6 +116,24 @@ export default function ResultsPage() {
       window.open(`/api/roast/${result.id}/certificate/download`, "_blank");
     } finally {
       setTimeout(() => setDownloadingCert(false), 2500);
+    }
+  };
+
+  const handleDownloadCarousel = async () => {
+    if (!result) return;
+    try {
+      setDownloadingCarousel(true);
+      const downloadUrl = `/api/roast/${result.id}/carousel/download`;
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `ResumeRoast-LinkedIn-Carousel-${result.id.slice(0, 8)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      window.open(`/api/roast/${result.id}/carousel/download`, "_blank");
+    } finally {
+      setTimeout(() => setDownloadingCarousel(false), 2500);
     }
   };
 
@@ -730,6 +751,59 @@ export default function ResultsPage() {
                 </button>
               </div>
 
+              {/* LinkedIn Carousel Card */}
+              <div className="border border-dashed border-cyan-500/40 bg-gradient-to-br from-[#0E171C] to-[#0A1014] rounded p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">📱</span>
+                  <span className="font-mono text-[10px] text-cyan-400 uppercase tracking-widest font-bold">
+                    LINKEDIN VIRAL CAROUSEL
+                  </span>
+                </div>
+                <h4 className="font-display text-sm text-paper mb-1">
+                  {isHinglish
+                    ? "LinkedIn Carousel (PDF)"
+                    : "LinkedIn Carousel (PDF)"}
+                </h4>
+                <p className="font-mono text-xs text-tan-dim mb-3">
+                  3-slide square PDF ready to upload directly as a LinkedIn
+                  document carousel.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleDownloadCarousel}
+                  disabled={downloadingCarousel}
+                  className="btn-primary !bg-cyan-500 !text-black hover:!bg-cyan-400 !text-xs !py-2 !px-3 w-full justify-center font-bold"
+                >
+                  {downloadingCarousel
+                    ? "Generating Carousel…"
+                    : "Download LinkedIn Carousel 📥"}
+                </button>
+              </div>
+
+              {/* AI Bullet Improver Studio Card */}
+              <div className="border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-[#1C160E] to-transparent rounded p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">⚡</span>
+                  <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold">
+                    AI BULLET IMPROVER
+                  </span>
+                </div>
+                <h4 className="font-display text-sm text-paper mb-1">
+                  {isHinglish ? "STAR Bullet Fixer" : "STAR Bullet Fixer"}
+                </h4>
+                <p className="font-mono text-xs text-tan-dim mb-3">
+                  Rewrite any resume bullet point into 3 high-impact STAR
+                  formulas.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowStudioRewriter(true)}
+                  className="btn-ghost !border-amber-400/40 text-paper hover:!border-amber-400 !text-xs !py-2 !px-3 w-full justify-center font-bold"
+                >
+                  ⚡ Open Rewriter Studio
+                </button>
+              </div>
+
               {/* JD Match Card */}
               <div className="border border-stamp/40 bg-gradient-to-r from-stamp/10 via-[#1C160E] to-transparent rounded p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -883,6 +957,89 @@ export default function ResultsPage() {
                         : "Download Certificate (PDF)"}
                   </span>
                   <span>📥</span>
+                </button>
+              </div>
+            </section>
+
+            {/* ── LinkedIn 3-Slide Carousel PDF Card ── */}
+            <section
+              aria-label="LinkedIn Document Carousel"
+              className="max-w-[640px] mx-auto text-left border-2 border-dashed border-cyan-500/40 bg-gradient-to-br from-[#0E171C] to-[#0A1014] rounded-sm p-6 shadow-xl relative overflow-hidden"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">📱</span>
+                    <span className="font-mono text-[10px] text-cyan-400 uppercase tracking-widest font-bold">
+                      LINKEDIN VIRAL CAROUSEL // 3-SLIDE PDF
+                    </span>
+                  </div>
+                  <h3 className="font-display text-lg sm:text-xl text-paper">
+                    {isHinglish
+                      ? "LinkedIn Carousel PDF Download Karo"
+                      : "Download LinkedIn Carousel PDF"}
+                  </h3>
+                  <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
+                    {isHinglish
+                      ? "1080x1080 swipeable PDF carousel ready to upload directly as a LinkedIn document post."
+                      : "Square swipeable 3-slide PDF formatted for high-reach LinkedIn document posts."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadCarousel}
+                  disabled={downloadingCarousel}
+                  className="btn-primary shrink-0 !bg-cyan-500 !text-black hover:!bg-cyan-400 !text-xs !py-2.5 !px-4 flex items-center gap-1.5 font-bold whitespace-nowrap"
+                >
+                  <span>
+                    {downloadingCarousel
+                      ? isHinglish
+                        ? "Generating Carousel…"
+                        : "Generating Carousel…"
+                      : isHinglish
+                        ? "Download Carousel (PDF)"
+                        : "Download Carousel (PDF)"}
+                  </span>
+                  <span>📥</span>
+                </button>
+              </div>
+            </section>
+
+            {/* ── AI Bullet Improver Studio Card ── */}
+            <section
+              aria-label="AI Bullet Improver Studio"
+              className="max-w-[640px] mx-auto text-left border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-[#1C160E] to-transparent rounded-sm p-5 shadow-xl relative overflow-hidden"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">⚡</span>
+                    <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold">
+                      STAR FORMULA REWRITER STUDIO
+                    </span>
+                  </div>
+                  <h3 className="font-display text-lg text-paper">
+                    {isHinglish
+                      ? "Resume Bullets Ko Auto-Fix Karo"
+                      : "Fix Any Bullet With AI"}
+                  </h3>
+                  <p className="font-mono text-xs text-tan-dim mt-0.5">
+                    {isHinglish
+                      ? "Apne resume ka koi bhi bullet point paste karo aur 3 high-impact versions pao."
+                      : "Paste any weak line from your resume and generate 3 quantified, ATS-ready rewrites."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowStudioRewriter(true)}
+                  className="btn-ghost shrink-0 !border-amber-400/40 text-paper hover:!border-amber-400 !text-xs !py-2.5 !px-4 flex items-center gap-1.5 font-bold whitespace-nowrap"
+                >
+                  <span>⚡</span>
+                  <span>
+                    {isHinglish
+                      ? "Open Rewriter Studio"
+                      : "Open Rewriter Studio"}
+                  </span>
                 </button>
               </div>
             </section>
@@ -1068,6 +1225,12 @@ export default function ResultsPage() {
         isOpen={isStoryModalOpen}
         onClose={() => setIsStoryModalOpen(false)}
         result={result}
+      />
+
+      {/* ── AI Bullet Rewriter Studio Modal ── */}
+      <BulletRewriterModal
+        isOpen={showStudioRewriter}
+        onClose={() => setShowStudioRewriter(false)}
       />
 
       {/* ── Pro Launching Soon Waitlist Modal ── */}

@@ -18,6 +18,8 @@ from app.db import database
 from app.i18n.mapping import DEFAULT_LANGUAGE, language_from_request
 from app.services import ai_analyzer, extractor
 from app.services.ai_analyzer import analyze_resume
+from app.services.bullet_rewriter import rewrite_bullet
+from app.services.carousel_service import generate_linkedin_carousel_pdf
 from app.services.certificate_service import generate_certificate_pdf, get_credential_title
 from app.services.pro_auth import get_authenticated_pro_email
 from app.services.resume_validator import validate_is_resume
@@ -527,6 +529,79 @@ async def download_certificate(roast_id: str, request: Request) -> FileResponse:
         filename=f"ResumeRoast-Certificate-{roast_id[:8]}.pdf",
         headers={"Content-Disposition": f'attachment; filename="ResumeRoast-Certificate-{roast_id[:8]}.pdf"'},
     )
+
+
+@router.get("/roast/{roast_id}/carousel")
+@router.get("/carousel/{roast_id}")
+async def get_carousel_info(roast_id: str, request: Request) -> JSONResponse:
+    lang = language_from_request(request)
+    if roast_id in ("demo", "demo-roast", "sample-roast-1"):
+        row = SAMPLE_ROAST_RESPONSE if lang == "hi-IN" else ENGLISH_SAMPLE_ROAST_RESPONSE
+    else:
+        row = database.get_roast(roast_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Roast not found or expired.")
+
+    return JSONResponse(
+        content={
+            "status": "success",
+            "roast_id": roast_id,
+            "title": "LinkedIn 3-Slide Roast Carousel",
+            "download_url": f"/api/roast/{roast_id}/carousel/download",
+        }
+    )
+
+
+@router.get("/roast/{roast_id}/carousel/download")
+@router.get("/carousel/{roast_id}/download")
+async def download_carousel(roast_id: str, request: Request) -> FileResponse:
+    lang = language_from_request(request)
+    if roast_id in ("demo", "demo-roast", "sample-roast-1"):
+        row = SAMPLE_ROAST_RESPONSE if lang == "hi-IN" else ENGLISH_SAMPLE_ROAST_RESPONSE
+    else:
+        row = database.get_roast(roast_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Roast not found or expired.")
+
+    pdf_path = generate_linkedin_carousel_pdf(
+        roast_id=roast_id,
+        roast_data=row,
+        app_url=str(request.base_url).rstrip("/"),
+    )
+
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=500, detail="Failed to render LinkedIn carousel PDF.")
+
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        filename=f"ResumeRoast-LinkedIn-Carousel-{roast_id[:8]}.pdf",
+        headers={"Content-Disposition": f'attachment; filename="ResumeRoast-LinkedIn-Carousel-{roast_id[:8]}.pdf"'},
+    )
+
+
+class BulletRewriteRequest(BaseModel):
+    bullet: str
+    target_role: Optional[str] = None
+    language: Optional[str] = "en"
+
+
+@router.post("/rewrite-bullet")
+@router.post("/roast/rewrite-bullet")
+@limiter.limit("30/minute")
+async def rewrite_resume_bullet_endpoint(payload: BulletRewriteRequest, request: Request) -> JSONResponse:
+    bullet_text = payload.bullet.strip()
+    if not bullet_text:
+        raise HTTPException(status_code=422, detail="Bullet text cannot be empty.")
+    if len(bullet_text) > 1000:
+        raise HTTPException(status_code=422, detail="Bullet text exceeds 1,000 character limit.")
+
+    result = await rewrite_bullet(
+        bullet=bullet_text,
+        target_role=payload.target_role,
+        language=payload.language or "en",
+    )
+    return JSONResponse(content={"ok": True, "data": result.model_dump()})
 
 
 class ReactionPayload(BaseModel):
