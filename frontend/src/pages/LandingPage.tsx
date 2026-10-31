@@ -13,6 +13,7 @@ import Footer from "@/components/Footer";
 import WaitlistModal from "@/components/WaitlistModal";
 import CheckoutModal from "@/components/CheckoutModal";
 import UserAccountNav from "@/components/UserAccountNav";
+import ResumeUploader from "@/components/ResumeUploader";
 import { useAppStore } from "@/store/useAppStore";
 import { usePageTitle } from "@/utils/usePageTitle";
 import { getSampleResumes, getDailyRotationIndex } from "@/data/sampleRoast";
@@ -587,9 +588,6 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen desk-cursor">
-      {/* B.4 Time-Boxed Placement Season Banner */}
-      <PlacementSeasonBanner />
-
       {/* Top Bar Header */}
       <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6">
         <div className="max-w-[960px] mx-auto flex items-center justify-between gap-2">
@@ -646,16 +644,6 @@ export default function LandingPage() {
 
       {/* ── Hero Section (Section A.2) ── */}
       <section className="pt-6 pb-8 sm:pt-10 sm:pb-12 px-3 sm:px-4 text-center relative overflow-hidden">
-        {/* Tactile Desk Clutter (Section A.5 - Desktop only) */}
-        <DeskClutter
-          stickyText={
-            isHinglish
-              ? "friday se pehle fix kar le yaar!! 😭"
-              : "fix this before Monday please!! 😭"
-          }
-          stickyRotation={4}
-        />
-
         <div className="max-w-[960px] mx-auto relative z-10">
           {/* B.2 Live Social Proof Counter */}
           <LiveRoastCounter />
@@ -692,63 +680,41 @@ export default function LandingPage() {
               : "Brutal red pen annotations, a definitive score stamp, and exact rewrite replacements with metrics and zero fluff."}
           </p>
 
-          {/* Primary + Ghost CTA Pair (A.2 Exact Spec) */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-10 w-full px-2">
-            <Link
-              to="/roast"
-              id="hero-cta"
-              className="btn-primary w-full sm:w-auto text-center justify-center"
-            >
-              {isHinglish ? "Resume daal de bhai" : "Roast My Resume"}
-            </Link>
-            <a
-              href="#sample"
-              className="btn-ghost w-full sm:w-auto text-center justify-center"
-            >
-              {isHinglish ? "Pehle sample dekh le" : "View Sample Roast"}
-            </a>
+          {/* Direct Dropzone in Hero (0-click immediate utility) */}
+          <div className="w-full max-w-[560px] mx-auto mt-6 mb-4">
+            <ResumeUploader />
           </div>
 
-          {/* Hero Visual: PaperMockup + ScoreStamp */}
-          <div className="relative inline-block w-full max-w-[580px] px-1 sm:px-0">
-            <PaperMockup
-              candidateName={heroSample.resumeInfo.candidateName}
-              candidateTitle={heroSample.resumeInfo.candidateTitle}
-              companyLine={heroSample.resumeInfo.companyLine}
-              bullet1Text={heroSample.resumeInfo.bullet1Text}
-              bullet1Annotated={heroSample.resumeInfo.bullet1Annotated}
-              bullet1Tag={heroSample.resumeInfo.bullet1Tag}
-              bullet2Text={heroSample.resumeInfo.bullet2Text}
-              bullet2Annotated={heroSample.resumeInfo.bullet2Annotated}
-              bullet2Tag={heroSample.resumeInfo.bullet2Tag}
-              bullet3Text={heroSample.resumeInfo.bullet3Text}
-              bullet3Annotated={heroSample.resumeInfo.bullet3Annotated}
-              bullet3Tag={heroSample.resumeInfo.bullet3Tag}
-              rotation={-2}
-              animate={true}
-            />
-
-            {/* Score stamp placed on top-right of paper */}
-            <div className="absolute -top-4 right-1 sm:-top-6 sm:right-6 z-20 pointer-events-none">
-              <div className="block sm:hidden">
-                <ScoreStamp
-                  score={heroSample.roastData.overall_score}
-                  band={heroSample.roastData.band}
-                  animate={true}
-                  size="sm"
-                  rotation={-10}
-                />
-              </div>
-              <div className="hidden sm:block">
-                <ScoreStamp
-                  score={heroSample.roastData.overall_score}
-                  band={heroSample.roastData.band}
-                  animate={true}
-                  size="md"
-                  rotation={-12}
-                />
-              </div>
-            </div>
+          {/* Trust Signals & Direct Sample Anchor */}
+          <div className="flex flex-col items-center justify-center gap-2 mt-4 font-mono text-xs text-tan-dim select-none">
+            <p className="flex items-center gap-2 flex-wrap justify-center text-[11px] text-tan-dim/90">
+              <span>
+                🔒{" "}
+                {isHinglish
+                  ? "100% Free · 1 Roast/Day"
+                  : "100% Free · 1 Roast Daily"}
+              </span>
+              <span>·</span>
+              <span>
+                {isHinglish ? "Text PDF ya DOCX" : "Text PDF or DOCX"}
+              </span>
+              <span>·</span>
+              <span>
+                {isHinglish
+                  ? "7 din mein auto-purge"
+                  : "Auto-purged after 7 days"}
+              </span>
+            </p>
+            <a
+              href="#sample"
+              className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-amber-400/90 hover:text-amber-300 transition-colors mt-2 font-medium"
+            >
+              <span>
+                {isHinglish
+                  ? "Pehle live sample roast dekhna hai? Niche scroll karein ↓"
+                  : "Want to see what a brutal roast report looks like? Scroll down ↓"}
+              </span>
+            </a>
           </div>
         </div>
       </section>

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { normalizeLang } from "@/i18n/detector";
 
 const HINGLISH_ROAST_LINES = [
+  "🎓 [PLACEMENT SEASON 2026 LIVE: Interview se pehle resume audit kara lo!]",
   '⚡ "Bhai resume hai ya suspense novel? Recruiter ko number chahiye, kahani nahi." 🕵️',
   '⚡ "Responsible for likhna band karo yaar 😩 impact dikhao!"',
   '⚡ "4 page ka resume? Novel likh rahe ho kya bhai?" 💀',
@@ -13,6 +14,7 @@ const HINGLISH_ROAST_LINES = [
 ];
 
 const ENGLISH_ROAST_LINES = [
+  "🎓 [PLACEMENT SEASON 2026 SPECIAL: Audit your resume before recruiters do!]",
   '⚡ "Is this a resume or a mystery novel? Recruiters need metrics, not cliffhangers." 🕵️',
   "⚡ \"Stop writing 'Responsible for' 😩 Show what actually shipped!\"",
   '⚡ "Four pages? Recruiters give this six seconds, not a book review." 💀',
