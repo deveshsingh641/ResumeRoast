@@ -11,7 +11,6 @@ import PaperMockup from "@/components/PaperMockup";
 import { IssueList } from "@/components/IssueCard";
 import ShareCardGenerator from "@/components/ShareCardGenerator";
 import VoiceNoteBubble from "@/components/VoiceNoteBubble";
-import DeskClutter from "@/components/DeskClutter";
 import PapaProudMeter from "@/components/PapaProudMeter";
 import WorstLineTrophy from "@/components/WorstLineTrophy";
 import ReferralChallenge from "@/components/ReferralChallenge";
@@ -327,17 +326,11 @@ export default function ResultsPage() {
       : null;
 
   return (
-    <main className="min-h-screen pb-24 desk-cursor relative overflow-hidden">
+    <main className="min-h-screen pb-24 relative overflow-hidden">
       {/* 1.4 Confetti Burst for High Scores (score >= 70) */}
       {showConfetti && (
         <ConfettiScraps onComplete={() => setShowConfetti(false)} />
       )}
-
-      {/* Tactile Desk Clutter (A.5) */}
-      <DeskClutter
-        stickyText="friday se pehle fix kar le yaar!! 😭"
-        stickyRotation={-5}
-      />
 
       {/* Top Bar Header */}
       <header className="border-b border-white/[0.08] py-3 sm:py-4 px-3 sm:px-6 mb-6 sm:mb-12 relative z-10">

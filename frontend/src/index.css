@@ -38,6 +38,8 @@
     background-color: var(--bg);
     color: var(--tan);
     font-family: "Inter", sans-serif;
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
   }
 
   body {
@@ -279,6 +281,16 @@
   .desk-cursor textarea {
     cursor: text !important;
   }
+
+  .desk-cursor p,
+  .desk-cursor span,
+  .desk-cursor h1,
+  .desk-cursor h2,
+  .desk-cursor h3,
+  .desk-cursor h4,
+  .desk-cursor li {
+    cursor: default;
+  }
 }
 
 /* On touch/mobile devices, strictly enforce standard cursor: auto */
@@ -351,6 +363,9 @@
 
 .animate-stamp-drift {
   animation: stamp-idle-drift 9s ease-in-out infinite alternate;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform-origin: center center;
 }
 
 /* 2.3 Ragged Torn Paper Top Edge Clip Path */

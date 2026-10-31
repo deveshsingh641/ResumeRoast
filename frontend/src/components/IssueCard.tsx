@@ -83,7 +83,7 @@ export function IssueCard({
   return (
     <div
       ref={cardRef}
-      className="relative bg-bg border border-white/[0.08] rounded-r-sm rounded-l-none p-5 select-none transition-all duration-200 hover:-translate-y-[3px] hover:shadow-2xl hover:border-white/[0.16] group"
+      className="relative bg-bg border border-white/[0.08] rounded-r-sm rounded-l-none p-5 transition-colors duration-150 hover:border-white/[0.2] hover:bg-white/[0.015] hover:shadow-xl group"
       style={{
         borderLeft: `3px solid ${categoryColor}`,
       }}

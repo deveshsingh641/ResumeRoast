@@ -28,15 +28,23 @@ export default function DeskClutter({
       return;
     }
 
+    let rafId: number | null = null;
     const handleMouseMove = (e: MouseEvent) => {
-      const { innerWidth, innerHeight } = window;
-      const x = (e.clientX / innerWidth - 0.5) * 12; // max 6px each way
-      const y = (e.clientY / innerHeight - 0.5) * 12;
-      setOffset({ x, y });
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        const { innerWidth, innerHeight } = window;
+        const x = (e.clientX / innerWidth - 0.5) * 8;
+        const y = (e.clientY / innerHeight - 0.5) * 8;
+        setOffset({ x, y });
+        rafId = null;
+      });
     };
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   return (
