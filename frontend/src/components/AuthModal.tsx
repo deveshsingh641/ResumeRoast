@@ -350,7 +350,7 @@ export default function AuthModal({
               autoFocus
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. ankitprjsoft@gmail.com"
+              placeholder="e.g. demo@gmail.com"
               className="w-full bg-black/60 border border-white/20 rounded-lg px-3.5 py-2.5 text-sm font-mono text-white placeholder:text-stone-600 focus:outline-none focus:border-amber-400 transition"
             />
           </div>
