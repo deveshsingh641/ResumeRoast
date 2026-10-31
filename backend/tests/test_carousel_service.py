@@ -38,3 +38,4 @@ def test_download_carousel_nonexistent_404():
     client = TestClient(app)
     response = client.get("/api/carousel/nonexistent-roast-id-404/download")
     assert response.status_code == 404
+

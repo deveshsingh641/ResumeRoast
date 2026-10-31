@@ -63,3 +63,4 @@ def test_rewrite_bullet_validation():
     # Overly long bullet
     res_long = client.post("/api/rewrite-bullet", json={"bullet": "x" * 1050})
     assert res_long.status_code == 422
+

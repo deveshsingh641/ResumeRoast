@@ -274,3 +274,4 @@ def generate_linkedin_carousel_pdf(
     c.save()
 
     return pdf_path
+
