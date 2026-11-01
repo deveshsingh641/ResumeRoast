@@ -256,3 +256,4 @@ Return ONLY valid JSON matching this schema:
 
     # Fallback
     return _generate_smart_fallback_questions(roast_data, roast_id, language)
+

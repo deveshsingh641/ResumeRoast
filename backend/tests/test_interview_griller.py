@@ -79,3 +79,4 @@ def test_interview_prep_endpoint_404():
     client = TestClient(app)
     response = client.get("/api/roast/non-existent-uuid-9999/interview-prep")
     assert response.status_code == 404
+

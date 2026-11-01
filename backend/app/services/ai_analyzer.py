@@ -626,91 +626,336 @@ def _detect_domain(text: str) -> str:
     return best if scores[best] >= 2 else "general"
 
 
-def _generate_domain_fix(line: str, domain: str, cat: str, lang: str) -> str:
+def _is_role_or_header_line(line: str) -> bool:
+    """Detect whether a line is a section heading, contact info, or pure job title/date line."""
+    clean = line.strip()
+    l_lower = clean.lower()
+
+    # Section titles
+    common_sections = {
+        "education", "experience", "work experience", "professional experience",
+        "technical skills", "skills", "projects", "academic projects", "personal projects",
+        "certifications", "achievements", "summary", "professional summary",
+        "declaration", "hobbies", "contact", "interests", "languages", "profile",
+    }
+    if l_lower.rstrip(":") in common_sections:
+        return True
+
+    # Contact info or links
+    if re.search(r"(@|phone:|email:|linkedin\.com|github\.com|\+91|\+\d{1,3}\s)", l_lower):
+        return True
+
+    # Job titles / role headers (e.g. "Full-Stack Development Intern Remote", "Software Engineer | 2022 - Present")
+    role_words = [
+        "intern", "internship", "engineer", "developer", "lead", "manager",
+        "specialist", "architect", "consultant", "analyst", "associate", "trainee",
+    ]
+    has_role = any(re.search(rf"\b{rw}\b", l_lower) for rw in role_words)
+    has_timing = bool(re.search(r"(\b20\d\d\b|present|remote|hybrid|full[\s-]time|part[\s-]time|months|years)", l_lower))
+
+    words = clean.split()
+    if has_role and (has_timing or len(words) <= 5):
+        return True
+    if "|" in clean and (has_role or has_timing):
+        return True
+    return False
+
+
+ENGINEERING_FIX_POOLS: dict[str, dict[str, list[str]]] = {
+    "auth": {
+        "hi-IN": [
+            "Security scale likho: 'Implemented secure JWT/OAuth2 authentication and RBAC workflows across 15+ API routes, securing 50,000+ active user sessions with zero CVEs'.",
+            "Authorization impact dikhao: 'Hardened user session authorization pipeline, reducing auth validation latency by 40% and passing automated penetration tests'.",
+            "Encryption metric daalo: 'Architected end-to-end token refresh & rotation flow with AES-256 encryption, eliminating unauthorized session replay risks'.",
+        ],
+        "en": [
+            "Specify security impact: 'Implemented secure JWT/OAuth2 authentication and RBAC workflows across 15+ API routes, securing 50,000+ active user sessions with zero CVEs'.",
+            "Quantify authorization efficiency: 'Hardened user session authorization pipeline, reducing auth validation latency by 40% and passing automated penetration tests'.",
+            "Add concrete security metrics: 'Architected end-to-end token refresh & rotation flow with AES-256 encryption, eliminating unauthorized session replay risks'.",
+        ],
+    },
+    "frontend": {
+        "hi-IN": [
+            "Frontend impact dikhao: 'Built responsive UI components in React/TypeScript, improving Core Web Vitals (LCP by 35%) across 50,000+ monthly active users'.",
+            "Client speed metric daalo: 'Engineered dynamic dashboard interfaces with React, reducing initial client load time from 2.4s to 850ms'.",
+            "Conversion metric likho: 'Spearheaded checkout UI redesign with Tailwind & React, boosting user checkout conversion by 18.5%'.",
+            "Bundle optimization scale dikhao: 'Refactored frontend bundle architecture, decreasing initial JavaScript payload by 42% and eliminating layout shifts'.",
+        ],
+        "en": [
+            "Highlight frontend impact: 'Built responsive UI components in React/TypeScript, improving Core Web Vitals (LCP by 35%) across 50,000+ monthly active users'.",
+            "Quantify client performance: 'Engineered dynamic dashboard interfaces with React, reducing initial client load time from 2.4s to 850ms'.",
+            "Add measurable conversion impact: 'Spearheaded checkout UI redesign with Tailwind & React, boosting user checkout conversion by 18.5%'.",
+            "Quantify bundle optimization: 'Refactored frontend bundle architecture, decreasing initial JavaScript payload by 42% and eliminating layout shifts'.",
+        ],
+    },
+    "backend": {
+        "hi-IN": [
+            "Throughput scale likho: 'Architected scalable REST endpoints with Redis caching, sustaining 2,500 req/sec at p95 latency under 80ms'.",
+            "Queue processing scale dikhao: 'Designed asynchronous background workers in Celery/Redis, processing 150k+ daily queue tasks with 99.95% uptime'.",
+            "Production uptime mention karo: 'Engineered distributed microservices handling 45,000 req/min with zero downtime during peak seasonal traffic'.",
+            "Response time metric daalo: 'Consolidated 8 legacy API routes into streamlined endpoints, cutting average server response times by 55%'.",
+        ],
+        "en": [
+            "Quantify backend throughput: 'Architected scalable REST endpoints with Redis caching, sustaining 2,500 req/sec at p95 latency under 80ms'.",
+            "Add queue processing metrics: 'Designed asynchronous background workers in Celery/Redis, processing 150k+ daily queue tasks with 99.95% uptime'.",
+            "Specify production scale: 'Engineered distributed microservices handling 45,000 req/min with zero downtime during peak seasonal traffic'.",
+            "Quantify latency reduction: 'Consolidated 8 legacy API routes into streamlined endpoints, cutting average server response times by 55%'.",
+        ],
+    },
+    "database": {
+        "hi-IN": [
+            "Database performance dikhao: 'Optimized complex relational SQL queries and compound indexing, decreasing database query execution time by 60%'.",
+            "Scale metric daalo: 'Migrated legacy database schema to PostgreSQL, eliminating deadlock timeouts and scaling to 1.2M+ customer records'.",
+            "Caching scale likho: 'Implemented Redis caching layer for read-heavy database models, cutting database CPU utilization by 45%'.",
+        ],
+        "en": [
+            "Quantify database query optimization: 'Optimized complex relational SQL queries and compound indexing, decreasing database query execution time by 60%'.",
+            "Specify data volume scale: 'Migrated legacy database schema to PostgreSQL, eliminating deadlock timeouts and scaling to 1.2M+ customer records'.",
+            "Add caching metrics: 'Implemented Redis caching layer for read-heavy database models, cutting database CPU utilization by 45%'.",
+        ],
+    },
+    "algo_perf": {
+        "hi-IN": [
+            "Algorithmic scale dikhao: 'Implemented optimized C++ data structures and multi-threaded algorithms, reducing memory footprint by 45% and execution time by 3x'.",
+            "Latency metric likho: 'Engineered low-latency C++ algorithmic routines processing high-throughput data streams with sub-millisecond overhead'.",
+            "Benchmark data mention karo: 'Refactored core graph algorithms in C++, improving traversal efficiency by 65% across 100k+ node datasets'.",
+        ],
+        "en": [
+            "Quantify algorithmic efficiency: 'Implemented optimized C++ data structures and multi-threaded algorithms, reducing memory footprint by 45% and execution time by 3x'.",
+            "Specify latency benchmark: 'Engineered low-latency C++ algorithmic routines processing high-throughput data streams with sub-millisecond overhead'.",
+            "Add dataset scale: 'Refactored core graph algorithms in C++, improving traversal efficiency by 65% across 100k+ node datasets'.",
+        ],
+    },
+    "cloud_devops": {
+        "hi-IN": [
+            "CI/CD speed metric daalo: 'Constructed automated CI/CD deployment pipelines using Docker & GitHub Actions, cutting release cycles from 45 mins to 6 mins'.",
+            "Cloud reliability dikhao: 'Orchestrated containerized microservice deployments on AWS ECS, ensuring seamless rolling updates with 99.99% availability'.",
+            "Spin-up time reduce karo: 'Configured Terraform infrastructure-as-code scripts on AWS, decreasing staging environment spin-up time by 75%'.",
+        ],
+        "en": [
+            "Quantify deployment velocity: 'Constructed automated CI/CD deployment pipelines using Docker & GitHub Actions, cutting release cycles from 45 mins to 6 mins'.",
+            "Specify cloud uptime: 'Orchestrated containerized microservice deployments on AWS ECS, ensuring seamless rolling updates with 99.99% availability'.",
+            "Add provisioning metrics: 'Configured Terraform infrastructure-as-code scripts on AWS, decreasing staging environment spin-up time by 75%'.",
+        ],
+    },
+    "project_intern": {
+        "hi-IN": [
+            "Project deliverables count karo: 'Delivered 3 end-to-end full-stack applications with React & FastAPI, demonstrating production-ready architecture and 90%+ test coverage'.",
+            "User scale dikhao: 'Built and deployed full-stack web project to production with 1,200+ registered beta users and 99.9% uptime'.",
+            "Sprint velocity mention karo: 'Shipped 6 sprint deliverables ahead of deadline during 3-month internship, closing 40+ Jira story points'.",
+        ],
+        "en": [
+            "Quantify project deliverables: 'Delivered 3 end-to-end full-stack applications with React & FastAPI, demonstrating production-ready architecture and 90%+ test coverage'.",
+            "Add user traction numbers: 'Built and deployed full-stack web project to production with 1,200+ registered beta users and 99.9% uptime'.",
+            "Specify internship output: 'Shipped 6 sprint deliverables ahead of deadline during 3-month internship, closing 40+ Jira story points'.",
+        ],
+    },
+    "general_eng": {
+        "hi-IN": [
+            "Deliverable scale likho: 'Spearheaded delivery of 4 key roadmap features, accelerating release turnaround time by 25%'.",
+            "Adoption number daalo: 'Engineered customer-facing feature utilized by 15,000+ weekly active users with 99.9% reliability'.",
+            "Efficiency save dikhao: 'Automated manual data processes, saving 12+ engineering hours per bi-weekly sprint'.",
+            "Quality metric add karo: 'Refactored error-handling logic and integrated automated tests, reducing production defect rate by 40%'.",
+        ],
+        "en": [
+            "Quantify delivery impact: 'Spearheaded delivery of 4 key roadmap features, accelerating release turnaround time by 25%'.",
+            "Add adoption metrics: 'Engineered customer-facing feature utilized by 15,000+ weekly active users with 99.9% reliability'.",
+            "Quantify operational hours saved: 'Automated manual data processes, saving 12+ engineering hours per bi-weekly sprint'.",
+            "Specify quality improvements: 'Refactored error-handling logic and integrated automated tests, reducing production defect rate by 40%'.",
+        ],
+    },
+}
+
+DOMAIN_FIX_POOLS: dict[str, dict[str, list[str]]] = {
+    "healthcare": {
+        "hi-IN": [
+            "Quantify karo: 'Triaged 25+ emergency patients per shift with zero protocol deviations'.",
+            "Patient throughput dikhao: 'Managed bedside care for 18 acute-care patients daily while maintaining 98% patient satisfaction'.",
+            "Clinical accuracy number daalo: 'Reduced patient chart documentation error rate by 32% through EHR audit standardization'.",
+        ],
+        "en": [
+            "Quantify clinical volume: 'Triaged 25+ emergency patients per shift with zero protocol deviations'.",
+            "Add patient throughput: 'Managed bedside care for 18 acute-care patients daily while maintaining 98% patient satisfaction'.",
+            "Quantify documentation accuracy: 'Reduced patient chart documentation error rate by 32% through EHR audit standardization'.",
+        ],
+    },
+    "finance": {
+        "hi-IN": [
+            "Portfolio number daalo: 'Modeled DCF valuations for 15+ tech equities managing $40M portfolio'.",
+            "Audit accuracy dikhao: 'Audited financial reconciliation workflows across 240+ general ledger accounts with 99.9% accuracy'.",
+            "Cost savings metric likho: 'Analyzed vendor procurement variances to identify $320,000 in recurring annual operating expense savings'.",
+        ],
+        "en": [
+            "Specify portfolio scale: 'Modeled DCF valuations for 15+ tech equities managing $40M portfolio'.",
+            "Quantify audit scope: 'Audited financial reconciliation workflows across 240+ general ledger accounts with 99.9% accuracy'.",
+            "Add bottom-line cost savings: 'Analyzed vendor procurement variances to identify $320,000 in recurring annual operating expense savings'.",
+        ],
+    },
+    "marketing": {
+        "hi-IN": [
+            "Performance number daalo: 'Optimized Google Ads CPA by 28%, driving 1,400+ qualified MQLs'.",
+            "Growth metric dikhao: 'Grew organic search traffic from 15k to 72k monthly visits via technical SEO roadmap'.",
+            "Revenue impact likho: 'Orchestrated quarterly email lifecycle campaign generating $180,000 in attributable pipeline revenue'.",
+        ],
+        "en": [
+            "Quantify CPA efficiency: 'Optimized Google Ads CPA by 28%, driving 1,400+ qualified MQLs'.",
+            "Specify organic growth: 'Grew organic search traffic from 15k to 72k monthly visits via technical SEO roadmap'.",
+            "Add revenue attribution: 'Orchestrated quarterly email lifecycle campaign generating $180,000 in attributable pipeline revenue'.",
+        ],
+    },
+    "design": {
+        "hi-IN": [
+            "Metric add karo: 'Designed mobile checkout flow tested with 30 users, reducing drop-off by 18%'.",
+            "Design system scale dikhao: 'Architected design system of 80+ tokenized Figma components used across 5 cross-functional teams'.",
+            "Task completion rate likho: 'Conducted 14 moderated usability tests, improving checkout task completion rate from 74% to 94%'.",
+        ],
+        "en": [
+            "Quantify conversion design: 'Designed mobile checkout flow tested with 30 users, reducing drop-off by 18%'.",
+            "Add component system scale: 'Architected design system of 80+ tokenized Figma components used across 5 cross-functional teams'.",
+            "Specify usability test impact: 'Conducted 14 moderated usability tests, improving checkout task completion rate from 74% to 94%'.",
+        ],
+    },
+    "education": {
+        "hi-IN": [
+            "Impact metric dikhao: 'Instructed 95+ students achieving an 88% AP pass rate'.",
+            "Retention number daalo: 'Developed interactive STEM curriculum increasing semester student retention by 22%'.",
+            "Grading efficiency likho: 'Introduced rubric-based assessment workflows cutting grading turnaround time by 35%'.",
+        ],
+        "en": [
+            "Quantify student outcomes: 'Instructed 95+ students achieving an 88% AP pass rate'.",
+            "Add retention metrics: 'Developed interactive STEM curriculum increasing semester student retention by 22%'.",
+            "Specify workflow efficiency: 'Introduced rubric-based assessment workflows cutting grading turnaround time by 35%'.",
+        ],
+    },
+    "legal": {
+        "hi-IN": [
+            "Exact count daalo: 'Negotiated 45+ enterprise SaaS agreements totaling $12M in ARR'.",
+            "Turnaround speed dikhao: 'Streamlined commercial NDA review process, reducing contract turnaround time from 7 days to 48 hours'.",
+            "Compliance metric likho: 'Conducted comprehensive GDPR compliance audit across 18 vendor agreements with zero compliance findings'.",
+        ],
+        "en": [
+            "Specify contract volume: 'Negotiated 45+ enterprise SaaS agreements totaling $12M in ARR'.",
+            "Quantify turnaround reduction: 'Streamlined commercial NDA review process, reducing contract turnaround time from 7 days to 48 hours'.",
+            "Add compliance track record: 'Conducted comprehensive GDPR compliance audit across 18 vendor agreements with zero compliance findings'.",
+        ],
+    },
+    "culinary": {
+        "hi-IN": [
+            "Metric daalo: 'Supervised kitchen brigade of 14 cooks, cutting food cost percentage by 4.5%'.",
+            "Throughput number likho: 'Managed daily dinner service plating 250+ covers while maintaining 99% ticket time under 15 mins'.",
+        ],
+        "en": [
+            "Quantify kitchen management: 'Supervised kitchen brigade of 14 cooks, cutting food cost percentage by 4.5%'.",
+            "Specify covers and ticket times: 'Managed daily dinner service plating 250+ covers while maintaining 99% ticket time under 15 mins'.",
+        ],
+    },
+}
+
+BUZZWORD_FIX_POOLS: dict[str, list[str]] = {
+    "hi-IN": [
+        "Generic buzzword hatao: Kaunsa tool use kiya aur uska exact outcome kya tha (e.g. 'Built feature X using Tool Y, saving 5 hrs/week').",
+        "Cliché adjectives ('hardworking', 'dynamic') delete karo aur concrete accomplishments numbers ke saath mention karo.",
+        "Direct action verb likho: 'Assisted' ya 'responsible for' ki jagah 'Architected' ya 'Spearheaded' lagao.",
+        "Corporate jargon hatakar exactly batao: Is delivery se team ya company ko kya measurable fayda hua.",
+    ],
+    "en": [
+        "Drop corporate jargon and state the concrete tool used and the resulting business outcome.",
+        "Eliminate generic adjectives ('hardworking', 'go-getter') and state verified technical deliverables.",
+        "Replace passive phrasing ('assisted', 'responsible for') with authoritative action verbs ('Architected', 'Spearheaded').",
+        "Cut the fluff: Clarify the technical architecture chosen and the measurable benefit to the team.",
+    ],
+}
+
+
+def _generate_domain_fix(
+    line: str,
+    domain: str,
+    cat: str,
+    lang: str,
+    used_fixes: set[str] | None = None,
+) -> str:
+    """
+    Generate context-aware, non-repeating fix suggestions tailored specifically
+    to the keywords, domain, and category of the flagged line.
+    """
+    import random
+    l_lower = line.lower()
+    norm_lang = "hi-IN" if lang == "hi-IN" else "en"
+    candidates: list[str] = []
+
     if cat == "no-metrics":
-        if domain == "healthcare":
-            return (
-                "Quantify karo: 'Triage kiya 25+ emergency patients per shift with zero protocol deviations'."
-                if lang == "hi-IN"
-                else "Quantify this: 'Triaged 25+ emergency patients per shift with zero protocol deviations'."
-            )
-        elif domain == "finance":
-            return (
-                "Number daalo: 'Modeled DCF valuations for 15+ tech equities managing $40M portfolio'."
-                if lang == "hi-IN"
-                else "Quantify this: 'Modeled DCF valuations for 15+ tech equities managing $40M portfolio'."
-            )
-        elif domain == "culinary":
-            return (
-                "Metric daalo: 'Supervised kitchen brigade of 14 cooks, cutting food cost percentage by 4.5%'."
-                if lang == "hi-IN"
-                else "Quantify this: 'Supervised kitchen brigade of 14 cooks, cutting food cost percentage by 4.5%'."
-            )
-        elif domain == "legal":
-            return (
-                "Exact count daalo: 'Negotiated 45+ enterprise SaaS agreements totaling $12M in ARR'."
-                if lang == "hi-IN"
-                else "Quantify this: 'Negotiated 45+ enterprise SaaS agreements totaling $12M in ARR'."
-            )
-        elif domain == "education":
-            return (
-                "Impact metric dikhao: 'Instructed 95+ students achieving an 88% AP pass rate'."
-                if lang == "hi-IN"
-                else "Quantify this: 'Instructed 95+ students achieving an 88% AP pass rate'."
-            )
-        elif domain == "marketing":
-            return (
-                "Performance number daalo: 'Optimized Google Ads CPA by 28%, driving 1,400+ qualified MQLs'."
-                if lang == "hi-IN"
-                else "Quantify this: 'Optimized Google Ads CPA by 28%, driving 1,400+ qualified MQLs'."
-            )
-        elif domain == "design":
-            return (
-                "Metric add karo: 'Designed mobile checkout flow tested with 30 users, reducing drop-off by 18%'."
-                if lang == "hi-IN"
-                else "Quantify this: 'Designed mobile checkout flow tested with 30 users, reducing drop-off by 18%'."
-            )
-        elif domain == "engineering":
-            return (
-                "Production scale likho: 'Architected microservice handling 45,000 req/min with 99.9% uptime'."
-                if lang == "hi-IN"
-                else "Quantify this: 'Architected microservice handling 45,000 req/min with 99.9% uptime'."
-            )
+        if domain == "engineering" or domain == "general":
+            # Detect sub-domain from line context
+            if any(k in l_lower for k in ["jwt", "rbac", "auth", "token", "oauth", "security", "permission", "session", "password"]):
+                candidates = ENGINEERING_FIX_POOLS["auth"][norm_lang]
+            elif any(k in l_lower for k in ["c++", "c#", "java", "dsa", "algorithm", "data structure", "memory", "concurrency"]):
+                candidates = ENGINEERING_FIX_POOLS["algo_perf"][norm_lang]
+            elif any(k in l_lower for k in ["react", "vue", "angular", "next", "html", "css", "ui", "ux", "tailwind", "frontend", "redux", "web"]):
+                candidates = ENGINEERING_FIX_POOLS["frontend"][norm_lang]
+            elif any(k in l_lower for k in ["sql", "postgres", "mysql", "mongo", "database", "redis", "query", "queries", "schema"]):
+                candidates = ENGINEERING_FIX_POOLS["database"][norm_lang]
+            elif any(k in l_lower for k in ["aws", "gcp", "azure", "docker", "kubernetes", "ci/cd", "pipeline", "terraform", "devops", "cloud"]):
+                candidates = ENGINEERING_FIX_POOLS["cloud_devops"][norm_lang]
+            elif any(k in l_lower for k in ["intern", "internship", "project", "personal project", "coursework", "portfolio"]):
+                candidates = ENGINEERING_FIX_POOLS["project_intern"][norm_lang]
+            elif any(k in l_lower for k in ["api", "rest", "fastapi", "node", "express", "django", "flask", "microservice", "backend", "endpoint"]):
+                candidates = ENGINEERING_FIX_POOLS["backend"][norm_lang]
+            else:
+                candidates = ENGINEERING_FIX_POOLS["general_eng"][norm_lang]
+        elif domain in DOMAIN_FIX_POOLS:
+            candidates = DOMAIN_FIX_POOLS[domain][norm_lang]
         else:
-            return (
-                "Quantify karo: Action verb + exact number/percent + business outcome daalo."
-                if lang == "hi-IN"
-                else "Quantify this: Start with an active verb, insert concrete numbers/percentages, and end with the outcome."
-            )
+            candidates = ENGINEERING_FIX_POOLS["general_eng"][norm_lang]
+
     elif cat == "buzzword":
-        return (
-            "Buzzword hatao aur direct bolo: Kaunsa tool use kiya aur uska tangible result kya tha."
-            if lang == "hi-IN"
-            else "Drop the corporate jargon and state the concrete tool used and the resulting business outcome."
-        )
+        candidates = BUZZWORD_FIX_POOLS[norm_lang]
     elif cat == "length":
-        return (
+        candidates = [
             "Header aur summary choti karo; purani schooling hata ke whitespace bachaao."
-            if lang == "hi-IN"
-            else "Trim summary and older schooling to ensure high-impact recent accomplishments stand out."
-        )
+            if norm_lang == "hi-IN"
+            else "Trim summary and older schooling to ensure high-impact recent accomplishments stand out.",
+            "Bullets ko max 2 lines per point mein condense karo taaki recruiter 6 seconds mein scan kar sake."
+            if norm_lang == "hi-IN"
+            else "Condense bullets to max 2 lines each for rapid 6-second recruiter scannability.",
+        ]
     elif cat == "irrelevant":
-        return (
+        candidates = [
             "Ye line delete karo aur wahan verifiable project links ya certifications mention karo."
-            if lang == "hi-IN"
-            else "Delete this line and replace the space with verified technical projects or certifications."
-        )
+            if norm_lang == "hi-IN"
+            else "Delete this line and replace the space with verified technical projects or certifications.",
+            "Out-of-place hobbies ya declaration hatao aur relevant engineering technical achievements daalo."
+            if norm_lang == "hi-IN"
+            else "Remove generic declarations or unrelated hobbies to maximize high-value whitespace.",
+        ]
     elif cat == "typo":
-        return (
+        candidates = [
             "Typo correct karo aur submission se pehle automated spellcheck zaroor chalao."
-            if lang == "hi-IN"
-            else "Correct typo and run an automated spellchecker before submitting your application."
-        )
-    return (
-        "Rephrase with strong action verbs and specific facts."
-        if lang != "hi-IN"
-        else "Strong action verb aur specific facts ke saath rewrite karo."
-    )
+            if norm_lang == "hi-IN"
+            else "Correct typo and run an automated spellchecker before submitting your application.",
+            "Technical term spelling fix karo aur consistency check karo (e.g. JavaScript, PostgreSQL)."
+            if norm_lang == "hi-IN"
+            else "Fix technical term capitalization and run an automated spellcheck (e.g. JavaScript, PostgreSQL).",
+        ]
+    else:
+        candidates = [
+            "Strong action verb aur specific facts ke saath rewrite karo."
+            if norm_lang == "hi-IN"
+            else "Rephrase with strong action verbs and specific facts."
+        ]
+
+    # Enforce strict anti-repetition: never return a fix already used in this roast
+    if used_fixes is not None:
+        fresh_candidates = [c for c in candidates if c not in used_fixes]
+        if not fresh_candidates:
+            # Fallback to general pool if category candidates were exhausted
+            general_backup = ENGINEERING_FIX_POOLS["general_eng"][norm_lang]
+            fresh_candidates = [c for c in general_backup if c not in used_fixes]
+        pool = fresh_candidates if fresh_candidates else candidates
+        chosen = random.choice(pool)
+        used_fixes.add(chosen)
+        return chosen
+
+    return random.choice(candidates)
 
 
 KNOWN_TOOLS = [
@@ -1112,6 +1357,7 @@ def _generate_fallback_roast(
 
     recent_exclusions = set(anti_repeat_memory.get_recent_roasts())
     used_roasts: set[str] = set()
+    used_fixes: set[str] = set()
 
     def _select_roast(cat: str, line_quote: str, fallback_default: str) -> str:
         tool = _extract_tool(line_quote)
@@ -1198,7 +1444,7 @@ def _generate_fallback_roast(
                 if not any(iss["quoted_text"] == line[:110] for iss in issues):
                     fallback_text = joke_bank.get(cat, [default_cat_joke])[0]
                     roast_text = _select_roast(cat, line, fallback_text)
-                    fix_txt = _generate_domain_fix(line, domain, cat, lang)
+                    fix_txt = _generate_domain_fix(line, domain, cat, lang, used_fixes)
                     issues.append({
                         "quoted_text": line[:110],
                         "category": cat,
@@ -1208,14 +1454,14 @@ def _generate_fallback_roast(
                     })
                 break
 
-    # Numberless bullet check
+    # Numberless bullet check (skip pure job titles, dates, and section headers)
     if len(issues) < 4:
         for line in lines:
-            if not any(char.isdigit() for char in line) and len(line) > 35 and len(issues) < 6:
+            if not _is_role_or_header_line(line) and not any(char.isdigit() for char in line) and len(line) > 35 and len(issues) < 6:
                 if not any(iss["quoted_text"] == line[:110] for iss in issues):
                     fallback_text = joke_bank.get("no-metrics", [default_cat_joke])[0]
                     roast_text = _select_roast("no-metrics", line, fallback_text)
-                    fix_advice = _generate_domain_fix(line, domain, "no-metrics", lang)
+                    fix_advice = _generate_domain_fix(line, domain, "no-metrics", lang, used_fixes)
                     issues.append({
                         "quoted_text": line[:110],
                         "category": "no-metrics",
@@ -1230,7 +1476,7 @@ def _generate_fallback_roast(
         if any(mis in lower for mis in ["skils", "pythno", "javascrip", "mangment", "experiance"]):
             fallback_text = joke_bank.get("typo", [default_cat_joke])[0]
             roast_text = _select_roast("typo", line, fallback_text)
-            fix_advice = _generate_domain_fix(line, domain, "typo", lang)
+            fix_advice = _generate_domain_fix(line, domain, "typo", lang, used_fixes)
             issues.append({
                 "quoted_text": line[:100],
                 "category": "typo",
@@ -1248,7 +1494,7 @@ def _generate_fallback_roast(
             sample_line = non_empty_lines[0] if non_empty_lines else resume_text[:60].strip()
         fallback_text = joke_bank.get("buzzword", [default_cat_joke])[0]
         roast_text = _select_roast("buzzword", sample_line, fallback_text)
-        fix_advice = _generate_domain_fix(sample_line, domain, "buzzword", lang)
+        fix_advice = _generate_domain_fix(sample_line, domain, "buzzword", lang, used_fixes)
         issues.append({
             "quoted_text": sample_line[:100],
             "category": "buzzword",

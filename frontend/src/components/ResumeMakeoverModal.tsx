@@ -29,6 +29,18 @@ export default function ResumeMakeoverModal({
 
   if (!isOpen) return null;
 
+  const parseFix = (fixText: string) => {
+    const match = fixText.match(/['"]([^'"]{15,})['"]/);
+    if (match && match[1]) {
+      const tip = fixText
+        .slice(0, match.index)
+        .trim()
+        .replace(/[:—\-\s]+$/, "");
+      return { cleanDropIn: match[1], directiveTip: tip };
+    }
+    return { cleanDropIn: fixText, directiveTip: "" };
+  };
+
   const handleCopyTransformed = async () => {
     const lines = [
       `# ATS-OPTIMIZED RESUME MAKEOVER`,
@@ -40,10 +52,11 @@ export default function ResumeMakeoverModal({
       ``,
       `## TRANSFORMED REVISED BULLET POINTS`,
       ...issues.map((iss, i) => {
+        const { cleanDropIn } = parseFix(iss.fix);
         return (
           `[Item #${i + 1}] Category: ${iss.category.toUpperCase()}\n` +
           `• Original: "${iss.quoted_text}"\n` +
-          `• Transformed: ${iss.fix}\n`
+          `• Transformed: ${cleanDropIn}\n`
         );
       }),
       ``,
@@ -221,9 +234,22 @@ export default function ResumeMakeoverModal({
                       ✓ STAR Compliant
                     </span>
                   </div>
-                  <p className="font-mono text-xs text-emerald-200 leading-relaxed font-medium mb-2">
-                    {iss.fix}
-                  </p>
+                  {(() => {
+                    const { cleanDropIn, directiveTip } = parseFix(iss.fix);
+                    return (
+                      <>
+                        {directiveTip && (
+                          <div className="mb-1 flex items-center gap-1 font-mono text-[10px] text-amber-400/90">
+                            <span>💡</span>
+                            <span className="font-bold">{directiveTip}:</span>
+                          </div>
+                        )}
+                        <p className="font-mono text-xs text-emerald-200 leading-relaxed font-medium mb-2 bg-emerald-950/20 border border-emerald-500/20 p-2.5 rounded-sm">
+                          "{cleanDropIn}"
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center justify-between pt-1">
                   <span className="font-mono text-[10px] text-tan-dim">
@@ -232,7 +258,8 @@ export default function ResumeMakeoverModal({
                   <button
                     onClick={async () => {
                       try {
-                        await navigator.clipboard.writeText(iss.fix);
+                        const { cleanDropIn } = parseFix(iss.fix);
+                        await navigator.clipboard.writeText(cleanDropIn);
                       } catch {}
                     }}
                     className="font-mono text-[10px] text-amber-300 hover:text-amber-200 border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 rounded-sm transition-colors"
