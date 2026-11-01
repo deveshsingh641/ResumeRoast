@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from app.core.limiter import limiter
 from app.db import database
 from app.i18n.mapping import DEFAULT_LANGUAGE, language_from_request
-from app.services import ai_analyzer, extractor
+from app.services import ai_analyzer, extractor, interview_griller
 from app.services.ai_analyzer import analyze_resume
 from app.services.bullet_rewriter import rewrite_bullet
 from app.services.carousel_service import generate_linkedin_carousel_pdf
@@ -678,6 +678,28 @@ async def roast_comeback(roast_id: str, payload: ComebackRequest, request: Reque
         history=payload.history,
     )
     return JSONResponse(content={"ok": True, "reply": reply})
+
+
+@router.get("/roast/{roast_id}/interview-prep")
+@router.post("/roast/{roast_id}/interview-prep")
+@limiter.limit("30/minute")
+async def get_interview_prep(roast_id: str, request: Request) -> JSONResponse:
+    """Generate tough interview trap questions and winning STAR scripts based on roast issues."""
+    roast = database.get_roast(roast_id)
+    lang = language_from_request(request)
+    if not roast:
+        if roast_id in ("demo", "demo-roast", "sample-roast-1"):
+            roast = SAMPLE_ROAST_RESPONSE if lang == "hi-IN" else ENGLISH_SAMPLE_ROAST_RESPONSE
+        else:
+            raise HTTPException(status_code=404, detail="Roast not found or expired.")
+
+    prep_data = await interview_griller.generate_interview_prep(
+        roast_data=roast,
+        roast_id=roast_id,
+        language=lang,
+    )
+    return JSONResponse(content={"ok": True, "data": prep_data.model_dump()})
+
 
 
 

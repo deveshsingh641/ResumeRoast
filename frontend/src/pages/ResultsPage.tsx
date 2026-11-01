@@ -24,6 +24,9 @@ import RoastBackChat from "@/components/RoastBackChat";
 import Footer from "@/components/Footer";
 import WaitlistModal from "@/components/WaitlistModal";
 import BulletRewriterModal from "@/components/BulletRewriterModal";
+import DimensionalScorecard from "@/components/DimensionalScorecard";
+import InterviewHotSeatModal from "@/components/InterviewHotSeatModal";
+import ResumeMakeoverModal from "@/components/ResumeMakeoverModal";
 import { useCinematicReveal } from "@/hooks/useCinematicReveal";
 import { ExtendedRoastResult, getSampleRoastData } from "@/data/sampleRoast";
 import { usePageTitle } from "@/utils/usePageTitle";
@@ -72,6 +75,8 @@ export default function ResultsPage() {
   const [xRayMode, setXRayMode] = useState(false);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+  const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
+  const [isMakeoverModalOpen, setIsMakeoverModalOpen] = useState(false);
   const [fixesCopied, setFixesCopied] = useState(false);
   const [wallPublished, setWallPublished] = useState(false);
   const [wallPublishing, setWallPublishing] = useState(false);
@@ -525,6 +530,14 @@ export default function ResultsPage() {
           </section>
         )}
 
+        {/* ── 3.5 Dimensional Resume Health Scorecard ── */}
+        <section aria-label="Dimensional Health Scorecard" className="pt-2">
+          <DimensionalScorecard
+            overallScore={result.overall_score}
+            issues={result.issues}
+          />
+        </section>
+
         {/* ── 4. Detailed Flagged Issues (Section A.6 with WhatsApp typing indicator) ── */}
         <section
           aria-label="Flagged Issues Breakdown"
@@ -551,6 +564,22 @@ export default function ResultsPage() {
                     : `Showing ${result.issues.length}`}
                 </span>
               )}
+              <button
+                type="button"
+                onClick={() => setIsInterviewModalOpen(true)}
+                className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1 text-amber-300 border-amber-500/40 hover:bg-amber-500/10 font-mono font-bold"
+                title="Practice tough interview questions based on your resume flaws"
+              >
+                <span>🔥 Interview Hot-Seat</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMakeoverModalOpen(true)}
+                className="btn-ghost !text-xs !py-1.5 !px-3 flex items-center gap-1 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/10 font-mono font-bold"
+                title="View full before vs after makeover"
+              >
+                <span>🔄 Before vs After</span>
+              </button>
               <button
                 type="button"
                 onClick={handleCopyAllFixes}
@@ -705,6 +734,34 @@ export default function ResultsPage() {
             >
               {worstIssue && <WorstLineTrophy issue={worstIssue} />}
               <PapaProudMeter overallScore={result.overall_score} />
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsInterviewModalOpen(true)}
+                  className="p-3 bg-amber-500/15 border border-amber-500/30 rounded text-left hover:bg-amber-500/25 transition-all"
+                >
+                  <span className="text-base block mb-1">🔥</span>
+                  <span className="font-mono text-xs font-bold text-amber-300 block">
+                    Interview Hot-Seat
+                  </span>
+                  <span className="font-mono text-[10px] text-tan-dim block">
+                    Trap Questions & Audio
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsMakeoverModalOpen(true)}
+                  className="p-3 bg-cyan-500/15 border border-cyan-500/30 rounded text-left hover:bg-cyan-500/25 transition-all"
+                >
+                  <span className="text-base block mb-1">🔄</span>
+                  <span className="font-mono text-xs font-bold text-cyan-300 block">
+                    Before vs After
+                  </span>
+                  <span className="font-mono text-[10px] text-tan-dim block">
+                    ATS Makeover Diff
+                  </span>
+                </button>
+              </div>
               <ScoreJourney
                 currentScore={result.overall_score}
                 band={result.band}
@@ -908,6 +965,74 @@ export default function ResultsPage() {
                 band={result.band}
                 totalIssues={result.total_issues}
               />
+            </section>
+
+            {/* ── 5.6 Interview Hot-Seat Interactive Card ── */}
+            <section
+              aria-label="Interview Hot-Seat"
+              className="max-w-[640px] mx-auto text-left border border-amber-500/30 bg-gradient-to-br from-[#1C160E] to-[#120F0C] rounded-sm p-6 shadow-xl relative overflow-hidden"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">🔥</span>
+                    <span className="font-mono text-[10px] text-amber-400 uppercase tracking-widest font-bold">
+                      INTERVIEW READINESS // AI HOT-SEAT
+                    </span>
+                  </div>
+                  <h3 className="font-display text-lg sm:text-xl text-paper">
+                    {isHinglish
+                      ? "Interview Hot-Seat: Trap Questions & STAR Scripts"
+                      : "Interview Hot-Seat: Trap Questions & STAR Scripts"}
+                  </h3>
+                  <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
+                    {isHinglish
+                      ? "Recruiters aapki resume ki kamzoriyon par kya grilling karenge? Hear interviewer audio & master winning answers."
+                      : "Prepare for the exact tough questions hiring managers will ask based on your flagged flaws, complete with audio drills."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsInterviewModalOpen(true)}
+                  className="btn-primary shrink-0 !text-xs !py-2.5 !px-4 flex items-center gap-1.5 font-bold whitespace-nowrap !bg-amber-600 hover:!bg-amber-500 text-black"
+                >
+                  <span>🔥 Open Hot-Seat Drill</span>
+                </button>
+              </div>
+            </section>
+
+            {/* ── 5.7 Before vs After Makeover Card ── */}
+            <section
+              aria-label="Before vs After Makeover"
+              className="max-w-[640px] mx-auto text-left border border-cyan-500/30 bg-gradient-to-br from-[#0E161C] to-[#0C1115] rounded-sm p-6 shadow-xl relative overflow-hidden"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">🔄</span>
+                    <span className="font-mono text-[10px] text-cyan-400 uppercase tracking-widest font-bold">
+                      SIDE-BY-SIDE MAKEOVER // BEFORE VS AFTER
+                    </span>
+                  </div>
+                  <h3 className="font-display text-lg sm:text-xl text-paper">
+                    {isHinglish
+                      ? "Flawed Lines vs ATS Drop-In Rewrites"
+                      : "Flawed Lines vs ATS Drop-In Rewrites"}
+                  </h3>
+                  <p className="font-mono text-xs text-tan-dim mt-1 leading-relaxed">
+                    {isHinglish
+                      ? "Dekhiye har kamzor line ka metric-backed drop-in replacement jo score ko 88+ tak le jaata hai."
+                      : "Inspect each flagged flaw alongside its metric-backed STAR replacement to boost your score to 88+."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMakeoverModalOpen(true)}
+                  className="btn-primary shrink-0 !text-xs !py-2.5 !px-4 flex items-center gap-1.5 font-bold whitespace-nowrap !bg-cyan-600 hover:!bg-cyan-500 text-black"
+                >
+                  <span>🔄 View Makeover</span>
+                </button>
+              </div>
             </section>
 
             {/* ── 5.8 Official Parody Certificate Download Card ── */}
@@ -1212,6 +1337,23 @@ export default function ResultsPage() {
       <div className="mt-20">
         <Footer />
       </div>
+
+      {/* ── AI Interview Hot-Seat Modal ── */}
+      <InterviewHotSeatModal
+        isOpen={isInterviewModalOpen}
+        onClose={() => setIsInterviewModalOpen(false)}
+        roastId={result.id}
+      />
+
+      {/* ── Before vs After Makeover Modal ── */}
+      <ResumeMakeoverModal
+        isOpen={isMakeoverModalOpen}
+        onClose={() => setIsMakeoverModalOpen(false)}
+        overallScore={result.overall_score}
+        oneLineVerdict={result.one_line_verdict}
+        issues={result.issues}
+        strengths={result.strengths}
+      />
 
       {/* ── 9:16 Instagram & WhatsApp Story Card Modal ── */}
       <StoryCardModal
