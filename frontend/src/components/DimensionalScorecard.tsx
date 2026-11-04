@@ -21,22 +21,25 @@ interface Dimension {
 
 export default function DimensionalScorecard({
   overallScore,
-  issues,
+  issues = [],
   className = "",
 }: DimensionalScorecardProps) {
   const { i18n } = useTranslation();
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
   const [expandedDim, setExpandedDim] = useState<string | null>(null);
 
-  // Derive dimensional scores from issues and overall score
-  const noMetricsCount = issues.filter(
-    (i) => i.category === "no-metrics",
+  // Derive dimensional scores from safe issues array
+  const safeIssues = Array.isArray(issues) ? issues : [];
+  const noMetricsCount = safeIssues.filter(
+    (i) => i?.category === "no-metrics",
   ).length;
-  const buzzwordCount = issues.filter((i) => i.category === "buzzword").length;
-  const formattingCount = issues.filter(
-    (i) => i.category === "formatting" || i.category === "length",
+  const buzzwordCount = safeIssues.filter(
+    (i) => i?.category === "buzzword",
   ).length;
-  const typoCount = issues.filter((i) => i.category === "typo").length;
+  const formattingCount = safeIssues.filter(
+    (i) => i?.category === "formatting" || i?.category === "length",
+  ).length;
+  const typoCount = safeIssues.filter((i) => i?.category === "typo").length;
 
   // 1. Metrics Score
   const metricScore = Math.max(

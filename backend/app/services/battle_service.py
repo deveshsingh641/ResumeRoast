@@ -98,15 +98,45 @@ Strengths: {json.dumps(f2.get('strengths', []))}
 Declare the winner and generate the savage comparative JSON verdict now.
 """
 
-    # 1. Gemini
+    # 1. Groq (Ultra-fast)
+    if groq_key:
+        groq_models = [
+            os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+        ]
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+        for g_model in groq_models:
+            try:
+                payload = {
+                    "model": g_model,
+                    "messages": [
+                        {"role": "system", "content": battle_system_prompt},
+                        {"role": "user", "content": prompt_content},
+                    ],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.7,
+                }
+                with httpx.Client(timeout=20.0) as client:
+                    res = client.post(url, headers=headers, json=payload)
+                    if res.status_code == 200:
+                        raw_text = res.json()["choices"][0]["message"]["content"]
+                        data = _extract_json(raw_text)
+                        if "winner" in data and "verdict" in data:
+                            return data
+            except Exception as e:
+                logger.debug(f"Groq battle error on {g_model}: {e}")
+
+    # 2. Gemini
     if gemini_key:
-        preferred_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        preferred_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         candidate_models = list(dict.fromkeys([
             preferred_model,
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash-8b",
-            "gemini-1.5-pro",
+            "gemini-2.5-flash",
+            "gemini-flash-latest",
+            "gemini-3.8-flash",
+            "gemini-2.5-pro",
         ]))
         for model in candidate_models:
             try:
@@ -117,7 +147,7 @@ Declare the winner and generate the savage comparative JSON verdict now.
                     ],
                     "generationConfig": {"responseMimeType": "application/json", "temperature": 0.7},
                 }
-                with httpx.Client(timeout=30.0) as client:
+                with httpx.Client(timeout=20.0) as client:
                     res = client.post(url, json=payload)
                     if res.status_code == 404:
                         continue
@@ -128,30 +158,6 @@ Declare the winner and generate the savage comparative JSON verdict now.
                         return data
             except Exception as e:
                 logger.debug(f"Gemini battle error on model {model}: {e}")
-
-    # 2. Groq
-    if groq_key:
-        try:
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
-            payload = {
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": battle_system_prompt},
-                    {"role": "user", "content": prompt_content},
-                ],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.7,
-            }
-            with httpx.Client(timeout=30.0) as client:
-                res = client.post(url, headers=headers, json=payload)
-                res.raise_for_status()
-                raw_text = res.json()["choices"][0]["message"]["content"]
-                data = _extract_json(raw_text)
-                if "winner" in data and "verdict" in data:
-                    return data
-        except Exception as e:
-            print(f"[WARN] Groq battle error: {e}")
 
     # 3. Fallback
     return _generate_fallback_battle(f1, f2, language=lang)

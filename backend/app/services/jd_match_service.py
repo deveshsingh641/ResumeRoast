@@ -275,16 +275,69 @@ def analyze_jd_match(
     if not resume_text or len(resume_text.strip()) < 50:
         raise ValueError("Resume content is too short to analyze.")
 
+    # 1. Try Groq (Fast structured inference)
+    groq_key = os.getenv("GROQ_API_KEY", "").strip()
+    if groq_key:
+        groq_models = [
+            os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+        ]
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+        prompt_content = f"""RESUME TEXT:
+\"\"\"
+{resume_text[:6000]}
+\"\"\"
+
+TARGET JOB DESCRIPTION:
+\"\"\"
+{job_description[:4000]}
+\"\"\"
+
+CURRENT REAL-WORLD DATE: {datetime.now().strftime("%B %Y")}
+LANGUAGE PREFERENCE: {language}
+"""
+        for g_model in groq_models:
+            payload = {
+                "model": g_model,
+                "messages": [
+                    {"role": "system", "content": JD_MATCH_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt_content},
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.2,
+            }
+            try:
+                with httpx.Client(timeout=20.0) as client:
+                    res = client.post(url, headers=headers, json=payload)
+                    if res.status_code == 200:
+                        raw_text = res.json()["choices"][0]["message"]["content"]
+                        from app.services.ai_analyzer import _extract_json
+                        parsed = _extract_json(raw_text)
+                        match_score = int(max(0, min(100, parsed.get("match_score", 50))))
+                        return JDMatchResult(
+                            match_score=match_score,
+                            match_verdict=str(parsed.get("match_verdict", "Evaluated against job description.")),
+                            missing_keywords=list(parsed.get("missing_keywords", [])),
+                            matching_strengths=list(parsed.get("matching_strengths", [])),
+                            tailoring_recommendations=list(parsed.get("tailoring_recommendations", [])),
+                            role_alignment=dict(parsed.get("role_alignment", {})),
+                            source="ai",
+                        )
+            except Exception as e:
+                logger.debug(f"Groq JD match error with {g_model}: {e}")
+
     gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
 
     if gemini_key:
-        preferred_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        preferred_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         candidate_models = list(dict.fromkeys([
             preferred_model,
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash-8b",
-            "gemini-1.5-pro",
+            "gemini-2.5-flash",
+            "gemini-flash-latest",
+            "gemini-3.8-flash",
+            "gemini-2.5-pro",
         ]))
         for model in candidate_models:
             try:

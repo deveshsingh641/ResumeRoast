@@ -165,9 +165,9 @@ def _render_dashboard_html(request: Request) -> str:
         commercial_label = "Simulation Mode"
         commercial_sub = "Razorpay Keys Unset in .env"
 
-    ai_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    ai_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     if os.getenv("GROQ_API_KEY") and not os.getenv("GEMINI_API_KEY"):
-        ai_provider_name = "Groq Llama 3.3 70B"
+        ai_provider_name = "Groq GPT-OSS 120B"
     else:
         ai_provider_name = f"Gemini {ai_model}"
 
@@ -670,9 +670,9 @@ async def get_founder_metrics(request: Request) -> JSONResponse:
     from app.routers.payment import get_razorpay_config, _mask_key
     rzp = get_razorpay_config()
 
-    ai_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    ai_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     if os.getenv("GROQ_API_KEY") and not os.getenv("GEMINI_API_KEY"):
-        ai_provider_name = "Groq Llama 3.3 70B"
+        ai_provider_name = "Groq GPT-OSS 120B"
     else:
         ai_provider_name = f"Gemini {ai_model}"
 

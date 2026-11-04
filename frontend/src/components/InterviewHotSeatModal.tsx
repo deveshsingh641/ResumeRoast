@@ -396,7 +396,20 @@ export default function InterviewHotSeatModal({
               </div>
             )}
           </div>
-        ) : null}
+        ) : (
+          <div className="py-10 text-center font-mono text-xs text-tan-dim space-y-2">
+            <p className="text-paper">
+              {isHinglish
+                ? "Is resume ke liye koi interview traps generate nahi huye."
+                : "No interview trap questions generated for this report."}
+            </p>
+            <p>
+              {isHinglish
+                ? "Aapke bullet points clear aur direct lag rahe hain."
+                : "Your accomplishments appear direct and well-structured."}
+            </p>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="mt-6 pt-4 border-t border-white/[0.08] flex items-center justify-between font-mono text-[11px] text-tan-dim">

@@ -17,8 +17,8 @@ export default function ResumeMakeoverModal({
   onClose,
   overallScore,
   oneLineVerdict,
-  issues,
-  strengths,
+  issues = [],
+  strengths = [],
 }: ResumeMakeoverModalProps) {
   const { i18n } = useTranslation();
   const isHinglish = normalizeLang(i18n.language) === "hi-IN";
@@ -29,7 +29,11 @@ export default function ResumeMakeoverModal({
 
   if (!isOpen) return null;
 
-  const parseFix = (fixText: string) => {
+  const safeIssues = Array.isArray(issues) ? issues : [];
+  const safeStrengths = Array.isArray(strengths) ? strengths : [];
+
+  const parseFix = (fixText: string = "") => {
+    if (!fixText) return { cleanDropIn: "", directiveTip: "" };
     const match = fixText.match(/['"]([^'"]{15,})['"]/);
     if (match && match[1]) {
       const tip = fixText
@@ -48,14 +52,14 @@ export default function ResumeMakeoverModal({
       `Verdict: "${oneLineVerdict}"`,
       ``,
       `## HIGHLIGHTS & CORE STRENGTHS`,
-      ...strengths.map((s) => `• ${s}`),
+      ...safeStrengths.map((s) => `• ${s}`),
       ``,
       `## TRANSFORMED REVISED BULLET POINTS`,
-      ...issues.map((iss, i) => {
-        const { cleanDropIn } = parseFix(iss.fix);
+      ...safeIssues.map((iss, i) => {
+        const { cleanDropIn } = parseFix(iss?.fix || "");
         return (
-          `[Item #${i + 1}] Category: ${iss.category.toUpperCase()}\n` +
-          `• Original: "${iss.quoted_text}"\n` +
+          `[Item #${i + 1}] Category: ${(iss?.category || "flaw").toUpperCase()}\n` +
+          `• Original: "${iss?.quoted_text || ""}"\n` +
           `• Transformed: ${cleanDropIn}\n`
         );
       }),
@@ -79,13 +83,15 @@ export default function ResumeMakeoverModal({
         `> Original Score: ${overallScore}/100 | Verdict: "${oneLineVerdict}"`,
         ``,
         `## 🎯 KEY TECHNICAL STRENGTHS`,
-        ...(strengths || ["Demonstrated engineering capabilities"]).map(
-          (s) => `- ${s}`,
-        ),
+        ...(safeStrengths.length > 0
+          ? safeStrengths
+          : ["Demonstrated engineering capabilities"]
+        ).map((s) => `- ${s}`),
         ``,
         `## 🛠️ REVISED BULLETS & ACTIONABLE IMPACT`,
-        ...(issues || []).map((iss, i) => {
-          return `### ${i + 1}. [${iss.category.toUpperCase()}] ATS Drop-In Rewrite:\n- **Recommended:** ${iss.fix}\n  *(Replaces: "${iss.quoted_text}")*\n`;
+        ...safeIssues.map((iss, i) => {
+          const cat = (iss?.category || "flaw").toUpperCase();
+          return `### ${i + 1}. [${cat}] ATS Drop-In Rewrite:\n- **Recommended:** ${iss?.fix || ""}\n  *(Replaces: "${iss?.quoted_text || ""}")*\n`;
         }),
         ``,
         `---`,
@@ -193,83 +199,98 @@ export default function ResumeMakeoverModal({
 
         {/* Comparison Rows */}
         <div className="space-y-4">
-          {issues.map((iss, idx) => (
-            <div
-              key={idx}
-              className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-black/40 border border-white/[0.06] rounded-sm p-3 sm:p-4 hover:border-white/[0.12] transition-colors"
-            >
-              {/* Left: Original Flaw */}
-              <div className="border-b md:border-b-0 md:border-r border-white/[0.06] pb-3 md:pb-0 md:pr-4 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 rounded-xs bg-red-500/20 text-red-300 border border-red-500/30">
-                      {iss.category}
-                    </span>
-                    <span className="font-mono text-[10px] text-tan-dim">
-                      Line #{idx + 1}
-                    </span>
-                  </div>
-                  <p className="font-mono text-xs text-red-300/90 line-through decoration-red-500/60 leading-relaxed mb-2">
-                    "{iss.quoted_text}"
-                  </p>
-                </div>
-                <div className="bg-black/40 border border-white/[0.04] p-2 rounded-xs">
-                  <span className="font-mono text-[10px] text-amber-400 font-bold block mb-0.5">
-                    Critique:
-                  </span>
-                  <p className="font-mono text-[11px] text-tan-dim italic">
-                    {iss.roast}
-                  </p>
-                </div>
-              </div>
-
-              {/* Right: Transformed Fix */}
-              <div className="md:pl-2 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 rounded-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      ATS Optimized Rewrite
-                    </span>
-                    <span className="font-mono text-[10px] text-emerald-400 font-bold">
-                      ✓ STAR Compliant
-                    </span>
-                  </div>
-                  {(() => {
-                    const { cleanDropIn, directiveTip } = parseFix(iss.fix);
-                    return (
-                      <>
-                        {directiveTip && (
-                          <div className="mb-1 flex items-center gap-1 font-mono text-[10px] text-amber-400/90">
-                            <span>💡</span>
-                            <span className="font-bold">{directiveTip}:</span>
-                          </div>
-                        )}
-                        <p className="font-mono text-xs text-emerald-200 leading-relaxed font-medium mb-2 bg-emerald-950/20 border border-emerald-500/20 p-2.5 rounded-sm">
-                          "{cleanDropIn}"
-                        </p>
-                      </>
-                    );
-                  })()}
-                </div>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="font-mono text-[10px] text-tan-dim">
-                    Drop-in ready for PDF/Docx
-                  </span>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const { cleanDropIn } = parseFix(iss.fix);
-                        await navigator.clipboard.writeText(cleanDropIn);
-                      } catch {}
-                    }}
-                    className="font-mono text-[10px] text-amber-300 hover:text-amber-200 border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 rounded-sm transition-colors"
-                  >
-                    Copy Line
-                  </button>
-                </div>
-              </div>
+          {safeIssues.length === 0 ? (
+            <div className="p-8 text-center border border-white/[0.08] rounded-sm bg-white/[0.02]">
+              <p className="font-mono text-sm text-paper mb-1">
+                {isHinglish
+                  ? "Koi critical flaws nahi mile! 🎉"
+                  : "No critical flaws flagged! 🎉"}
+              </p>
+              <p className="font-mono text-xs text-tan-dim">
+                {isHinglish
+                  ? "Aapka resume already strong aur ATS-compliant hai."
+                  : "Your resume is already strong and ATS-optimized."}
+              </p>
             </div>
-          ))}
+          ) : (
+            safeIssues.map((iss, idx) => (
+              <div
+                key={idx}
+                className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-black/40 border border-white/[0.06] rounded-sm p-3 sm:p-4 hover:border-white/[0.12] transition-colors"
+              >
+                {/* Left: Original Flaw */}
+                <div className="border-b md:border-b-0 md:border-r border-white/[0.06] pb-3 md:pb-0 md:pr-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 rounded-xs bg-red-500/20 text-red-300 border border-red-500/30">
+                        {iss.category}
+                      </span>
+                      <span className="font-mono text-[10px] text-tan-dim">
+                        Line #{idx + 1}
+                      </span>
+                    </div>
+                    <p className="font-mono text-xs text-red-300/90 line-through decoration-red-500/60 leading-relaxed mb-2">
+                      "{iss.quoted_text}"
+                    </p>
+                  </div>
+                  <div className="bg-black/40 border border-white/[0.04] p-2 rounded-xs">
+                    <span className="font-mono text-[10px] text-amber-400 font-bold block mb-0.5">
+                      Critique:
+                    </span>
+                    <p className="font-mono text-[11px] text-tan-dim italic">
+                      {iss.roast}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right: Transformed Fix */}
+                <div className="md:pl-2 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 rounded-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        ATS Optimized Rewrite
+                      </span>
+                      <span className="font-mono text-[10px] text-emerald-400 font-bold">
+                        ✓ STAR Compliant
+                      </span>
+                    </div>
+                    {(() => {
+                      const { cleanDropIn, directiveTip } = parseFix(iss.fix);
+                      return (
+                        <>
+                          {directiveTip && (
+                            <div className="mb-1 flex items-center gap-1 font-mono text-[10px] text-amber-400/90">
+                              <span>💡</span>
+                              <span className="font-bold">{directiveTip}:</span>
+                            </div>
+                          )}
+                          <p className="font-mono text-xs text-emerald-200 leading-relaxed font-medium mb-2 bg-emerald-950/20 border border-emerald-500/20 p-2.5 rounded-sm">
+                            "{cleanDropIn}"
+                          </p>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="font-mono text-[10px] text-tan-dim">
+                      Drop-in ready for PDF/Docx
+                    </span>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { cleanDropIn } = parseFix(iss.fix);
+                          await navigator.clipboard.writeText(cleanDropIn);
+                        } catch {}
+                      }}
+                      className="font-mono text-[10px] text-amber-300 hover:text-amber-200 border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 rounded-sm transition-colors"
+                    >
+                      Copy Line
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Footer */}

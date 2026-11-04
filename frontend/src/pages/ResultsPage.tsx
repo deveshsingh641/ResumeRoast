@@ -552,16 +552,16 @@ export default function ResultsPage() {
               </p>
               <h2 className="font-display text-lg sm:text-xl text-paper">
                 {isHinglish
-                  ? `Itni galtiyaan mili bhai (${result.total_issues})`
-                  : `Critical flaws flagged (${result.total_issues})`}
+                  ? `Itni galtiyaan mili bhai (${result.total_issues ?? result.issues?.length ?? 0})`
+                  : `Critical flaws flagged (${result.total_issues ?? result.issues?.length ?? 0})`}
               </h2>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {result.is_truncated && (
                 <span className="font-mono text-xs text-ember mr-1">
                   {isHinglish
-                    ? `${result.issues.length} dikha rahe hain`
-                    : `Showing ${result.issues.length}`}
+                    ? `${result.issues?.length || 0} dikha rahe hain`
+                    : `Showing ${result.issues?.length || 0}`}
                 </span>
               )}
               <button
@@ -1351,8 +1351,8 @@ export default function ResultsPage() {
         onClose={() => setIsMakeoverModalOpen(false)}
         overallScore={result.overall_score}
         oneLineVerdict={result.one_line_verdict}
-        issues={result.issues}
-        strengths={result.strengths}
+        issues={result.issues || []}
+        strengths={result.strengths || []}
       />
 
       {/* ── 9:16 Instagram & WhatsApp Story Card Modal ── */}

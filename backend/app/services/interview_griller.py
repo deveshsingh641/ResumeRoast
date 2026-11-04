@@ -226,31 +226,76 @@ Return ONLY valid JSON matching this schema:
   ]
 }}"""
 
-    # 1. Try Gemini
+    # 1. Try Groq (Ultra-fast structured output)
+    if groq_key:
+        groq_models = [
+            os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.8-27b",
+        ]
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+        for g_model in groq_models:
+            payload = {
+                "model": g_model,
+                "messages": [
+                    {"role": "system", "content": "You are an elite Silicon Valley Bar Raiser. Always respond in valid JSON format only."},
+                    {"role": "user", "content": prompt},
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.4,
+            }
+            try:
+                async with httpx.AsyncClient(timeout=12.0) as client:
+                    res = await client.post(url, headers=headers, json=payload)
+                    if res.status_code == 200:
+                        raw = res.json()["choices"][0]["message"]["content"]
+                        clean_raw = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.MULTILINE)
+                        clean_raw = re.sub(r"\s*```$", "", clean_raw.strip(), flags=re.MULTILINE)
+                        data = json.loads(clean_raw)
+                        qs = data.get("questions", [])
+                        if qs:
+                            return InterviewPrepResult(
+                                roast_id=roast_id,
+                                candidate_summary=data.get("candidate_summary", ""),
+                                questions=[InterviewQuestion(**q) for q in qs[:3]],
+                                source="ai",
+                            )
+            except Exception as e:
+                logger.debug(f"Groq interview prep error with {g_model}: {e}")
+
+    # 2. Try Gemini
     if gemini_key:
         models = [
-            os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
+            os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+            "gemini-2.5-flash",
+            "gemini-flash-latest",
+            "gemini-3.8-flash",
+            "gemini-2.5-pro",
         ]
         for model in models:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.4, "response_mime_type": "application/json"},
+                "generationConfig": {"temperature": 0.4, "responseMimeType": "application/json"},
             }
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     res = await client.post(url, json=payload)
                     if res.status_code == 200:
                         raw = res.json()["candidates"][0]["content"]["parts"][0]["text"]
-                        data = json.loads(raw)
-                        return InterviewPrepResult(
-                            roast_id=roast_id,
-                            candidate_summary=data.get("candidate_summary", ""),
-                            questions=[InterviewQuestion(**q) for q in data.get("questions", [])],
-                            source="ai",
-                        )
+                        clean_raw = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.MULTILINE)
+                        clean_raw = re.sub(r"\s*```$", "", clean_raw.strip(), flags=re.MULTILINE)
+                        data = json.loads(clean_raw)
+                        qs = data.get("questions", [])
+                        if qs:
+                            return InterviewPrepResult(
+                                roast_id=roast_id,
+                                candidate_summary=data.get("candidate_summary", ""),
+                                questions=[InterviewQuestion(**q) for q in qs[:3]],
+                                source="ai",
+                            )
             except Exception as e:
                 logger.debug(f"Gemini interview prep error with {model}: {e}")
 

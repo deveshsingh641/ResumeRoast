@@ -44,7 +44,7 @@ export function IssueCard({
 
   // 1.2 WhatsApp "Typing..." Indicator State & Session Cache
   const cardRef = useRef<HTMLDivElement>(null);
-  const cacheKey = `seen_roast_${roastId}_issue_${rank}_${issue.quoted_text.slice(0, 20)}`;
+  const cacheKey = `seen_roast_${roastId}_issue_${rank}_${issue?.quoted_text ? issue.quoted_text.slice(0, 20) : "empty"}`;
   const alreadySeen =
     typeof window !== "undefined" && Boolean(sessionStorage.getItem(cacheKey));
 
@@ -252,14 +252,16 @@ interface IssueListProps {
 }
 
 export function IssueList({
-  issues,
-  totalIssues = issues.length,
+  issues = [],
+  totalIssues,
   isTruncated,
   roastId,
 }: IssueListProps) {
   const isPro = useAppStore((state) => state.usage?.is_pro) ?? false;
+  const safeIssues = Array.isArray(issues) ? issues : [];
+  const effectiveTotal = totalIssues ?? safeIssues.length;
   const lockedCount =
-    isTruncated && !isPro ? Math.max(0, totalIssues - issues.length) : 0;
+    isTruncated && !isPro ? Math.max(0, effectiveTotal - safeIssues.length) : 0;
 
   // Real placeholder locked cards for layout-shift-free preview
   const lockedCards: Issue[] = [
@@ -299,7 +301,7 @@ export function IssueList({
 
   return (
     <div className="space-y-3 w-full max-w-[640px] mx-auto text-left">
-      {issues.map((issue, idx) => (
+      {safeIssues.map((issue, idx) => (
         <IssueCard
           key={idx}
           issue={issue}
@@ -312,7 +314,7 @@ export function IssueList({
         <IssueCard
           key={`locked-${idx}`}
           issue={issue}
-          rank={issues.length + idx + 1}
+          rank={safeIssues.length + idx + 1}
           locked={true}
           roastId={roastId}
         />

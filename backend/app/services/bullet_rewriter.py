@@ -117,12 +117,54 @@ Return STRICT JSON matching this schema with NO markdown code fences:
   ]
 }}"""
 
-    # Try Gemini if key is available
+    # 1. Try Groq (Ultra-fast structured output)
+    groq_key = os.getenv("GROQ_API_KEY", "").strip()
+    if groq_key:
+        groq_models = [
+            os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.8-27b",
+        ]
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+        for g_model in groq_models:
+            payload = {
+                "model": g_model,
+                "messages": [
+                    {"role": "system", "content": "You are a professional executive resume writer. Return valid JSON only."},
+                    {"role": "user", "content": prompt},
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.5,
+            }
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.post(url, headers=headers, json=payload)
+                    if resp.status_code == 200:
+                        raw_text = resp.json()["choices"][0]["message"]["content"]
+                        clean_json = re.sub(r"^```(?:json)?\s*", "", raw_text.strip(), flags=re.MULTILINE)
+                        clean_json = re.sub(r"```$", "", clean_json.strip(), flags=re.MULTILINE).strip()
+                        parsed = json.loads(clean_json)
+                        opts = parsed.get("options", [])
+                        if len(opts) >= 3:
+                            return BulletRewriteResult(
+                                original=bullet,
+                                target_role=target_role,
+                                options=[BulletRewriteOption(**o) for o in opts[:3]],
+                                source="ai",
+                            )
+            except Exception as e:
+                logger.warning(f"Groq rewrite failed on {g_model}: {e}")
+
+    # 2. Try Gemini if key is available
     if gemini_key:
         models_to_try = [
-            os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
+            os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+            "gemini-2.5-flash",
+            "gemini-flash-latest",
+            "gemini-3.8-flash",
+            "gemini-2.5-pro",
         ]
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],

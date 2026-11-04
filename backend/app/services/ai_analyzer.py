@@ -404,13 +404,14 @@ def _call_gemini_api(api_key: str, resume_text: str, exclusion_block: str = "", 
         },
     }
 
-    preferred_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    preferred_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     models_to_try = [
         preferred_model,
-        "gemini-1.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash-8b",
-        "gemini-1.5-pro",
+        "gemini-2.5-flash",
+        "gemini-flash-latest",
+        "gemini-3.8-flash",
+        "gemini-2.5-pro",
+        "gemini-pro-latest",
     ]
     candidate_models = list(dict.fromkeys(models_to_try))
     last_err = None
@@ -457,8 +458,10 @@ def _call_groq_api(api_key: str, resume_text: str, exclusion_block: str = "", la
         exclusion_block=f"\n{exclusion_block}\n" if exclusion_block else "",
     )
     models_to_try = [
-        "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant",
+        os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.8-27b",
     ]
     last_err = None
     with httpx.Client(timeout=15.0) as client:
@@ -1555,7 +1558,7 @@ def _has_hinglish_tone(text: str) -> bool:
 
 
 def _validate_schema(data: dict, resume_text: str | None = None, language: str = HINGLISH_LANGUAGE) -> None:
-    required_top = {"overall_score", "band", "one_line_verdict", "issues", "strengths"}
+    required_top = {"overall_score", "one_line_verdict", "issues"}
 
     # Unwrap single-key container if model wrapped it (e.g. {"analysis": {...}})
     if len(data) == 1 and not (required_top & set(data.keys())):
@@ -1563,6 +1566,28 @@ def _validate_schema(data: dict, resume_text: str | None = None, language: str =
         if isinstance(inner, dict) and (required_top & set(inner.keys())):
             data.clear()
             data.update(inner)
+
+    # Auto-derive strengths if missing or malformed
+    norm_lang = normalize_language(language)
+    if "strengths" not in data or not isinstance(data.get("strengths"), list):
+        data["strengths"] = (
+            data.get("key_strengths")
+            or data.get("highlights")
+            or [
+                "Tech stack modern hai — project context mein aur expand kar sakte ho 👍"
+                if norm_lang == "hi-IN"
+                else "Core tech stack is relevant to modern technical roles 👍"
+            ]
+        )
+
+    # Auto-derive band if missing
+    if "band" not in data or not str(data.get("band", "")).strip():
+        score_val = data.get("overall_score", 50)
+        try:
+            score_num = int(score_val)
+        except Exception:
+            score_num = 50
+        data["band"] = "weak" if score_num <= 40 else ("mid" if score_num <= 70 else "strong")
 
     missing = required_top - set(data.keys())
     if missing:
@@ -2015,35 +2040,62 @@ def generate_roast_comeback(
     past_user_msgs = [h.get("text", "").strip().lower() for h in history if h.get("sender") == "user"]
     turn_number = len(past_user_msgs)
 
-    # 1. Attempt LLM generation via Gemini
+    # 1. Attempt LLM generation via Groq or Gemini
+    context_issues = ""
+    if issues:
+        top_iss = issues[:3]
+        context_issues = "Specific resume flaws found: " + "; ".join(
+            f"Quote: '{iss.get('quoted_text', '')}' -> Rewrite: '{iss.get('fix', '')}'" for iss in top_iss
+        )
+
+    sys_prompt = (
+        "You are a brutally honest, hilarious yet sharp tech recruiter and resume roaster in a live chat with a candidate. "
+        f"Candidate's score: {score}/100. Verdict: '{verdict}'. {context_issues}\n"
+        f"Candidate just said: '{user_msg}'.\n"
+        "Reply directly TO the candidate with a witty, savage critique or concrete advice. "
+        "Language: " + ("Conversational Hinglish with emojis" if lang == "hi-IN" else "Sharp English with emojis") + ". "
+        "Keep it strictly under 30 words. Complete sentence only, never trail off."
+    )
+
+    groq_key = os.getenv("GROQ_API_KEY", "").strip()
+    if groq_key:
+        groq_models = [os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"), "openai/gpt-oss-120b", "openai/gpt-oss-20b"]
+        for g_model in groq_models:
+            try:
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+                payload = {
+                    "model": g_model,
+                    "messages": [
+                        {"role": "system", "content": sys_prompt},
+                        {"role": "user", "content": user_msg},
+                    ],
+                    "temperature": 0.8,
+                    "max_tokens": 120,
+                }
+                with httpx.Client(timeout=4.0) as client:
+                    resp = client.post(url, headers=headers, json=payload)
+                    if resp.status_code == 200:
+                        out = resp.json()["choices"][0]["message"]["content"].strip().strip('"`* \n')
+                        if out and len(out) >= 15 and out not in past_ai_texts:
+                            return out
+            except Exception as e:
+                logger.debug(f"Groq comeback model {g_model} skipped: {e}")
+
     gemini_key = os.getenv("GEMINI_API_KEY", "")
     if gemini_key:
-        preferred_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        preferred_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         candidate_models = list(dict.fromkeys([
             preferred_model,
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash-8b",
-            "gemini-1.5-pro",
+            "gemini-2.5-flash",
+            "gemini-flash-latest",
+            "gemini-3.8-flash",
+            "gemini-2.5-pro",
+            "gemini-pro-latest",
         ]))
         for model in candidate_models:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
-                context_issues = ""
-                if issues:
-                    top_iss = issues[:3]
-                    context_issues = "Specific resume flaws found: " + "; ".join(
-                        f"Quote: '{iss.get('quoted_text', '')}' -> Rewrite: '{iss.get('fix', '')}'" for iss in top_iss
-                    )
-
-                sys_prompt = (
-                    "You are a brutally honest, hilarious yet sharp tech recruiter and resume roaster in a live chat with a candidate. "
-                    f"Candidate's score: {score}/100. Verdict: '{verdict}'. {context_issues}\n"
-                    f"Candidate just said: '{user_msg}'.\n"
-                    "Reply directly TO the candidate with a witty, savage critique or concrete advice. "
-                    "Language: " + ("Conversational Hinglish with emojis" if lang == "hi-IN" else "Sharp English with emojis") + ". "
-                    "Keep it strictly under 30 words. Complete sentence only, never trail off."
-                )
                 payload = {
                     "contents": [{"parts": [{"text": sys_prompt}]}],
                     "generationConfig": {"temperature": 0.8, "maxOutputTokens": 250},
