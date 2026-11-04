@@ -7,6 +7,7 @@ Includes private founder authentication gate for /stats dashboard.
 
 import hashlib
 import hmac
+import html
 import logging
 import os
 from datetime import datetime, timezone
