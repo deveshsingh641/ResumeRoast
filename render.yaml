@@ -23,8 +23,8 @@ services:
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
       - key: ADMIN_SECRET_KEY
-        generateValue: true
+        value: devesh666
       - key: TOKEN_SECRET_KEY
-        generateValue: true
+        value: devesh666_token_signing_secret_prod
       - key: IP_SHARED_DAILY_LIMIT
         value: 10

