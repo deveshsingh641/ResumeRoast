@@ -14,8 +14,15 @@ if (typeof window !== "undefined") {
   });
 }
 
+const isLocalhost =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1");
+
 if (import.meta.env.VITE_API_URL) {
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+} else if (!isLocalhost) {
+  axios.defaults.baseURL = "https://resumeroast-8bl9.onrender.com";
 }
 
 axios.defaults.withCredentials = true;
