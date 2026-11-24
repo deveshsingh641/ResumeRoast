@@ -263,6 +263,12 @@ export default function WallPage() {
               ? "Brave candidates ke asli anonymized resumes. Saare personal names aur emails pehle hi sanitize kar diye gaye hain."
               : "Real anonymized resumes submitted by brave candidates. All personal data, emails, and company names have been pre-sanitized."}
           </p>
+          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[11px] font-mono text-amber-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            {isHinglish
+              ? "Weekly Sync: Har hafte naye candidate roasts anonymize hokar judte hain"
+              : "Weekly Sync: Updated weekly with newly anonymized candidate roasts"}
+          </div>
         </div>
 
         {/* Tab switcher & Sorting */}

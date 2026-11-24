@@ -125,6 +125,8 @@ async def lifespan(app: FastAPI):
     try:
         database.init_db()
         database.cleanup_expired_roasts()
+        from app.services import wall_service
+        wall_service.rotate_weekly_wall(force=False)
     except Exception as e:
         logger.warning(f"Database init warning: {e}")
     # Candidate resumes are preserved permanently to protect founder data and metrics.

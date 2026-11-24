@@ -12,6 +12,7 @@ interface MetricsSummary {
   waitlist_signups: number;
   pro_subscribers: number;
   estimated_mrr_inr: number;
+  last_wall_rotation?: string | null;
 }
 
 interface InfrastructureInfo {
@@ -169,6 +170,45 @@ export default function FounderDashboardPage() {
       });
     } finally {
       setActivatingPro(false);
+    }
+  };
+
+  // Weekly Wall Rotation State & Handler
+  const [rotatingWall, setRotatingWall] = useState(false);
+  const [wallRotateMsg, setWallRotateMsg] = useState<{
+    text: string;
+    ok: boolean;
+  } | null>(null);
+
+  const handleRotateWall = async () => {
+    if (!adminKey) return;
+    setRotatingWall(true);
+    setWallRotateMsg(null);
+    try {
+      const { data } = await axios.post(
+        "/api/admin/wall/rotate",
+        {},
+        { headers: { "X-Admin-Key": adminKey } },
+      );
+      if (data && data.ok) {
+        setWallRotateMsg({
+          text: `⚡ Weekly Wall Updated! Rotated ${data.fame_count} to Wall of Fame and ${data.shame_count} to Wall of Shame. All identifiers scrubbed.`,
+          ok: true,
+        });
+        if (metrics) {
+          setMetrics({
+            ...metrics,
+            last_wall_rotation: data.rotation_date,
+          });
+        }
+      }
+    } catch (err: any) {
+      setWallRotateMsg({
+        text: `✗ ${err.response?.data?.detail || err.message || "Failed to rotate weekly wall"}`,
+        ok: false,
+      });
+    } finally {
+      setRotatingWall(false);
     }
   };
 
@@ -449,6 +489,15 @@ export default function FounderDashboardPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleRotateWall}
+            disabled={rotatingWall}
+            className="px-3 py-1.5 rounded text-xs font-mono font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition cursor-pointer flex items-center gap-1.5"
+            title="Publish top & brutal roasts to public Wall of Fame & Shame (PII scrubbed)"
+          >
+            {rotatingWall ? "Rotating..." : "⚡ Rotate Wall"}
+          </button>
           <button
             type="button"
             onClick={() => fetchDashboardData(adminKey)}
@@ -973,11 +1022,41 @@ export default function FounderDashboardPage() {
               </button>
             </div>
 
+            <button
+              type="button"
+              onClick={handleRotateWall}
+              disabled={rotatingWall}
+              className="px-3 py-1 rounded text-xs font-mono font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition cursor-pointer flex items-center gap-1.5 shrink-0"
+              title="Publish top & brutal roasts to public Wall of Fame & Shame (PII scrubbed)"
+            >
+              {rotatingWall ? "Rotating Wall..." : "⚡ Rotate Weekly Wall"}
+            </button>
+
             <span className="text-xs font-mono text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded border border-amber-400/20 shrink-0">
               Live Supabase Sync
             </span>
           </div>
         </div>
+
+        {/* Weekly Wall Rotate Status Message */}
+        {wallRotateMsg && (
+          <div
+            className={`px-4 py-2 text-xs font-mono border-b flex items-center justify-between ${
+              wallRotateMsg.ok
+                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                : "bg-red-500/10 text-red-400 border-red-500/30"
+            }`}
+          >
+            <span>{wallRotateMsg.text}</span>
+            <button
+              type="button"
+              onClick={() => setWallRotateMsg(null)}
+              className="text-stone-400 hover:text-white ml-2 text-xs cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Filter & Search Toolbar */}
         <div className="p-4 bg-white/[0.02] border-b border-white/[0.08] flex flex-wrap items-center gap-3">

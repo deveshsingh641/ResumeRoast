@@ -95,6 +95,12 @@ async def get_wall(
     """
     Public paginated feed of anonymized roasts for Wall of Shame and Wall of Fame.
     """
+    # Background check: ensure wall is rotated if a new week has started
+    try:
+        wall_service.rotate_weekly_wall(force=False)
+    except Exception:
+        pass
+
     result = database.get_wall_entries(
         entry_type=type,
         sort_by=sort,

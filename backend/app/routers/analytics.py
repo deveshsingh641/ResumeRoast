@@ -13,7 +13,7 @@ import os
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
@@ -698,6 +698,7 @@ async def get_founder_metrics(request: Request) -> JSONResponse:
                 "waitlist_signups": waitlist_count,
                 "pro_subscribers": pro_users,
                 "estimated_mrr_inr": estimated_mrr,
+                "last_wall_rotation": database.get_last_wall_rotation_date(),
             },
             "costs": {
                 "estimated_total_ai_spend_usd": est_blended_ai_spend,
@@ -831,4 +832,22 @@ async def activate_founder_pro(request: Request, payload: Optional[FounderActiva
         )
 
     return apply_secure_admin_headers(response)
+
+
+@router.post("/api/admin/wall/rotate")
+async def admin_rotate_wall(request: Request, force: bool = Query(True)) -> JSONResponse:
+    """
+    Founder manual trigger to instantly rotate candidate roasts to Wall of Fame & Shame.
+    """
+    if not verify_admin_access(request):
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized founder access: valid X-Admin-Key is required.",
+        )
+
+    from app.services import wall_service
+    result = wall_service.rotate_weekly_wall(force=force)
+    response = JSONResponse(content={"ok": True, **result})
+    return apply_secure_admin_headers(response)
+
 

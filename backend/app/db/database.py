@@ -721,6 +721,7 @@ def get_waitlist_entries(limit: int = 100) -> list[dict]:
 # In-memory stores for battles and wall entries
 _battles_memory: dict[str, dict] = {}
 _wall_entries_memory: dict[str, dict] = {}
+_last_wall_rotation_date: Optional[str] = None
 
 
 def update_roast_voice(roast_id: str, script: str, audio_path: str) -> None:
@@ -1092,6 +1093,127 @@ def hide_wall_entry(entry_id: str, hidden: bool = True) -> bool:
             row = cur.fetchone()
         conn.commit()
     return bool(row)
+
+
+def get_unfeatured_candidate_roasts(entry_type: str = "fame", limit: int = 2) -> list[dict]:
+    """
+    Fetch high-quality candidates from real roasts that haven't been featured on the Wall yet.
+    - 'fame': score >= 60, highest score & most recent first.
+    - 'shame': score <= 50, lowest score & most recent first.
+    """
+    if not DATABASE_URL:
+        featured_ids = {
+            v["roast_id"] for v in _wall_entries_memory.values() if v.get("roast_id")
+        }
+        candidates = [
+            v for v in _memory_store.values()
+            if v.get("id") not in featured_ids
+            and v.get("one_line_verdict")
+            and len(str(v.get("one_line_verdict")).strip()) > 0
+        ]
+        if entry_type == "fame":
+            candidates = [c for c in candidates if c.get("overall_score", 0) >= 60]
+            candidates.sort(key=lambda x: (x.get("overall_score", 0), x.get("created_at", "")), reverse=True)
+        else:
+            candidates = [c for c in candidates if c.get("overall_score", 0) <= 50]
+            candidates.sort(key=lambda x: (x.get("overall_score", 999), x.get("created_at", "")))
+        return candidates[:limit]
+
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            if entry_type == "fame":
+                cur.execute(
+                    """
+                    SELECT r.*
+                    FROM roasts r
+                    WHERE r.overall_score >= 60
+                      AND r.one_line_verdict IS NOT NULL
+                      AND LENGTH(TRIM(r.one_line_verdict)) > 0
+                      AND r.id NOT IN (
+                          SELECT roast_id FROM wall_entries WHERE roast_id IS NOT NULL
+                      )
+                    ORDER BY r.created_at DESC, r.overall_score DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT r.*
+                    FROM roasts r
+                    WHERE r.overall_score <= 50
+                      AND r.one_line_verdict IS NOT NULL
+                      AND LENGTH(TRIM(r.one_line_verdict)) > 0
+                      AND r.id NOT IN (
+                          SELECT roast_id FROM wall_entries WHERE roast_id IS NOT NULL
+                      )
+                    ORDER BY r.created_at DESC, r.overall_score ASC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+            rows = cur.fetchall()
+
+    results = []
+    for r in rows:
+        d = dict(r)
+        if isinstance(d.get("id"), uuid.UUID):
+            d["id"] = str(d["id"])
+        if isinstance(d.get("user_id"), uuid.UUID):
+            d["user_id"] = str(d["user_id"])
+        if isinstance(d.get("created_at"), (datetime, date)):
+            d["created_at"] = d["created_at"].isoformat()
+        if isinstance(d.get("issues"), str):
+            try:
+                d["issues"] = json.loads(d["issues"])
+            except Exception:
+                d["issues"] = []
+        results.append(d)
+    return results
+
+
+def get_last_wall_rotation_date() -> Optional[str]:
+    """Retrieve the date string (YYYY-MM-DD) of the last weekly wall rotation."""
+    global _last_wall_rotation_date
+    if not DATABASE_URL:
+        return _last_wall_rotation_date
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT date FROM usage_counters WHERE key = 'wall:weekly_rotation' ORDER BY date DESC LIMIT 1"
+                )
+                row = cur.fetchone()
+                if row:
+                    return str(row["date"])
+    except Exception as e:
+        print(f"[WARN] Error fetching last wall rotation date: {e}")
+    return None
+
+
+def record_wall_rotation(date_str: str, rotated_count: int) -> None:
+    """Record wall rotation event date and count in usage_counters or memory."""
+    global _last_wall_rotation_date
+    _last_wall_rotation_date = date_str
+    if not DATABASE_URL:
+        return
+
+    try:
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO usage_counters (key, date, count)
+                    VALUES ('wall:weekly_rotation', %s, %s)
+                    ON CONFLICT (key, date) DO UPDATE SET count = EXCLUDED.count
+                    """,
+                    (date_str, rotated_count),
+                )
+            conn.commit()
+    except Exception as e:
+        print(f"[WARN] Error recording wall rotation: {e}")
 
 
 VALID_REACTION_EMOJIS = {"laugh", "fire", "skull", "eyes"}
